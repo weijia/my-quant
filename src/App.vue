@@ -1,0 +1,600 @@
+<template>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="header-content">
+        <div class="logo-section">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4ecdc4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3v18h18"/>
+            <path d="M18 9l-5 5-4-4-3 3"/>
+          </svg>
+          <h1>my-quant</h1>
+        </div>
+        
+        <div class="search-section">
+          <input 
+            v-model="searchQuery"
+            type="text"
+            placeholder="搜索策略名称..."
+            class="search-input"
+            @input="handleSearch"
+          />
+        </div>
+        
+        <div class="action-buttons">
+          <button @click="showAddDialog" class="btn btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 5v14"/>
+              <path d="M5 12h14"/>
+            </svg>
+            添加策略
+          </button>
+          <button @click="exportData" class="btn btn-secondary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" x2="12" y1="15" y2="3"/>
+            </svg>
+            导出数据
+          </button>
+          <label class="import-btn btn btn-secondary">
+            <input type="file" accept=".json" @change="importData" style="display: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" x2="12" y1="3" y2="15"/>
+            </svg>
+            导入数据
+          </label>
+        </div>
+      </div>
+    </header>
+    
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>账户类型:</label>
+        <select v-model="filter.accountType" @change="loadStrategies" class="filter-select">
+          <option value="all">全部</option>
+          <option value="default">普通账户</option>
+          <option value="credit">信用账户</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>趋势过滤:</label>
+        <select v-model="filter.trend" @change="loadStrategies" class="filter-select">
+          <option value="all">全部</option>
+          <option value="unset">未设置</option>
+          <option value="unknown">未知</option>
+          <option value="up">上升</option>
+          <option value="down">下降</option>
+          <option value="oscillation">震荡</option>
+          <option value="pullback">回踩</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>排序:</label>
+        <select v-model="filter.sortBy" @change="loadStrategies" class="filter-select">
+          <option value="name">名称</option>
+          <option value="marketValue">市值</option>
+          <option value="netPosition">股数</option>
+        </select>
+        <select v-model="filter.sortOrder" @change="loadStrategies" class="filter-select">
+          <option value="asc">升序</option>
+          <option value="desc">降序</option>
+        </select>
+      </div>
+    </div>
+    
+    <main class="main-content">
+      <StrategyList
+        :strategies="filteredStrategies"
+        :sort-by="filter.sortBy"
+        :sort-order="filter.sortOrder"
+        :trend-filter="filter.trend"
+        @edit-strategy="editStrategy"
+        @delete-strategy="deleteStrategy"
+        @update-trend-judgment="updateTrendJudgment"
+        @batch-condition="openBatchConditionDialog"
+        @update-trend-filter="(trend) => { filter.trend = trend; loadStrategies() }"
+        @update-sort="(sortInfo) => { filter.sortBy = sortInfo.sortBy; filter.sortOrder = sortInfo.sortOrder; loadStrategies() }"
+      />
+    </main>
+    
+    <footer class="app-footer">
+      <p>数据存储于本地浏览器 (PouchDB)</p>
+      <p>共 {{ strategies.length }} 个策略</p>
+    </footer>
+    
+    <StrategyDialog
+      :show="showDialog"
+      :is-editing="isEditing"
+      :strategy="editingStrategy"
+      @close="closeDialog"
+      @save="saveStrategy"
+    />
+    
+    <BatchConditionDialog
+      :visible="showBatchConditionDialog"
+      :stock-info="selectedStrategy"
+      :existing-decrease-strategies="selectedStrategy?.decreaseStrategies || []"
+      :existing-increase-strategies="selectedStrategy?.increaseStrategies || []"
+      @update:visible="showBatchConditionDialog = false"
+      @submit="handleBatchConditionSubmit"
+    />
+  </div>
+</template>
+
+<script setup>import { ref, reactive, computed, onMounted } from 'vue';
+import { strategyService } from './services/StrategyService';
+import { trendService } from './services/TrendService';
+import { database } from './utils/Database';
+import StrategyList from './components/StrategyList.vue';
+import StrategyDialog from './components/StrategyDialog.vue';
+import BatchConditionDialog from './components/BatchConditionDialog.vue';
+const strategies = ref([]);
+const showDialog = ref(false);
+const isEditing = ref(false);
+const editingStrategy = ref({});
+const showBatchConditionDialog = ref(false);
+const selectedStrategy = ref({});
+const searchQuery = ref('');
+const filter = reactive({
+ accountType: 'all',
+ trend: 'all',
+ sortBy: 'name',
+ sortOrder: 'asc'
+});
+const filteredStrategies = computed(() => {
+ let result = [...strategies.value];
+ if (searchQuery.value) {
+ const query = searchQuery.value.toLowerCase();
+ result = result.filter(s => s.name.toLowerCase().includes(query) ||
+ s.stockCode?.toLowerCase().includes(query));
+ }
+ return result;
+});
+const loadStrategies = async () => {
+ try {
+ const result = await strategyService.getAllStrategies({
+ accountType: filter.accountType,
+ trend: filter.trend,
+ sortBy: filter.sortBy,
+ sortOrder: filter.sortOrder
+ });
+ strategies.value = result;
+ }
+ catch (error) {
+ console.error('加载策略失败:', error);
+ }
+};
+const showAddDialog = () => {
+ isEditing.value = false;
+ editingStrategy.value = {};
+ showDialog.value = true;
+};
+const editStrategy = (strategy) => {
+ isEditing.value = true;
+ editingStrategy.value = { ...strategy };
+ showDialog.value = true;
+};
+const closeDialog = () => {
+ showDialog.value = false;
+ editingStrategy.value = {};
+};
+const saveStrategy = async (strategyData) => {
+ try {
+ if (isEditing.value && editingStrategy.value.id) {
+ await strategyService.updateStrategy(editingStrategy.value.id, strategyData);
+ }
+ else {
+ await strategyService.addStrategy(strategyData);
+ }
+ await loadStrategies();
+ closeDialog();
+ }
+ catch (error) {
+ console.error('保存策略失败:', error);
+ alert('保存策略失败');
+ }
+};
+const deleteStrategy = async (id) => {
+ if (!confirm('确定要删除此策略吗？')) {
+ return;
+ }
+ try {
+ await strategyService.deleteStrategy(id);
+ await loadStrategies();
+ }
+ catch (error) {
+ console.error('删除策略失败:', error);
+ alert('删除策略失败');
+ }
+};
+const updateTrendJudgment = async (strategyId, trend) => {
+ try {
+ await trendService.updateTrendJudgment(strategyId, trend);
+ await loadStrategies();
+ }
+ catch (error) {
+ console.error('更新趋势判断失败:', error);
+ alert('更新趋势判断失败');
+ }
+};
+const openBatchConditionDialog = (strategy) => {
+ selectedStrategy.value = { ...strategy };
+ showBatchConditionDialog.value = true;
+};
+const handleBatchConditionSubmit = async (data) => {
+ try {
+ const { decreaseStrategies, increaseStrategies } = data;
+ await strategyService.updateStrategy(selectedStrategy.value.id, {
+ decreaseStrategies,
+ increaseStrategies
+ });
+ await loadStrategies();
+ }
+ catch (error) {
+ console.error('更新条件单失败:', error);
+ alert('更新条件单失败');
+ }
+};
+const exportData = async () => {
+ try {
+ const data = await database.exportData();
+ const blob = new Blob([data], { type: 'application/json' });
+ const url = URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = url;
+ a.download = `my-quant-strategies-${new Date().toISOString().split('T')[0]}.json`;
+ document.body.appendChild(a);
+ a.click();
+ document.body.removeChild(a);
+ URL.revokeObjectURL(url);
+ }
+ catch (error) {
+ console.error('导出数据失败:', error);
+ alert('导出数据失败');
+ }
+};
+const importData = async (event) => {
+ const file = event.target.files[0];
+ if (!file)
+ return;
+ try {
+ const text = await file.text();
+ const count = await database.importData(text);
+ await loadStrategies();
+ alert(`成功导入 ${count} 条数据`);
+ }
+ catch (error) {
+ console.error('导入数据失败:', error);
+ alert('导入数据失败，请确保文件格式正确');
+ }
+ event.target.value = '';
+};
+const handleSearch = () => {
+};
+const loadMockData = async () => {
+ const mockStrategies = [
+ {
+ name: '贵州茅台',
+ stockCode: '600519',
+ accountType: 'default',
+ netPosition: 100,
+ marketValue: '168,000',
+ profitLoss: '+5.2',
+ fiveYearAvgDividendYield: '2.5',
+ changePercent: '+2.3',
+ decreasePercentage: '5',
+ decreaseAmount: '200',
+ increasePercentage: '8',
+ increaseAmount: '300',
+ trendJudgment: 'up',
+ oscillationGridSize: '2.5',
+ oscillationTradeAmount: '100',
+ breakoutGridSize: '5.0',
+ breakoutTradeAmount: '200',
+ decreaseStrategies: [
+ { deltaPercentage: '5', tradeVolume: '200', side: 'SELL' },
+ { deltaPercentage: '10', tradeVolume: '300', side: 'SELL' }
+ ],
+ increaseStrategies: [
+ { deltaPercentage: '8', tradeVolume: '300', side: 'BUY' }
+ ],
+ manualNotes: '长期持有'
+ },
+ {
+ name: '比亚迪',
+ stockCode: '002594',
+ accountType: 'default',
+ netPosition: 500,
+ marketValue: '95,000',
+ profitLoss: '-3.1',
+ fiveYearAvgDividendYield: '0.8',
+ changePercent: '-1.5',
+ decreasePercentage: '3',
+ decreaseAmount: '100',
+ increasePercentage: '6',
+ increaseAmount: '200',
+ trendJudgment: 'down',
+ oscillationGridSize: '1.0',
+ oscillationTradeAmount: '100',
+ decreaseStrategies: [],
+ increaseStrategies: [],
+ manualNotes: ''
+ },
+ {
+ name: '招商银行',
+ stockCode: '600036',
+ accountType: 'credit',
+ netPosition: 300,
+ marketValue: '66,000',
+ profitLoss: '+1.8',
+ fiveYearAvgDividendYield: '4.2',
+ changePercent: '+0.9',
+ decreasePercentage: '4',
+ decreaseAmount: '150',
+ increasePercentage: '7',
+ increaseAmount: '200',
+ trendJudgment: 'oscillation',
+ oscillationGridSize: '0.5',
+ oscillationTradeAmount: '100',
+ breakoutGridSize: '1.0',
+ breakoutTradeAmount: '150',
+ decreaseStrategies: [
+ { deltaPercentage: '4', tradeVolume: '150', side: 'COLLSELL' }
+ ],
+ increaseStrategies: [
+ { deltaPercentage: '7', tradeVolume: '200', side: 'BUY' }
+ ],
+ manualNotes: '融资买入'
+ },
+ {
+ name: '宁德时代',
+ stockCode: '300750',
+ accountType: 'default',
+ netPosition: 200,
+ marketValue: '78,000',
+ profitLoss: '+8.5',
+ fiveYearAvgDividendYield: '1.2',
+ changePercent: '+3.2',
+ decreasePercentage: '6',
+ decreaseAmount: '100',
+ increasePercentage: '10',
+ increaseAmount: '150',
+ trendJudgment: 'up',
+ oscillationGridSize: '3.0',
+ oscillationTradeAmount: '50',
+ decreaseStrategies: [],
+ increaseStrategies: [
+ { deltaPercentage: '10', tradeVolume: '150', side: 'BUY' }
+ ],
+ manualNotes: '新能源龙头'
+ },
+ {
+ name: '中国平安',
+ stockCode: '601318',
+ accountType: 'default',
+ netPosition: 400,
+ marketValue: '28,000',
+ profitLoss: '-2.5',
+ fiveYearAvgDividendYield: '5.8',
+ changePercent: '-0.8',
+ decreasePercentage: '5',
+ decreaseAmount: '100',
+ increasePercentage: '8',
+ increaseAmount: '200',
+ trendJudgment: 'pullback',
+ oscillationGridSize: '0.3',
+ oscillationTradeAmount: '100',
+ decreaseStrategies: [],
+ increaseStrategies: [],
+ manualNotes: '高股息'
+ },
+ {
+ name: '东方财富',
+ stockCode: '300059',
+ accountType: 'credit',
+ netPosition: 150,
+ marketValue: '34,500',
+ profitLoss: '+4.2',
+ fiveYearAvgDividendYield: '0.5',
+ changePercent: '+2.1',
+ decreasePercentage: '5',
+ decreaseAmount: '50',
+ increasePercentage: '7',
+ increaseAmount: '100',
+ trendJudgment: 'unknown',
+ oscillationGridSize: '1.5',
+ oscillationTradeAmount: '50',
+ breakoutGridSize: '3.0',
+ breakoutTradeAmount: '100',
+ decreaseStrategies: [
+ { deltaPercentage: '5', tradeVolume: '50', side: 'COLLSELL' }
+ ],
+ increaseStrategies: [],
+ manualNotes: '券商龙头'
+ }
+ ];
+ const existingStrategies = await strategyService.getAllStrategies();
+ if (existingStrategies.length === 0) {
+ for (const strategy of mockStrategies) {
+ await strategyService.addStrategy(strategy);
+ }
+ }
+};
+onMounted(async () => {
+ await loadMockData();
+ await loadStrategies();
+});
+</script>
+
+<style scoped>
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #1a1a2e;
+}
+
+.app-header {
+  background-color: #16213e;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-section h1 {
+  margin: 0;
+  font-size: 20px;
+  color: #4ecdc4;
+  font-weight: bold;
+}
+
+.search-section {
+  flex: 1;
+  max-width: 400px;
+  margin: 0 20px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 20px;
+  background-color: rgba(255,255,255,0.1);
+  color: white;
+  font-size: 14px;
+}
+
+.search-input::placeholder {
+  color: rgba(255,255,255,0.5);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background-color: #4ecdc4;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #45b7aa;
+}
+
+.btn-secondary {
+  background-color: rgba(255,255,255,0.2);
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: rgba(255,255,255,0.3);
+}
+
+.import-btn {
+  cursor: pointer;
+}
+
+.filter-bar {
+  background-color: rgba(0,0,0,0.2);
+  padding: 10px 20px;
+  display: flex;
+  gap: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-group label {
+  color: rgba(255,255,255,0.7);
+  font-size: 14px;
+}
+
+.filter-select {
+  padding: 6px 12px;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 4px;
+  background-color: rgba(255,255,255,0.1);
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.main-content {
+  flex: 1;
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.app-footer {
+  background-color: #16213e;
+  padding: 12px 20px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.app-footer p {
+  margin: 0;
+  color: rgba(255,255,255,0.5);
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .search-section {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+  }
+  
+  .action-buttons {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .filter-bar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+}
+</style>
