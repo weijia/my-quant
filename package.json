@@ -1,7 +1,7 @@
 {
   "name": "my-quant",
   "version": "1.0.0",
-  "description": "我要画一个github中的readme的图，它是一个股票量化交易平台\r 它包含多个web在线股票交易平台，这些平台所对应的agent，以及我自己的多个dashboard\r 对于实时股票价格数据，条件单以及网格交易创建请求，它通过中间层通过加密及重试等，发送到底层mqtt或者其他消息平台发送接收消息来更新数据\r 对于并不是那么实时的数据，比如每日开盘时的持仓，已设定条件单，网格交易订单等，它通过webdav等远程存储空间进行同步及更新\r 请帮我写一个这样的图",
+  "description": "高级策略监控系统",
   "main": "index.js",
   "scripts": {
     "dev": "vite",
@@ -21,12 +21,12 @@
   },
   "homepage": "https://github.com/weijia/my-quant#readme",
   "dependencies": {
-    "@vitejs/plugin-vue": "^6.0.6",
+    "@vitejs/plugin-vue": "^5.2.1",
     "autoprefixer": "^10.5.0",
     "lucide-vue-next": "^1.0.0",
     "pouchdb": "^9.0.0",
     "tailwindcss": "^3.4.19",
-    "vite": "^8.0.12",
+    "vite": "^5.4.11",
     "vue": "^3.5.34"
   }
 }
