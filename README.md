@@ -58,6 +58,6 @@ gh secret set WEBDAV_PASSWORD --repo %ROOT% --body YOUR_PASSWORD
 
 ### 注意事项
 
-- 项目部署路径: `/x/`
-- Vite base URL 已配置为 `/x/`
-- WebDAV 目标目录: `online/x`
+- 项目部署路径: `/my-quant/`
+- Vite base URL 已配置为 `/my-quant/`
+- WebDAV 目标目录: `online/my-quant`

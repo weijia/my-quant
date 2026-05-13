@@ -8,7 +8,7 @@ module.exports = defineConfig({
       '@': '/src'
     }
   },
-  base: '/x/',
+  base: '/my-quant/',
   build: {
     outDir: './dist',
     emptyOutDir: true
