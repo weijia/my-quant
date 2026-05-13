@@ -8,6 +8,7 @@ module.exports = defineConfig({
       '@': '/src'
     }
   },
+  base: '/x/',
   build: {
     outDir: './dist',
     emptyOutDir: true
