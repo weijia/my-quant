@@ -45,6 +45,15 @@
             </svg>
             导入数据
           </label>
+          <button @click="importFromWebDAV" class="btn btn-secondary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+              <path d="M16 16h5v5"/>
+            </svg>
+            同步WebDAV
+          </button>
         </div>
       </div>
     </header>
@@ -127,6 +136,7 @@
 import { strategyService } from './services/StrategyService';
 import { trendService } from './services/TrendService';
 import { database } from './utils/Database';
+import { webdavImportService } from './services/WebDAVImportService';
 import StrategyList from './components/StrategyList.vue';
 import StrategyDialog from './components/StrategyDialog.vue';
 import BatchConditionDialog from './components/BatchConditionDialog.vue';
@@ -270,6 +280,22 @@ const importData = async (event) => {
  alert('导入数据失败，请确保文件格式正确');
  }
  event.target.value = '';
+};
+const importFromWebDAV = async () => {
+ try {
+ const result = await webdavImportService.importFromWebDAV();
+ if (result.success) {
+ await loadStrategies();
+ alert(result.message);
+ }
+ else {
+ alert(result.message);
+ }
+ }
+ catch (error) {
+ console.error('从WebDAV导入数据失败:', error);
+ alert('从WebDAV导入数据失败');
+ }
 };
 const handleSearch = () => {
 };
