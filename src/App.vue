@@ -271,9 +271,31 @@ const importData = async (event) => {
  return;
  try {
  const text = await file.text();
+ let result;
+ 
+ try {
+ const jsonData = JSON.parse(text);
+ if (jsonData.stockData || jsonData.advancedStrategies || jsonData.conditionalStrategies) {
+ result = await webdavImportService.importFromJSON(jsonData);
+ } else {
  const count = await database.importData(text);
+ result = {
+ success: true,
+ count: count,
+ message: `成功导入 ${count} 条数据`
+ };
+ }
+ } catch (parseError) {
+ const count = await database.importData(text);
+ result = {
+ success: true,
+ count: count,
+ message: `成功导入 ${count} 条数据`
+ };
+ }
+ 
  await loadStrategies();
- alert(`成功导入 ${count} 条数据`);
+ alert(result.message);
  }
  catch (error) {
  console.error('导入数据失败:', error);
