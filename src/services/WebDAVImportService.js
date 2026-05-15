@@ -284,10 +284,10 @@ class WebDAVImportService {
     }
   }
   
-  async importFromWebDAV() {
+  async importFromWebDAV(clearBeforeImport = true) {
     try {
       const webdavData = await this.fetchFromWebDAV()
-      return await this.importFromData(webdavData)
+      return await this.importFromData(webdavData, clearBeforeImport)
     } catch (error) {
       console.error('从 WebDAV 导入数据失败:', error)
       return {
@@ -298,7 +298,7 @@ class WebDAVImportService {
     }
   }
   
-  async importFromData(webdavData) {
+  async importFromData(webdavData, clearBeforeImport = true) {
     try {
       console.log('开始转换数据...')
       const strategies = DataConverter.convertStockData(webdavData)
@@ -309,6 +309,11 @@ class WebDAVImportService {
           count: 0,
           message: '没有找到任何可导入的策略数据'
         }
+      }
+      
+      if (clearBeforeImport) {
+        const deletedCount = await database.clearAllStrategies()
+        console.log(`已清空 ${deletedCount} 条原有策略`)
       }
       
       let importedCount = 0

@@ -304,8 +304,13 @@ const importData = async (event) => {
  event.target.value = '';
 };
 const importFromWebDAV = async () => {
+ const confirmed = confirm('确定要从 WebDAV 同步数据吗？\n\n此操作将清空当前所有策略数据，然后从 WebDAV 重新导入。');
+ if (!confirmed) {
+ return;
+ }
+ 
  try {
- const result = await webdavImportService.importFromWebDAV();
+ const result = await webdavImportService.importFromWebDAV(true);
  if (result.success) {
  await loadStrategies();
  alert(result.message);
