@@ -360,10 +360,11 @@ class WebDAVImportService {
       }
       
       // 提取文件名并获取第一个 JSON 文件
-      const jsonFile = jsonFiles[0].replace('<d:href>', '').replace('</d:href>', '')
+      const jsonFile = jsonFiles[0].replace(/<\/?[Dd]:href>/g, '')
       const fileUrl = this.holdingsBaseUrl + jsonFile.split('/').pop()
       
-      console.log('找到持仓文件:', fileUrl)
+      console.log('提取的文件名:', jsonFile)
+      console.log('最终 URL:', fileUrl)
       
       const response = await fetch(fileUrl, {
         method: 'GET',
