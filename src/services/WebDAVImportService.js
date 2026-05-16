@@ -360,7 +360,6 @@ class WebDAVImportService {
       })
       
       console.log('PROPFIND 响应状态:', propfindResponse.status)
-      console.log('PROPFIND 响应头:', JSON.stringify(Object.fromEntries(propfindResponse.headers.entries())))
       
       if (!propfindResponse.ok) {
         console.warn('获取持仓目录列表失败:', propfindResponse.status)
@@ -368,22 +367,37 @@ class WebDAVImportService {
       }
       
       const text = await propfindResponse.text()
-      console.log('PROPFIND 响应内容:', text)
+      console.log('PROPFIND 响应内容:', text.substring(0, 500))
       
-      // 解析 XML 响应，提取文件名 (D:href 可能大写或小写)
-      const jsonFiles = text.match(/<[Dd]:href>([^<]+\.json)<\/[Dd]:href>/g) || []
-      console.log('匹配到的 JSON 文件:', jsonFiles)
+      // 使用 DOMParser 解析 XML 响应
+      const parser = new DOMParser()
+      const xmlDoc = parser.parseFromString(text, 'text/xml')
       
-      if (jsonFiles.length === 0) {
+      // 获取所有 response 元素
+      const responses = xmlDoc.getElementsByTagNameNS('DAV:', 'response')
+      console.log('找到的响应数量:', responses.length)
+      
+      // 提取 JSON 文件名
+      let jsonFileName = null
+      for (let i = 0; i < responses.length; i++) {
+        const hrefElements = responses[i].getElementsByTagNameNS('DAV:', 'href')
+        if (hrefElements.length > 0) {
+          const href = hrefElements[0].textContent
+          const pathParts = href.split('/')
+          const fileName = pathParts[pathParts.length - 1]
+          if (fileName && fileName.endsWith('.json')) {
+            jsonFileName = fileName
+            break
+          }
+        }
+      }
+      
+      if (!jsonFileName) {
         console.log('持仓目录中没有找到 JSON 文件')
         return null
       }
       
-      // 提取文件名并获取第一个 JSON 文件
-      const jsonFile = jsonFiles[0].replace(/<\/?[Dd]:href>/g, '')
-      const fileUrl = this.holdingsBaseUrl + jsonFile.split('/').pop()
-      
-      console.log('提取的文件名:', jsonFile)
+      const fileUrl = this.holdingsBaseUrl + jsonFileName
       console.log('最终 URL:', fileUrl)
       
       const response = await fetch(fileUrl, {
@@ -428,9 +442,30 @@ class WebDAVImportService {
       }
 
       const text = await propfindResponse.text()
+      console.log('PROPFIND 响应内容:', text.substring(0, 500))
 
-      // 解析 XML 响应，提取文件名
-      const jsonFiles = text.match(/<[Dd]:href>(trend_judgment_[^<]+\.json)<\/[Dd]:href>/g) || []
+      // 使用 DOMParser 解析 XML 响应
+      const parser = new DOMParser()
+      const xmlDoc = parser.parseFromString(text, 'text/xml')
+      
+      // 获取所有 response 元素
+      const responses = xmlDoc.getElementsByTagNameNS('DAV:', 'response')
+      console.log('找到的响应数量:', responses.length)
+      
+      // 提取文件名
+      const jsonFiles = []
+      for (let i = 0; i < responses.length; i++) {
+        const hrefElements = responses[i].getElementsByTagNameNS('DAV:', 'href')
+        if (hrefElements.length > 0) {
+          const href = hrefElements[0].textContent
+          const pathParts = href.split('/')
+          const fileName = pathParts[pathParts.length - 1]
+          if (fileName && fileName.startsWith('trend_judgment_') && fileName.endsWith('.json')) {
+            jsonFiles.push(fileName)
+          }
+        }
+      }
+      
       console.log('匹配到的趋势判断文件:', jsonFiles)
 
       if (jsonFiles.length === 0) {
@@ -443,8 +478,7 @@ class WebDAVImportService {
       let validCount = 0
 
       // 遍历所有趋势判断文件
-      for (const fileEntry of jsonFiles) {
-        const fileName = fileEntry.replace(/<\/?[Dd]:href>/g, '')
+      for (const fileName of jsonFiles) {
         const fileUrl = this.trendBaseUrl + fileName
 
         try {
