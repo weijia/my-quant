@@ -332,14 +332,20 @@ class WebDAVImportService {
         }
       })
       
+      console.log('PROPFIND 响应状态:', propfindResponse.status)
+      console.log('PROPFIND 响应头:', JSON.stringify(Object.fromEntries(propfindResponse.headers.entries())))
+      
       if (!propfindResponse.ok) {
         console.warn('获取持仓目录列表失败:', propfindResponse.status)
         return null
       }
       
       const text = await propfindResponse.text()
+      console.log('PROPFIND 响应内容:', text)
+      
       // 解析 XML 响应，提取文件名
       const jsonFiles = text.match(/<d:href>([^<]+\.json)<\/d:href>/g) || []
+      console.log('匹配到的 JSON 文件:', jsonFiles)
       
       if (jsonFiles.length === 0) {
         console.log('持仓目录中没有找到 JSON 文件')
@@ -358,6 +364,8 @@ class WebDAVImportService {
           'Accept': 'application/json'
         }
       })
+      
+      console.log('获取持仓文件响应状态:', response.status)
       
       if (!response.ok) {
         console.warn('获取持仓数据失败:', response.status)
