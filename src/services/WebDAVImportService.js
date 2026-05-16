@@ -7,6 +7,23 @@ class DataConverter {
     
     console.log('开始转换数据，原始数据结构:', Object.keys(webdavData))
     
+    // 处理持仓数据，构建以 stockCode 为 key 的映射
+    const holdingsMap = {}
+    if (webdavData.holdingsData) {
+      console.log('处理持仓数据')
+      const holdingsArray = Array.isArray(webdavData.holdingsData) 
+        ? webdavData.holdingsData 
+        : [webdavData.holdingsData]
+      
+      for (const holding of holdingsArray) {
+        if (holding && holding.stockCode) {
+          const key = `${holding.stockCode}-${this.normalizeAccountType(holding.accountType)}`
+          holdingsMap[key] = holding
+          console.log('持仓映射:', key, holding.stockName, holding.quantity)
+        }
+      }
+    }
+    
     if (webdavData.stockData && Array.isArray(webdavData.stockData)) {
       console.log('stockData 数量:', webdavData.stockData.length)
       for (const stock of webdavData.stockData) {
@@ -90,6 +107,21 @@ class DataConverter {
           processedKeys.add(mapKey)
           convertedStrategies.push(strategy)
           console.log('添加条件单策略:', strategy.name, strategy.accountType)
+        }
+      }
+    }
+    
+    // 将持仓数据合并到策略中
+    if (Object.keys(holdingsMap).length > 0) {
+      console.log('合并持仓数据到策略')
+      for (const strategy of convertedStrategies) {
+        const holdingKey = `${strategy.stockCode}-${strategy.accountType}`
+        const holding = holdingsMap[holdingKey]
+        if (holding) {
+          strategy.netPosition = this.parseNumber(holding.quantity || holding.currentAmount || strategy.netPosition)
+          strategy.marketValue = this.formatMarketValue(holding.marketValue || strategy.marketValue)
+          strategy.name = strategy.name || holding.stockName || holding.name || strategy.name
+          console.log('合并持仓:', strategy.stockCode, '数量:', strategy.netPosition, '市值:', strategy.marketValue)
         }
       }
     }
@@ -264,6 +296,7 @@ class DataConverter {
 class WebDAVImportService {
   constructor() {
     this.webdavBaseUrl = 'https://your-webdav-server.com/dav/app_data/stocks/'
+    this.holdingsBaseUrl = 'https://your-webdav-server.com/dav/app_data/holdings/pingan/'
   }
   
   async fetchFromWebDAV(filename = 'all_strategies.json') {
@@ -291,9 +324,70 @@ class WebDAVImportService {
     }
   }
   
+  async fetchHoldings() {
+    try {
+      // 先用 PROPFIND 获取目录下的文件列表
+      console.log('正在获取持仓目录文件列表:', this.holdingsBaseUrl)
+      const propfindResponse = await fetch(this.holdingsBaseUrl, {
+        method: 'PROPFIND',
+        headers: {
+          'Depth': '1',
+          'Content-Type': 'application/xml'
+        }
+      })
+      
+      if (!propfindResponse.ok) {
+        console.warn('获取持仓目录列表失败:', propfindResponse.status)
+        return null
+      }
+      
+      const text = await propfindResponse.text()
+      // 解析 XML 响应，提取文件名
+      const jsonFiles = text.match(/<d:href>([^<]+\.json)<\/d:href>/g) || []
+      
+      if (jsonFiles.length === 0) {
+        console.log('持仓目录中没有找到 JSON 文件')
+        return null
+      }
+      
+      // 提取文件名并获取第一个 JSON 文件
+      const jsonFile = jsonFiles[0].replace('<d:href>', '').replace('</d:href>', '')
+      const fileUrl = this.holdingsBaseUrl + jsonFile.split('/').pop()
+      
+      console.log('找到持仓文件:', fileUrl)
+      
+      const response = await fetch(fileUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+      
+      if (!response.ok) {
+        console.warn('获取持仓数据失败:', response.status)
+        return null
+      }
+      
+      const data = await response.json()
+      console.log('成功获取持仓数据')
+      return data
+    } catch (error) {
+      console.warn('获取持仓数据失败:', error)
+      return null
+    }
+  }
+  
   async importFromWebDAV(clearBeforeImport = true) {
     try {
-      const webdavData = await this.fetchFromWebDAV()
+      const [webdavData, holdingsData] = await Promise.all([
+        this.fetchFromWebDAV(),
+        this.fetchHoldings()
+      ])
+      
+      if (holdingsData) {
+        webdavData.holdingsData = holdingsData
+      }
+      
       return await this.importFromData(webdavData, clearBeforeImport)
     } catch (error) {
       console.error('从 WebDAV 导入数据失败:', error)
