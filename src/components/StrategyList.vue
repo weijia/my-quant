@@ -95,36 +95,25 @@
             @batch-condition="$emit('batch-condition', strategy)"
           />
           
+          <tr v-if="pinganStrategies.length > 0" class="account-section-header pingan-section">
+            <td :colspan="visibleColumns.length">平安持仓 ({{ pinganStrategies.length }})</td>
+          </tr>
+          <StrategyRow
+            v-for="strategy in pinganStrategies"
+            :key="strategy.id"
+            :strategy="strategy"
+            :visible-columns="visibleColumns"
+            @edit="$emit('edit-strategy', strategy)"
+            @delete="$emit('delete-strategy', strategy.id)"
+            @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
+            @batch-condition="$emit('batch-condition', strategy)"
+          />
+          
           <tr v-if="strategies.length === 0">
             <td :colspan="visibleColumns.length" class="empty-state">
               暂无策略数据，请点击右上角添加按钮添加新策略
             </td>
           </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- 平安持仓表格 -->
-    <div v-if="pinganStrategies.length > 0" class="table-wrapper pingan-table">
-      <h4 class="pingan-title">平安持仓</h4>
-      <table class="strategy-table">
-        <thead>
-          <tr>
-            <th v-if="visibleColumns.includes('name')">策略名称</th>
-            <th>股数</th>
-            <th>市值</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <StrategyRow
-            v-for="strategy in pinganStrategies"
-            :key="strategy.id"
-            :strategy="strategy"
-            :visible-columns="['name', 'quantity', 'marketValue']"
-            @edit="$emit('edit-strategy', strategy)"
-            @delete="$emit('delete-strategy', strategy.id)"
-          />
         </tbody>
       </table>
     </div>
@@ -386,21 +375,18 @@ const resetColumns = () => {
   background-color: rgba(253,126,20,0.4) !important;
 }
 
+.account-section-header.pingan-section {
+  background-color: rgba(76,205,196,0.2);
+}
+
+.account-section-header.pingan-section td:first-child {
+  background-color: rgba(76,205,196,0.4) !important;
+}
+
 .empty-state {
   text-align: center;
   padding: 40px;
   color: rgba(255,255,255,0.5);
-}
-
-.pingan-table {
-  margin-top: 20px;
-  border-top: 2px solid rgba(255,255,255,0.2);
-}
-
-.pingan-title {
-  margin: 10px 15px;
-  font-size: 14px;
-  color: rgba(255,255,255,0.8);
 }
 
 .filter-header {
