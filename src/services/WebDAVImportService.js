@@ -3,7 +3,7 @@ import { database } from '../utils/Database'
 class DataConverter {
   static convertStockData(webdavData) {
     const convertedStrategies = []
-    const processedNames = new Set()
+    const processedKeys = new Set()
     
     console.log('开始转换数据，原始数据结构:', Object.keys(webdavData))
     
@@ -11,10 +11,10 @@ class DataConverter {
       console.log('stockData 数量:', webdavData.stockData.length)
       for (const stock of webdavData.stockData) {
         const strategy = this.convertStockToStrategy(stock, webdavData)
-        if (strategy && strategy.name) {
-          const key = `${strategy.name}-${strategy.accountType}`
-          if (!processedNames.has(key)) {
-            processedNames.add(key)
+        if (strategy && strategy.stockCode) {
+          const key = `${strategy.stockCode}-${strategy.accountType}-${strategy.provider || ''}`
+          if (!processedKeys.has(key)) {
+            processedKeys.add(key)
             convertedStrategies.push(strategy)
             console.log('添加策略:', strategy.name, strategy.accountType)
           }
@@ -26,10 +26,10 @@ class DataConverter {
       console.log('advancedStrategies 数量:', webdavData.advancedStrategies.length)
       for (const advanced of webdavData.advancedStrategies) {
         const strategy = this.convertAdvancedStrategy(advanced)
-        if (strategy && strategy.name) {
-          const key = `${strategy.name}-${strategy.accountType}`
-          if (!processedNames.has(key)) {
-            processedNames.add(key)
+        if (strategy && strategy.stockCode) {
+          const key = `${strategy.stockCode}-${strategy.accountType}-${strategy.provider || ''}`
+          if (!processedKeys.has(key)) {
+            processedKeys.add(key)
             convertedStrategies.push(strategy)
             console.log('添加高级策略:', strategy.name, strategy.accountType)
           }
@@ -41,33 +41,38 @@ class DataConverter {
       console.log('conditionalStrategies 数量:', webdavData.conditionalStrategies.length)
       const stockMap = {}
       for (const cond of webdavData.conditionalStrategies) {
-        const name = cond.stockName || cond.name || ''
-        if (name) {
-          if (!stockMap[name]) {
-            stockMap[name] = {
-              name: name,
-              stockCode: cond.stockCode || '',
-              accountType: this.normalizeAccountType(cond.accountType),
+        const stockCode = cond.stockCode || ''
+        const accountType = this.normalizeAccountType(cond.accountType)
+        const provider = cond.provider || ''
+        if (stockCode) {
+          const mapKey = `${stockCode}-${accountType}-${provider}`
+          if (!stockMap[mapKey]) {
+            stockMap[mapKey] = {
+              name: cond.stockName || cond.name || '',
+              stockCode: stockCode,
+              accountType: accountType,
+              provider: provider,
               decreaseStrategies: [],
               increaseStrategies: []
             }
           }
           const converted = this.convertConditionStrategy(cond)
           if (converted.side === 'SELL' || converted.side === 'COLLSELL' || converted.side === 'SELL_SHORT') {
-            stockMap[name].decreaseStrategies.push(converted)
+            stockMap[mapKey].decreaseStrategies.push(converted)
           } else {
-            stockMap[name].increaseStrategies.push(converted)
+            stockMap[mapKey].increaseStrategies.push(converted)
           }
         }
       }
-      for (const name in stockMap) {
-        const key = `${name}-${stockMap[name].accountType}`
-        if (!processedNames.has(key)) {
+      for (const mapKey in stockMap) {
+        if (!processedKeys.has(mapKey)) {
+          const item = stockMap[mapKey]
           const strategy = {
-            name: stockMap[name].name,
-            stockCode: stockMap[name].stockCode,
-            accountType: stockMap[name].accountType,
-            isMarginAccount: stockMap[name].accountType === 'credit',
+            name: item.name,
+            stockCode: item.stockCode,
+            accountType: item.accountType,
+            provider: item.provider,
+            isMarginAccount: item.accountType === 'credit',
             netPosition: 0,
             marketValue: '',
             fiveYearAvgDividendYield: '',
@@ -77,12 +82,12 @@ class DataConverter {
             breakoutGridSize: '',
             breakoutTradeAmount: '',
             decreaseSide: 'COLLSELL',
-            decreaseStrategies: stockMap[name].decreaseStrategies,
-            increaseStrategies: stockMap[name].increaseStrategies,
+            decreaseStrategies: item.decreaseStrategies,
+            increaseStrategies: item.increaseStrategies,
             notes: '',
             manualNotes: ''
           }
-          processedNames.add(key)
+          processedKeys.add(mapKey)
           convertedStrategies.push(strategy)
           console.log('添加条件单策略:', strategy.name, strategy.accountType)
         }
@@ -99,17 +104,18 @@ class DataConverter {
     const advancedStrategies = webdavData.advancedStrategies || []
     
     const name = stock.stockName || stock.name || ''
-    if (!name) {
-      console.log('跳过无名称股票:', stock)
+    const stockCode = stock.stockCode || ''
+    
+    if (!stockCode) {
+      console.log('跳过无股票代码:', stock)
       return null
     }
     
-    const stockCode = stock.stockCode || ''
     const accountType = this.normalizeAccountType(stock.accountType)
+    const provider = stock.provider || ''
     
     const existingAdvanced = advancedStrategies.find(a => {
-      const aName = a.stockName || a.name || ''
-      return aName === name && a.accountType === stock.accountType
+      return a.stockCode === stockCode && a.accountType === stock.accountType
     })
     
     if (existingAdvanced) {
@@ -118,29 +124,27 @@ class DataConverter {
     
     const decreaseStrategies = conditionalStrategies
       .filter(c => {
-        const cName = c.stockName || c.name || ''
-        return cName === name && 
+        return c.stockCode === stockCode && 
                (c.side === 'SELL' || c.side === 'COLLSELL' || c.side === 'SELL_SHORT')
       })
       .map(c => this.convertConditionStrategy(c))
     
     const increaseStrategies = conditionalStrategies
       .filter(c => {
-        const cName = c.stockName || c.name || ''
-        return cName === name && 
+        return c.stockCode === stockCode && 
                (c.side === 'BUY' || c.side === 'BUY_COVER')
       })
       .map(c => this.convertConditionStrategy(c))
     
     const gridData = gridStrategies.filter(g => {
-      const gName = g.stockName || g.name || ''
-      return gName === name
+      return g.stockCode === stockCode
     })
     
     return {
       name: name,
       stockCode: stockCode,
       accountType: accountType,
+      provider: provider,
       isMarginAccount: accountType === 'credit',
       netPosition: this.parseNumber(stock.currentAmount || stock.quantity || stock.enableAmount || 0),
       marketValue: this.formatMarketValue(stock.marketValue),
@@ -160,8 +164,10 @@ class DataConverter {
   
   static convertAdvancedStrategy(advanced) {
     const name = advanced.stockName || advanced.name || ''
-    if (!name) {
-      console.log('跳过无名称高级策略:', advanced)
+    const stockCode = advanced.stockCode || ''
+    
+    if (!stockCode) {
+      console.log('跳过无股票代码高级策略:', advanced)
       return null
     }
     
@@ -181,8 +187,9 @@ class DataConverter {
     
     return {
       name: name,
-      stockCode: advanced.stockCode || '',
+      stockCode: stockCode,
       accountType: this.normalizeAccountType(advanced.accountType),
+      provider: advanced.provider || '',
       isMarginAccount: advanced.accountType === 'credit' || advanced.isMarginAccount === true,
       netPosition: this.parseNumber(advanced.quantity || advanced.netPosition || advanced.currentAmount || 0),
       marketValue: this.formatMarketValue(advanced.marketValue),
