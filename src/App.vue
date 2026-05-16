@@ -480,8 +480,10 @@ const loadMockData = async () => {
  }
 };
 onMounted(async () => {
- await loadMockData();
- await loadStrategies();
+  await loadMockData();
+  // 页面加载时自动同步趋势数据到本地数据库
+  await trendService.syncTrendJudgmentsFromWebDAV();
+  await loadStrategies();
 });
 </script>
 
