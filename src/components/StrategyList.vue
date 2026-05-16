@@ -103,6 +103,31 @@
         </tbody>
       </table>
     </div>
+
+    <!-- 平安持仓表格 -->
+    <div v-if="pinganStrategies.length > 0" class="table-wrapper pingan-table">
+      <h4 class="pingan-title">平安持仓</h4>
+      <table class="strategy-table">
+        <thead>
+          <tr>
+            <th v-if="visibleColumns.includes('name')">策略名称</th>
+            <th>股数</th>
+            <th>市值</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <StrategyRow
+            v-for="strategy in pinganStrategies"
+            :key="strategy.id"
+            :strategy="strategy"
+            :visible-columns="['name', 'quantity', 'marketValue']"
+            @edit="$emit('edit-strategy', strategy)"
+            @delete="$emit('delete-strategy', strategy.id)"
+          />
+        </tbody>
+      </table>
+    </div>
     
     <div class="dialog-overlay" v-if="showColumnSelectDialog" @click="showColumnSelectDialog = false">
       <div class="dialog-content" @click.stop>
@@ -210,11 +235,15 @@ const getInitialVisibleColumns = () => {
 const visibleColumns = ref(getInitialVisibleColumns())
 
 const defaultStrategies = computed(() => {
-  return props.strategies.filter(s => s.accountType !== 'credit')
+  return props.strategies.filter(s => s.accountType !== 'credit' && s.provider !== 'pingan')
 })
 
 const marginStrategies = computed(() => {
-  return props.strategies.filter(s => s.accountType === 'credit')
+  return props.strategies.filter(s => s.accountType === 'credit' && s.provider !== 'pingan')
+})
+
+const pinganStrategies = computed(() => {
+  return props.strategies.filter(s => s.provider === 'pingan')
 })
 
 const handleSort = (column) => {
@@ -361,6 +390,17 @@ const resetColumns = () => {
   text-align: center;
   padding: 40px;
   color: rgba(255,255,255,0.5);
+}
+
+.pingan-table {
+  margin-top: 20px;
+  border-top: 2px solid rgba(255,255,255,0.2);
+}
+
+.pingan-title {
+  margin: 10px 15px;
+  font-size: 14px;
+  color: rgba(255,255,255,0.8);
 }
 
 .filter-header {

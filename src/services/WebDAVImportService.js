@@ -7,20 +7,6 @@ class DataConverter {
     
     console.log('开始转换数据，原始数据结构:', Object.keys(webdavData))
     
-    // 处理持仓数据，构建以 secuCode 为 key 的映射
-    const holdingsMap = {}
-    if (webdavData.holdingsData && webdavData.holdingsData.holdings) {
-      console.log('处理持仓数据, 共', webdavData.holdingsData.holdings.length, '条')
-      
-      for (const holding of webdavData.holdingsData.holdings) {
-        if (holding && holding.secuCode) {
-          const key = `${holding.secuCode}`
-          holdingsMap[key] = holding
-          console.log('持仓映射:', key, holding.secuName, holding.mktQty)
-        }
-      }
-    }
-    
     if (webdavData.stockData && Array.isArray(webdavData.stockData)) {
       console.log('stockData 数量:', webdavData.stockData.length)
       for (const stock of webdavData.stockData) {
@@ -108,16 +94,37 @@ class DataConverter {
       }
     }
     
-    // 将持仓数据合并到策略中
-    if (Object.keys(holdingsMap).length > 0) {
-      console.log('合并持仓数据到策略')
-      for (const strategy of convertedStrategies) {
-        const holding = holdingsMap[strategy.stockCode]
-        if (holding) {
-          strategy.netPosition = this.parseNumber(holding.mktQty || strategy.netPosition)
-          strategy.marketValue = this.formatMarketValue(holding.mktVal || strategy.marketValue)
-          strategy.name = strategy.name || holding.secuName || strategy.name
-          console.log('合并持仓:', strategy.stockCode, '数量:', strategy.netPosition, '市值:', strategy.marketValue)
+    // 将持仓数据作为独立的策略添加（不同 provider，不覆盖原策略）
+    if (webdavData.holdingsData && webdavData.holdingsData.holdings) {
+      console.log('添加持仓数据为独立策略')
+      for (const holding of webdavData.holdingsData.holdings) {
+        if (holding && holding.secuCode) {
+          const key = `${holding.secuCode}-${holding.accountType || 'default'}-${holding.provider || ''}`
+          if (!processedKeys.has(key)) {
+            processedKeys.add(key)
+            const strategy = {
+              name: holding.secuName || '',
+              stockCode: holding.secuCode,
+              accountType: 'default',
+              provider: holding.provider || '',
+              isMarginAccount: false,
+              netPosition: this.parseNumber(holding.mktQty || 0),
+              marketValue: this.formatMarketValue(holding.mktVal || ''),
+              fiveYearAvgDividendYield: '',
+              trendJudgment: 'unset',
+              oscillationGridSize: '',
+              oscillationTradeAmount: '',
+              breakoutGridSize: '',
+              breakoutTradeAmount: '',
+              decreaseSide: 'COLLSELL',
+              decreaseStrategies: [],
+              increaseStrategies: [],
+              notes: '',
+              manualNotes: ''
+            }
+            convertedStrategies.push(strategy)
+            console.log('添加持仓策略:', strategy.name, strategy.stockCode, strategy.provider)
+          }
         }
       }
     }
@@ -343,8 +350,8 @@ class WebDAVImportService {
       const text = await propfindResponse.text()
       console.log('PROPFIND 响应内容:', text)
       
-      // 解析 XML 响应，提取文件名
-      const jsonFiles = text.match(/<d:href>([^<]+\.json)<\/d:href>/g) || []
+      // 解析 XML 响应，提取文件名 (D:href 可能大写或小写)
+      const jsonFiles = text.match(/<[Dd]:href>([^<]+\.json)<\/[Dd]:href>/g) || []
       console.log('匹配到的 JSON 文件:', jsonFiles)
       
       if (jsonFiles.length === 0) {
