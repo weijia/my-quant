@@ -7,19 +7,16 @@ class DataConverter {
     
     console.log('开始转换数据，原始数据结构:', Object.keys(webdavData))
     
-    // 处理持仓数据，构建以 stockCode 为 key 的映射
+    // 处理持仓数据，构建以 secuCode 为 key 的映射
     const holdingsMap = {}
-    if (webdavData.holdingsData) {
-      console.log('处理持仓数据')
-      const holdingsArray = Array.isArray(webdavData.holdingsData) 
-        ? webdavData.holdingsData 
-        : [webdavData.holdingsData]
+    if (webdavData.holdingsData && webdavData.holdingsData.holdings) {
+      console.log('处理持仓数据, 共', webdavData.holdingsData.holdings.length, '条')
       
-      for (const holding of holdingsArray) {
-        if (holding && holding.stockCode) {
-          const key = `${holding.stockCode}-${this.normalizeAccountType(holding.accountType)}`
+      for (const holding of webdavData.holdingsData.holdings) {
+        if (holding && holding.secuCode) {
+          const key = `${holding.secuCode}`
           holdingsMap[key] = holding
-          console.log('持仓映射:', key, holding.stockName, holding.quantity)
+          console.log('持仓映射:', key, holding.secuName, holding.mktQty)
         }
       }
     }
@@ -115,12 +112,11 @@ class DataConverter {
     if (Object.keys(holdingsMap).length > 0) {
       console.log('合并持仓数据到策略')
       for (const strategy of convertedStrategies) {
-        const holdingKey = `${strategy.stockCode}-${strategy.accountType}`
-        const holding = holdingsMap[holdingKey]
+        const holding = holdingsMap[strategy.stockCode]
         if (holding) {
-          strategy.netPosition = this.parseNumber(holding.quantity || holding.currentAmount || strategy.netPosition)
-          strategy.marketValue = this.formatMarketValue(holding.marketValue || strategy.marketValue)
-          strategy.name = strategy.name || holding.stockName || holding.name || strategy.name
+          strategy.netPosition = this.parseNumber(holding.mktQty || strategy.netPosition)
+          strategy.marketValue = this.formatMarketValue(holding.mktVal || strategy.marketValue)
+          strategy.name = strategy.name || holding.secuName || strategy.name
           console.log('合并持仓:', strategy.stockCode, '数量:', strategy.netPosition, '市值:', strategy.marketValue)
         }
       }
