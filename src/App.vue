@@ -204,8 +204,13 @@ const loadStrategies = async () => {
         if (trend) {
           strategy.trendJudgment = normalizeTrendValue(trend.trendValue);
           // 如果策略没有 decreasePercentage，从趋势数据中获取
-          if (!strategy.decreasePercentage && trend.decreasePercentage) {
-            strategy.decreasePercentage = trend.decreasePercentage;
+          // 优先使用 price_drop_ratio（90天内最高价与当前价的下跌百分比）
+          if (!strategy.decreasePercentage) {
+            if (trend.price_drop_ratio) {
+              strategy.decreasePercentage = Math.round(trend.price_drop_ratio * 100) / 100;
+            } else if (trend.decreasePercentage) {
+              strategy.decreasePercentage = trend.decreasePercentage;
+            }
           }
           matchedCount++;
         }
@@ -579,7 +584,8 @@ const getTrendByStockCode = (stockCode, trendData) => {
     // 返回完整的趋势信息对象
     return {
       trendValue: trendInfo.autoTrendJudgment || trendInfo.trendJudgment,
-      decreasePercentage: trendInfo.decreasePercentage || null
+      decreasePercentage: trendInfo.decreasePercentage || null,
+      price_drop_ratio: trendInfo.price_drop_ratio || null
     };
   }
   

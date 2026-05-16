@@ -492,10 +492,10 @@ class WebDAVImportService {
           if (!response.ok) continue
 
           const content = await response.json()
-          const { stockCode, trendJudgment, autoTrendJudgment, trendJudgmentUpdatedAt, autoTrendJudgmentUpdatedAt, decreasePercentage } = content
+          const { stockCode, trendJudgment, autoTrendJudgment, trendJudgmentUpdatedAt, autoTrendJudgmentUpdatedAt, decreasePercentage, price_drop_ratio } = content
 
           const key = stockCode
-          if (key && (trendJudgment || autoTrendJudgment || decreasePercentage)) {
+          if (key && (trendJudgment || autoTrendJudgment || decreasePercentage || price_drop_ratio)) {
             // 检查是否已有更新的数据
             const existing = trendJudgmentsMap[key]
             const currentUpdateTime = trendJudgmentUpdatedAt || autoTrendJudgmentUpdatedAt
@@ -512,7 +512,8 @@ class WebDAVImportService {
                 trendJudgmentUpdatedAt: trendJudgmentUpdatedAt || null,
                 autoTrendJudgment: autoTrendJudgment || null,
                 autoTrendJudgmentUpdatedAt: autoTrendJudgmentUpdatedAt || null,
-                decreasePercentage: decreasePercentage || null
+                decreasePercentage: decreasePercentage || null,
+                price_drop_ratio: price_drop_ratio || null
               }
               validCount++
             }
