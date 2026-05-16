@@ -172,27 +172,49 @@ const loadStrategies = async () => {
    const trendData = await getTrendData();
    
    // 获取策略列表
-   const result = await strategyService.getAllStrategies({
-     accountType: filter.accountType,
-     trend: filter.trend,
-     sortBy: filter.sortBy,
-     sortOrder: filter.sortOrder
-   });
+  const result = await strategyService.getAllStrategies({
+    accountType: filter.accountType,
+    trend: filter.trend,
+    sortBy: filter.sortBy,
+    sortOrder: filter.sortOrder
+  });
    
-   // 为每个策略注入实时趋势值
-   if (trendData && result.length > 0) {
-     let matchedCount = 0;
-     for (const strategy of result) {
-       const trend = getTrendByStockCode(strategy.stockCode, trendData);
-       if (trend) {
-         strategy.trendJudgment = normalizeTrendValue(trend);
-         matchedCount++;
-       }
-     }
-     console.log('loadStrategies: 为', matchedCount, '个策略注入了实时趋势值');
-   }
+  // 清理策略名称，去除其中的股票代码
+  const cleanName = (name, stockCode) => {
+    if (!name) return '';
+    // 去除形如 (600519) 或 (600519.SH) 的股票代码
+    let cleaned = name.replace(/\(\d{6}(\.\w+)?\)/g, '').trim();
+    // 如果清理后为空，使用 stockCode
+    if (!cleaned && stockCode) {
+      cleaned = stockCode;
+    }
+    return cleaned;
+  };
    
-   strategies.value = result;
+  // 为每个策略注入实时趋势值并清理名称
+  if (result.length > 0) {
+    let matchedCount = 0;
+    for (const strategy of result) {
+      // 清理名称
+      strategy.name = cleanName(strategy.name, strategy.stockCode);
+      
+      // 注入实时趋势值和下跌百分比
+      if (trendData) {
+        const trend = getTrendByStockCode(strategy.stockCode, trendData);
+        if (trend) {
+          strategy.trendJudgment = normalizeTrendValue(trend.trendValue);
+          // 如果策略没有 decreasePercentage，从趋势数据中获取
+          if (!strategy.decreasePercentage && trend.decreasePercentage) {
+            strategy.decreasePercentage = trend.decreasePercentage;
+          }
+          matchedCount++;
+        }
+      }
+    }
+    console.log('loadStrategies: 为', matchedCount, '个策略注入了实时趋势值');
+  }
+   
+  strategies.value = result;
  }
  catch (error) {
    console.error('加载策略失败:', error);
@@ -530,7 +552,7 @@ const normalizeTrendValue = (value) => {
   return `trend_${value}`;
 };
 
-// 根据 stockCode 获取趋势值
+// 根据 stockCode 获取趋势信息（包含趋势值和下跌百分比）
 const getTrendByStockCode = (stockCode, trendData) => {
   if (!trendData || !stockCode) return null;
   
@@ -554,8 +576,11 @@ const getTrendByStockCode = (stockCode, trendData) => {
   }
   
   if (trendInfo) {
-    // 优先使用自动趋势判断
-    return trendInfo.autoTrendJudgment || trendInfo.trendJudgment;
+    // 返回完整的趋势信息对象
+    return {
+      trendValue: trendInfo.autoTrendJudgment || trendInfo.trendJudgment,
+      decreasePercentage: trendInfo.decreasePercentage || null
+    };
   }
   
   return null;
