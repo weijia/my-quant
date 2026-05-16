@@ -32,25 +32,74 @@ class TrendService {
         return false
       }
 
-      console.log('TrendService: 获取到的趋势数据键:', Object.keys(trendData))
+      const trendKeys = Object.keys(trendData)
+      console.log('TrendService: 获取到的趋势数据键:', trendKeys)
+      console.log('TrendService: 趋势数据示例:', JSON.stringify(Object.entries(trendData).slice(0, 2)))
 
       // 获取所有策略
       const strategies = await strategyService.getAllStrategies()
       console.log('TrendService: 数据库中的策略数量:', strategies.length)
+      console.log('TrendService: 数据库中的策略股票代码:', strategies.map(s => s.stockCode))
       
       let updatedCount = 0
       let matchedCount = 0
 
       for (const strategy of strategies) {
         const stockCode = strategy.stockCode
-        // 尝试直接匹配 stockCode
-        let trendInfo = trendData[stockCode]
+        if (!stockCode) continue
         
-        // 如果直接匹配失败，尝试标准化后匹配（如去掉 .SH/.SZ 后缀）
-        if (!trendInfo && stockCode) {
-          const normalizedCode = stockCode.replace(/\.(SH|SZ)$/i, '')
-          trendInfo = trendData[normalizedCode]
-          console.log(`TrendService: 标准化匹配 ${stockCode} -> ${normalizedCode}:`, trendInfo ? '成功' : '失败')
+        // 尝试多种匹配方式
+        let trendInfo = null
+        const matchAttempts = []
+        
+        // 1. 直接匹配
+        if (trendData[stockCode]) {
+          trendInfo = trendData[stockCode]
+          matchAttempts.push({ type: 'direct', code: stockCode, success: true })
+        }
+        
+        // 2. 去掉 .SH/.SZ 后缀
+        if (!trendInfo && stockCode.includes('.')) {
+          const normalizedCode = stockCode.split('.')[0]
+          if (trendData[normalizedCode]) {
+            trendInfo = trendData[normalizedCode]
+            matchAttempts.push({ type: 'normalize', code: `${stockCode} -> ${normalizedCode}`, success: true })
+          } else {
+            matchAttempts.push({ type: 'normalize', code: `${stockCode} -> ${normalizedCode}`, success: false })
+          }
+        }
+        
+        // 3. 加上 .SH 后缀
+        if (!trendInfo) {
+          const shCode = stockCode + '.SH'
+          if (trendData[shCode]) {
+            trendInfo = trendData[shCode]
+            matchAttempts.push({ type: 'addSH', code: `${stockCode} -> ${shCode}`, success: true })
+          }
+        }
+        
+        // 4. 加上 .SZ 后缀
+        if (!trendInfo) {
+          const szCode = stockCode + '.SZ'
+          if (trendData[szCode]) {
+            trendInfo = trendData[szCode]
+            matchAttempts.push({ type: 'addSZ', code: `${stockCode} -> ${szCode}`, success: true })
+          }
+        }
+        
+        // 5. 如果 stockCode 包含后缀，尝试纯数字匹配
+        if (!trendInfo && /\.\w+$/.test(stockCode)) {
+          const pureCode = stockCode.replace(/\.\w+$/, '')
+          if (trendData[pureCode]) {
+            trendInfo = trendData[pureCode]
+            matchAttempts.push({ type: 'pureCode', code: `${stockCode} -> ${pureCode}`, success: true })
+          }
+        }
+
+        // 打印匹配尝试结果（用于调试）
+        const failedMatch = matchAttempts.find(m => !m.success)
+        if (failedMatch && matchedCount < 3) {
+          console.log(`TrendService: 策略 ${strategy.name}(${stockCode}) 匹配尝试:`, matchAttempts)
         }
 
         if (trendInfo) {
@@ -80,6 +129,7 @@ class TrendService {
       // 如果没有匹配到任何策略，提示用户可能需要先同步 WebDAV
       if (matchedCount === 0 && strategies.length > 0) {
         console.warn('TrendService: 未匹配到任何策略，可能需要先点击"同步WebDAV"按钮导入策略数据')
+        console.warn('TrendService: 请检查控制台日志，确认 stockCode 格式是否匹配')
       }
       
       return true
