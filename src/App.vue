@@ -168,16 +168,34 @@ const filteredStrategies = computed(() => {
 });
 const loadStrategies = async () => {
  try {
- const result = await strategyService.getAllStrategies({
- accountType: filter.accountType,
- trend: filter.trend,
- sortBy: filter.sortBy,
- sortOrder: filter.sortOrder
- });
- strategies.value = result;
+   // 先获取趋势数据缓存
+   const trendData = await getTrendData();
+   
+   // 获取策略列表
+   const result = await strategyService.getAllStrategies({
+     accountType: filter.accountType,
+     trend: filter.trend,
+     sortBy: filter.sortBy,
+     sortOrder: filter.sortOrder
+   });
+   
+   // 为每个策略注入实时趋势值
+   if (trendData && result.length > 0) {
+     let matchedCount = 0;
+     for (const strategy of result) {
+       const trend = getTrendByStockCode(strategy.stockCode, trendData);
+       if (trend) {
+         strategy.trendJudgment = normalizeTrendValue(trend);
+         matchedCount++;
+       }
+     }
+     console.log('loadStrategies: 为', matchedCount, '个策略注入了实时趋势值');
+   }
+   
+   strategies.value = result;
  }
  catch (error) {
- console.error('加载策略失败:', error);
+   console.error('加载策略失败:', error);
  }
 };
 const showAddDialog = () => {
@@ -479,11 +497,90 @@ const loadMockData = async () => {
  }
  }
 };
+
+// 缓存趋势数据，避免重复请求
+let cachedTrendData = null;
+let trendDataPromise = null;
+
+// 获取趋势数据（带缓存）
+const getTrendData = async () => {
+  if (cachedTrendData) return cachedTrendData;
+  if (trendDataPromise) return trendDataPromise;
+  
+  trendDataPromise = (async () => {
+    try {
+      const { webdavImportService } = await import('./services/WebDAVImportService');
+      cachedTrendData = await webdavImportService.fetchTrendJudgments();
+      return cachedTrendData;
+    } catch (error) {
+      console.error('获取趋势数据失败:', error);
+      return null;
+    }
+  })();
+  
+  return trendDataPromise;
+};
+
+// 标准化趋势值（添加 trend_ 前缀）
+const normalizeTrendValue = (value) => {
+  if (!value) return 'unset';
+  if (value.startsWith('trend_') || value === 'unset' || value === 'high_volatility' || value === 'medium_volatility' || value === 'low_volatility' || value === 'trend_breakdown' || value === 'trend_unknown') {
+    return value;
+  }
+  return `trend_${value}`;
+};
+
+// 根据 stockCode 获取趋势值
+const getTrendByStockCode = (stockCode, trendData) => {
+  if (!trendData || !stockCode) return null;
+  
+  // 尝试多种匹配方式
+  let trendInfo = trendData[stockCode];
+  
+  if (!trendInfo && stockCode.includes('.')) {
+    trendInfo = trendData[stockCode.split('.')[0]];
+  }
+  
+  if (!trendInfo) {
+    trendInfo = trendData[stockCode + '.SH'];
+  }
+  
+  if (!trendInfo) {
+    trendInfo = trendData[stockCode + '.SZ'];
+  }
+  
+  if (!trendInfo && /\.\w+$/.test(stockCode)) {
+    trendInfo = trendData[stockCode.replace(/\.\w+$/, '')];
+  }
+  
+  if (trendInfo) {
+    // 优先使用自动趋势判断
+    return trendInfo.autoTrendJudgment || trendInfo.trendJudgment;
+  }
+  
+  return null;
+};
+
 onMounted(async () => {
+  console.log('App: 开始初始化...');
   await loadMockData();
-  // 页面加载时自动同步趋势数据到本地数据库
-  await trendService.syncTrendJudgmentsFromWebDAV();
+  console.log('App: loadMockData 完成');
+  
+  // 提前开始获取趋势数据（不等待）
+  console.log('App: 开始预加载趋势数据...');
+  getTrendData();
+  
+  // 同时加载策略
+  console.log('App: 开始加载策略...');
   await loadStrategies();
+  
+  // 策略加载完成后，异步同步趋势到数据库（不阻塞界面）
+  trendService.syncTrendJudgmentsFromWebDAV().then(result => {
+    console.log('App: 后台趋势同步完成:', result);
+    // 可选：重新加载策略以刷新数据库中的趋势值
+  });
+  
+  console.log('App: 初始化完成（界面已可交互）');
 });
 </script>
 

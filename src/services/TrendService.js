@@ -44,18 +44,28 @@ class TrendService {
       let updatedCount = 0
       let matchedCount = 0
 
+      // 将简化的趋势值转换为带前缀的格式
+      // WebDAV: 'up' -> 'trend_up', 'down' -> 'trend_down', 'oscillation' -> 'trend_oscillation'
+      const normalizeTrendValue = (value) => {
+        if (!value) return null
+        // 如果已经有前缀，直接返回
+        if (value.startsWith('trend_') || value === 'unset' || value === 'high_volatility' || value === 'medium_volatility' || value === 'low_volatility' || value === 'trend_breakdown') {
+          return value
+        }
+        // 否则添加前缀
+        return `trend_${value}`
+      }
+
       for (const strategy of strategies) {
         const stockCode = strategy.stockCode
         if (!stockCode) continue
         
         // 尝试多种匹配方式
         let trendInfo = null
-        const matchAttempts = []
         
         // 1. 直接匹配
         if (trendData[stockCode]) {
           trendInfo = trendData[stockCode]
-          matchAttempts.push({ type: 'direct', code: stockCode, success: true })
         }
         
         // 2. 去掉 .SH/.SZ 后缀
@@ -63,9 +73,6 @@ class TrendService {
           const normalizedCode = stockCode.split('.')[0]
           if (trendData[normalizedCode]) {
             trendInfo = trendData[normalizedCode]
-            matchAttempts.push({ type: 'normalize', code: `${stockCode} -> ${normalizedCode}`, success: true })
-          } else {
-            matchAttempts.push({ type: 'normalize', code: `${stockCode} -> ${normalizedCode}`, success: false })
           }
         }
         
@@ -74,7 +81,6 @@ class TrendService {
           const shCode = stockCode + '.SH'
           if (trendData[shCode]) {
             trendInfo = trendData[shCode]
-            matchAttempts.push({ type: 'addSH', code: `${stockCode} -> ${shCode}`, success: true })
           }
         }
         
@@ -83,7 +89,6 @@ class TrendService {
           const szCode = stockCode + '.SZ'
           if (trendData[szCode]) {
             trendInfo = trendData[szCode]
-            matchAttempts.push({ type: 'addSZ', code: `${stockCode} -> ${szCode}`, success: true })
           }
         }
         
@@ -92,26 +97,19 @@ class TrendService {
           const pureCode = stockCode.replace(/\.\w+$/, '')
           if (trendData[pureCode]) {
             trendInfo = trendData[pureCode]
-            matchAttempts.push({ type: 'pureCode', code: `${stockCode} -> ${pureCode}`, success: true })
           }
-        }
-
-        // 打印匹配尝试结果（用于调试）
-        const failedMatch = matchAttempts.find(m => !m.success)
-        if (failedMatch && matchedCount < 3) {
-          console.log(`TrendService: 策略 ${strategy.name}(${stockCode}) 匹配尝试:`, matchAttempts)
         }
 
         if (trendInfo) {
           matchedCount++
           const updateData = {}
           
-          // 优先使用自动趋势判断
+          // 优先使用自动趋势判断，并转换为带前缀的格式
           if (trendInfo.autoTrendJudgment) {
-            updateData.trendJudgment = trendInfo.autoTrendJudgment
+            updateData.trendJudgment = normalizeTrendValue(trendInfo.autoTrendJudgment)
             updateData.trendJudgmentUpdatedAt = trendInfo.autoTrendJudgmentUpdatedAt || new Date().toISOString()
           } else if (trendInfo.trendJudgment) {
-            updateData.trendJudgment = trendInfo.trendJudgment
+            updateData.trendJudgment = normalizeTrendValue(trendInfo.trendJudgment)
             updateData.trendJudgmentUpdatedAt = trendInfo.trendJudgmentUpdatedAt || new Date().toISOString()
           }
 
