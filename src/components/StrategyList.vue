@@ -25,7 +25,19 @@
                 </span>
               </div>
             </th>
-            <th v-if="visibleColumns.includes('quantity')">股数</th>
+            <th v-if="visibleColumns.includes('quantity')">
+              <div class="filter-header">
+                <span>股数</span>
+                <label class="toggle-filter">
+                  <input 
+                    type="checkbox" 
+                    v-model="hideZeroQuantity"
+                    @change="saveHideZeroQuantity"
+                  >
+                  <span class="toggle-label">隐藏0股</span>
+                </label>
+              </div>
+            </th>
             <th v-if="visibleColumns.includes('marketValue')" class="sortable-header" @click="handleSort('marketValue')">
               <div class="sort-header-content">
                 <span class="header-text">市值</span>
@@ -51,11 +63,15 @@
                 >
                   <option value="all">全部</option>
                   <option value="unset">未设置</option>
-                  <option value="unknown">未知</option>
-                  <option value="up">上升</option>
-                  <option value="down">下降</option>
-                  <option value="oscillation">震荡</option>
-                  <option value="pullback">回踩</option>
+                  <option value="trend_unknown">未知趋势</option>
+                  <option value="trend_up">上涨趋势</option>
+                  <option value="trend_down">下跌趋势</option>
+                  <option value="trend_breakdown">下跌破位</option>
+                  <option value="trend_oscillation">震荡趋势</option>
+                  <option value="trend_pullback">回踩趋势</option>
+                  <option value="high_volatility">高波动率</option>
+                  <option value="medium_volatility">中等波动率</option>
+                  <option value="low_volatility">低波动率</option>
                 </select>
               </div>
             </th>
@@ -178,6 +194,11 @@ const emit = defineEmits([
 ])
 
 const showColumnSelectDialog = ref(false)
+const hideZeroQuantity = ref(localStorage.getItem('hideZeroQuantity') === 'true')
+
+const saveHideZeroQuantity = () => {
+  localStorage.setItem('hideZeroQuantity', hideZeroQuantity.value)
+}
 
 const allColumns = [
   { key: 'name', label: '策略名称' },
@@ -225,14 +246,17 @@ const visibleColumns = ref(getInitialVisibleColumns())
 
 const defaultStrategies = computed(() => {
   return props.strategies.filter(s => s.accountType !== 'credit' && s.provider !== 'pingan')
+    .filter(s => !hideZeroQuantity.value || (s.netPosition || 0) !== 0)
 })
 
 const marginStrategies = computed(() => {
   return props.strategies.filter(s => s.accountType === 'credit' && s.provider !== 'pingan')
+    .filter(s => !hideZeroQuantity.value || (s.netPosition || 0) !== 0)
 })
 
 const pinganStrategies = computed(() => {
   return props.strategies.filter(s => s.provider === 'pingan')
+    .filter(s => !hideZeroQuantity.value || (s.netPosition || 0) !== 0)
 })
 
 const handleSort = (column) => {
@@ -405,6 +429,23 @@ const resetColumns = () => {
   color: white;
   cursor: pointer;
   width: 80px;
+}
+
+.toggle-filter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.toggle-filter input[type="checkbox"] {
+  accent-color: #4ecdc4;
+  cursor: pointer;
+}
+
+.toggle-label {
+  color: rgba(255,255,255,0.7);
 }
 
 .sortable-header {

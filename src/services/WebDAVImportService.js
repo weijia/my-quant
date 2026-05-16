@@ -4,13 +4,15 @@ class DataConverter {
   static convertStockData(webdavData) {
     const convertedStrategies = []
     const processedKeys = new Set()
-    
+    const trendJudgments = webdavData.trendJudgments || {}
+
     console.log('开始转换数据，原始数据结构:', Object.keys(webdavData))
-    
+    console.log('趋势判断数据:', Object.keys(trendJudgments).length, '条')
+
     if (webdavData.stockData && Array.isArray(webdavData.stockData)) {
       console.log('stockData 数量:', webdavData.stockData.length)
       for (const stock of webdavData.stockData) {
-        const strategy = this.convertStockToStrategy(stock, webdavData)
+        const strategy = this.convertStockToStrategy(stock, webdavData, trendJudgments)
         if (strategy && strategy.stockCode) {
           const key = `${strategy.stockCode}-${strategy.accountType}-${strategy.provider || ''}`
           if (!processedKeys.has(key)) {
@@ -21,11 +23,11 @@ class DataConverter {
         }
       }
     }
-    
+
     if (webdavData.advancedStrategies && Array.isArray(webdavData.advancedStrategies)) {
       console.log('advancedStrategies 数量:', webdavData.advancedStrategies.length)
       for (const advanced of webdavData.advancedStrategies) {
-        const strategy = this.convertAdvancedStrategy(advanced)
+        const strategy = this.convertAdvancedStrategy(advanced, trendJudgments)
         if (strategy && strategy.stockCode) {
           const key = `${strategy.stockCode}-${strategy.accountType}-${strategy.provider || ''}`
           if (!processedKeys.has(key)) {
@@ -36,7 +38,7 @@ class DataConverter {
         }
       }
     }
-    
+
     if (webdavData.conditionalStrategies && Array.isArray(webdavData.conditionalStrategies)) {
       console.log('conditionalStrategies 数量:', webdavData.conditionalStrategies.length)
       const stockMap = {}
@@ -98,7 +100,8 @@ class DataConverter {
     if (webdavData.holdingsData && webdavData.holdingsData.holdings) {
       console.log('添加持仓数据为独立策略')
       for (const holding of webdavData.holdingsData.holdings) {
-        if (holding && holding.secuCode) {
+        // 过滤股数为0的持仓
+        if (holding && holding.secuCode && (holding.mktQty || 0) !== 0) {
           const key = `${holding.secuCode}-${holding.accountType || 'default'}-${holding.provider || ''}`
           if (!processedKeys.has(key)) {
             processedKeys.add(key)
@@ -133,30 +136,35 @@ class DataConverter {
     return convertedStrategies
   }
   
-  static convertStockToStrategy(stock, webdavData) {
+  static convertStockToStrategy(stock, webdavData, trendJudgments = {}) {
     const conditionalStrategies = webdavData.conditionalStrategies || []
     const gridStrategies = webdavData.gridStrategies || []
     const advancedStrategies = webdavData.advancedStrategies || []
-    
+
     const name = stock.stockName || stock.name || ''
     const stockCode = stock.stockCode || ''
-    
+
     if (!stockCode) {
       console.log('跳过无股票代码:', stock)
       return null
     }
-    
+
+    // 获取该股票的趋势判断数据
+    const trendData = trendJudgments[stockCode] || {}
+    // 优先使用自动趋势判断，否则使用手动趋势判断
+    const trendValue = trendData.autoTrendJudgment || trendData.trendJudgment || 'unset'
+
     const accountType = this.normalizeAccountType(stock.accountType)
     const provider = stock.provider || ''
-    
+
     const existingAdvanced = advancedStrategies.find(a => {
       return a.stockCode === stockCode && a.accountType === stock.accountType
     })
-    
+
     if (existingAdvanced) {
-      return this.convertAdvancedStrategy(existingAdvanced)
+      return this.convertAdvancedStrategy(existingAdvanced, trendJudgments)
     }
-    
+
     const decreaseStrategies = conditionalStrategies
       .filter(c => {
         return c.stockCode === stockCode && 
@@ -184,7 +192,7 @@ class DataConverter {
       netPosition: this.parseNumber(stock.currentAmount || stock.quantity || stock.enableAmount || 0),
       marketValue: this.formatMarketValue(stock.marketValue),
       fiveYearAvgDividendYield: this.parseNumber(stock.dividendYield || stock.fiveYearAvgDividendYield || ''),
-      trendJudgment: 'unset',
+      trendJudgment: trendValue,
       oscillationGridSize: gridData.length > 0 ? this.parseNumber(gridData[0].gridSize || gridData[0].oscillationGridSize || '') : '',
       oscillationTradeAmount: gridData.length > 0 ? this.parseNumber(gridData[0].tradeAmount || gridData[0].oscillationTradeAmount || '') : '',
       breakoutGridSize: gridData.length > 1 ? this.parseNumber(gridData[1].gridSize || gridData[1].breakoutGridSize || '') : '',
@@ -197,29 +205,34 @@ class DataConverter {
     }
   }
   
-  static convertAdvancedStrategy(advanced) {
+  static convertAdvancedStrategy(advanced, trendJudgments = {}) {
     const name = advanced.stockName || advanced.name || ''
     const stockCode = advanced.stockCode || ''
-    
+
     if (!stockCode) {
       console.log('跳过无股票代码高级策略:', advanced)
       return null
     }
-    
+
+    // 获取该股票的趋势判断数据
+    const trendData = trendJudgments[stockCode] || {}
+    // 优先使用 WebDAV 趋势数据中的自动趋势判断，其次手动趋势判断，最后使用高级策略本身的趋势判断
+    const trendValue = trendData.autoTrendJudgment || trendData.trendJudgment || advanced.trendJudgment || 'unset'
+
     const decreaseStrategies = (advanced.decreaseStrategies || [])
       .map(c => ({
         deltaPercentage: c.deltaPercentage || c.delta || '',
         tradeVolume: c.tradeVolume || c.volume || c.tradeAmount || '',
         side: c.side || 'SELL'
       }))
-    
+
     const increaseStrategies = (advanced.increaseStrategies || [])
       .map(c => ({
         deltaPercentage: c.deltaPercentage || c.delta || '',
         tradeVolume: c.tradeVolume || c.volume || c.tradeAmount || '',
         side: c.side || 'BUY'
       }))
-    
+
     return {
       name: name,
       stockCode: stockCode,
@@ -235,7 +248,7 @@ class DataConverter {
       decreaseAmount: this.parseNumber(advanced.decreaseAmount || ''),
       increasePercentage: this.parseNumber(advanced.increasePercentage || ''),
       increaseAmount: this.parseNumber(advanced.increaseAmount || ''),
-      trendJudgment: advanced.trendJudgment || 'unset',
+      trendJudgment: trendValue,
       expiryDate: advanced.expiryDate || '',
       oscillationGridSize: this.parseNumber(advanced.oscillationGridSize || ''),
       oscillationTradeAmount: this.parseNumber(advanced.oscillationTradeAmount || ''),
@@ -300,6 +313,7 @@ class WebDAVImportService {
   constructor() {
     this.webdavBaseUrl = 'https://your-webdav-server.com/dav/app_data/stocks/'
     this.holdingsBaseUrl = 'https://your-webdav-server.com/dav/app_data/holdings/pingan/'
+    this.trendBaseUrl = 'https://your-webdav-server.com/dav/app_data/stocks/trend_judgments/'
   }
   
   async fetchFromWebDAV(filename = 'all_strategies.json') {
@@ -388,18 +402,109 @@ class WebDAVImportService {
       return null
     }
   }
-  
+
+  async fetchTrendJudgments() {
+    try {
+      console.log('正在获取趋势判断目录文件列表:', this.trendBaseUrl)
+      const propfindResponse = await fetch(this.trendBaseUrl, {
+        method: 'PROPFIND',
+        headers: {
+          'Depth': '1',
+          'Content-Type': 'application/xml'
+        }
+      })
+
+      console.log('趋势判断 PROPFIND 响应状态:', propfindResponse.status)
+
+      if (!propfindResponse.ok) {
+        console.warn('获取趋势判断目录列表失败:', propfindResponse.status)
+        return null
+      }
+
+      const text = await propfindResponse.text()
+
+      // 解析 XML 响应，提取文件名
+      const jsonFiles = text.match(/<[Dd]:href>(trend_judgment_[^<]+\.json)<\/[Dd]:href>/g) || []
+      console.log('匹配到的趋势判断文件:', jsonFiles)
+
+      if (jsonFiles.length === 0) {
+        console.log('趋势判断目录中没有找到 JSON 文件')
+        return null
+      }
+
+      // 创建一个映射来存储每个股票的最新趋势判断
+      const trendJudgmentsMap = {}
+      let validCount = 0
+
+      // 遍历所有趋势判断文件
+      for (const fileEntry of jsonFiles) {
+        const fileName = fileEntry.replace(/<\/?[Dd]:href>/g, '')
+        const fileUrl = this.trendBaseUrl + fileName
+
+        try {
+          const response = await fetch(fileUrl, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json'
+            }
+          })
+
+          if (!response.ok) continue
+
+          const content = await response.json()
+          const { stockCode, trendJudgment, autoTrendJudgment, trendJudgmentUpdatedAt, autoTrendJudgmentUpdatedAt } = content
+
+          const key = stockCode
+          if (key && (trendJudgment || autoTrendJudgment)) {
+            // 检查是否已有更新的数据
+            const existing = trendJudgmentsMap[key]
+            const currentUpdateTime = trendJudgmentUpdatedAt || autoTrendJudgmentUpdatedAt
+            const existingUpdateTime = existing ? (existing.trendJudgmentUpdatedAt || existing.autoTrendJudgmentUpdatedAt) : null
+
+            const shouldUpdate = !existing ||
+              !existingUpdateTime ||
+              !currentUpdateTime ||
+              new Date(currentUpdateTime) > new Date(existingUpdateTime)
+
+            if (shouldUpdate) {
+              trendJudgmentsMap[key] = {
+                trendJudgment: trendJudgment || null,
+                trendJudgmentUpdatedAt: trendJudgmentUpdatedAt || null,
+                autoTrendJudgment: autoTrendJudgment || null,
+                autoTrendJudgmentUpdatedAt: autoTrendJudgmentUpdatedAt || null
+              }
+              validCount++
+            }
+          }
+        } catch (e) {
+          console.warn('获取趋势文件失败:', fileName, e)
+        }
+      }
+
+      console.log(`成功获取 ${validCount} 条趋势判断数据`)
+      return validCount > 0 ? trendJudgmentsMap : null
+    } catch (error) {
+      console.warn('获取趋势判断数据失败:', error)
+      return null
+    }
+  }
+
   async importFromWebDAV(clearBeforeImport = true) {
     try {
-      const [webdavData, holdingsData] = await Promise.all([
+      const [webdavData, holdingsData, trendJudgments] = await Promise.all([
         this.fetchFromWebDAV(),
-        this.fetchHoldings()
+        this.fetchHoldings(),
+        this.fetchTrendJudgments()
       ])
-      
+
       if (holdingsData) {
         webdavData.holdingsData = holdingsData
       }
-      
+
+      if (trendJudgments) {
+        webdavData.trendJudgments = trendJudgments
+      }
+
       return await this.importFromData(webdavData, clearBeforeImport)
     } catch (error) {
       console.error('从 WebDAV 导入数据失败:', error)
@@ -410,7 +515,7 @@ class WebDAVImportService {
       }
     }
   }
-  
+
   async importFromData(webdavData, clearBeforeImport = true) {
     try {
       console.log('开始转换数据...')

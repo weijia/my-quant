@@ -72,11 +72,15 @@
         <select v-model="filter.trend" @change="loadStrategies" class="filter-select">
           <option value="all">全部</option>
           <option value="unset">未设置</option>
-          <option value="unknown">未知</option>
-          <option value="up">上升</option>
-          <option value="down">下降</option>
-          <option value="oscillation">震荡</option>
-          <option value="pullback">回踩</option>
+          <option value="trend_unknown">未知趋势</option>
+          <option value="trend_up">上涨趋势</option>
+          <option value="trend_down">下跌趋势</option>
+          <option value="trend_breakdown">下跌破位</option>
+          <option value="trend_oscillation">震荡趋势</option>
+          <option value="trend_pullback">回踩趋势</option>
+          <option value="high_volatility">高波动率</option>
+          <option value="medium_volatility">中等波动率</option>
+          <option value="low_volatility">低波动率</option>
         </select>
       </div>
       <div class="filter-group">
@@ -340,9 +344,9 @@ const loadMockData = async () => {
  decreasePercentage: '5',
  decreaseAmount: '200',
  increasePercentage: '8',
- increaseAmount: '300',
- trendJudgment: 'up',
- oscillationGridSize: '2.5',
+      increaseAmount: '300',
+      trendJudgment: 'trend_up',
+      oscillationGridSize: '2.5',
  oscillationTradeAmount: '100',
  breakoutGridSize: '5.0',
  breakoutTradeAmount: '200',
@@ -367,9 +371,9 @@ const loadMockData = async () => {
  decreasePercentage: '3',
  decreaseAmount: '100',
  increasePercentage: '6',
- increaseAmount: '200',
- trendJudgment: 'down',
- oscillationGridSize: '1.0',
+      increaseAmount: '200',
+      trendJudgment: 'trend_down',
+      oscillationGridSize: '1.0',
  oscillationTradeAmount: '100',
  decreaseStrategies: [],
  increaseStrategies: [],
@@ -387,9 +391,9 @@ const loadMockData = async () => {
  decreasePercentage: '4',
  decreaseAmount: '150',
  increasePercentage: '7',
- increaseAmount: '200',
- trendJudgment: 'oscillation',
- oscillationGridSize: '0.5',
+      increaseAmount: '200',
+      trendJudgment: 'trend_oscillation',
+      oscillationGridSize: '0.5',
  oscillationTradeAmount: '100',
  breakoutGridSize: '1.0',
  breakoutTradeAmount: '150',
@@ -413,9 +417,9 @@ const loadMockData = async () => {
  decreasePercentage: '6',
  decreaseAmount: '100',
  increasePercentage: '10',
- increaseAmount: '150',
- trendJudgment: 'up',
- oscillationGridSize: '3.0',
+      increaseAmount: '150',
+      trendJudgment: 'trend_up',
+      oscillationGridSize: '3.0',
  oscillationTradeAmount: '50',
  decreaseStrategies: [],
  increaseStrategies: [
@@ -435,9 +439,9 @@ const loadMockData = async () => {
  decreasePercentage: '5',
  decreaseAmount: '100',
  increasePercentage: '8',
- increaseAmount: '200',
- trendJudgment: 'pullback',
- oscillationGridSize: '0.3',
+      increaseAmount: '200',
+      trendJudgment: 'trend_pullback',
+      oscillationGridSize: '0.3',
  oscillationTradeAmount: '100',
  decreaseStrategies: [],
  increaseStrategies: [],
@@ -455,9 +459,9 @@ const loadMockData = async () => {
  decreasePercentage: '5',
  decreaseAmount: '50',
  increasePercentage: '7',
- increaseAmount: '100',
- trendJudgment: 'unknown',
- oscillationGridSize: '1.5',
+      increaseAmount: '100',
+      trendJudgment: 'trend_unknown',
+      oscillationGridSize: '1.5',
  oscillationTradeAmount: '50',
  breakoutGridSize: '3.0',
  breakoutTradeAmount: '100',

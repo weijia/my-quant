@@ -33,14 +33,18 @@
       <select 
         v-model="localTrend" 
         @change="updateTrend"
-        class="trend-select"
+        :class="['trend-select', getTrendClass(localTrend)]"
       >
         <option value="unset">未设置</option>
-        <option value="unknown">未知</option>
-        <option value="up">上升</option>
-        <option value="down">下降</option>
-        <option value="oscillation">震荡</option>
-        <option value="pullback">回踩</option>
+        <option value="trend_unknown">未知趋势</option>
+        <option value="trend_up">上涨趋势</option>
+        <option value="trend_down">下跌趋势</option>
+        <option value="trend_breakdown">下跌破位</option>
+        <option value="trend_oscillation">震荡趋势</option>
+        <option value="trend_pullback">回踩趋势</option>
+        <option value="high_volatility">高波动率</option>
+        <option value="medium_volatility">中等波动率</option>
+        <option value="low_volatility">低波动率</option>
       </select>
     </td>
     
@@ -149,6 +153,22 @@ const getChangeClass = (value) => {
   const num = parseFloat(value)
   return num >= 0 ? 'positive' : 'negative'
 }
+
+const getTrendClass = (trend) => {
+  const trendColors = {
+    trend_up: 'trend-up',
+    trend_down: 'trend-down',
+    trend_breakdown: 'trend-breakdown',
+    trend_oscillation: 'trend-oscillation',
+    trend_pullback: 'trend-pullback',
+    trend_unknown: 'trend-unknown',
+    high_volatility: 'trend-high-volatility',
+    medium_volatility: 'trend-medium-volatility',
+    low_volatility: 'trend-low-volatility',
+    unset: 'trend-unset'
+  }
+  return trendColors[trend] || 'trend-unset'
+}
 </script>
 
 <style scoped>
@@ -204,6 +224,56 @@ const getChangeClass = (value) => {
 
 .trend-select:hover {
   border-color: rgba(255, 255, 255, 0.6);
+}
+
+.trend-up {
+  color: #dc3545;
+  border-color: rgba(220, 53, 69, 0.5);
+}
+
+.trend-down {
+  color: #28a745;
+  border-color: rgba(40, 167, 69, 0.5);
+}
+
+.trend-oscillation {
+  color: #ffc107;
+  border-color: rgba(255, 193, 7, 0.5);
+}
+
+.trend-pullback {
+  color: #17a2b8;
+  border-color: rgba(23, 162, 184, 0.5);
+}
+
+.trend-unknown {
+  color: #6c757d;
+  border-color: rgba(108, 117, 125, 0.5);
+}
+
+.trend-unset {
+  color: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.trend-breakdown {
+  color: #8b0000;
+  border-color: rgba(139, 0, 0, 0.5);
+}
+
+.trend-high-volatility {
+  color: #ff6600;
+  border-color: rgba(255, 102, 0, 0.5);
+}
+
+.trend-medium-volatility {
+  color: #9966ff;
+  border-color: rgba(153, 102, 255, 0.5);
+}
+
+.trend-low-volatility {
+  color: #00cc99;
+  border-color: rgba(0, 204, 153, 0.5);
 }
 
 .grid-info {

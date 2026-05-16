@@ -186,11 +186,15 @@
               class="form-select"
             >
               <option value="unset">未设置</option>
-              <option value="unknown">未知</option>
-              <option value="up">上升</option>
-              <option value="down">下降</option>
-              <option value="oscillation">震荡</option>
-              <option value="pullback">回踩</option>
+              <option value="trend_unknown">未知趋势</option>
+              <option value="trend_up">上涨趋势</option>
+              <option value="trend_down">下跌趋势</option>
+              <option value="trend_breakdown">下跌破位</option>
+              <option value="trend_oscillation">震荡趋势</option>
+              <option value="trend_pullback">回踩趋势</option>
+              <option value="high_volatility">高波动率</option>
+              <option value="medium_volatility">中等波动率</option>
+              <option value="low_volatility">低波动率</option>
             </select>
           </div>
           
