@@ -145,6 +145,32 @@ class Database {
     }
     return docs.length
   }
+
+  async clearAllStrategies() {
+    const result = await this.db.allDocs({
+      include_docs: true,
+      startkey: this.strategyPrefix,
+      endkey: this.strategyPrefix + '\uffff'
+    })
+
+    const deletePromises = result.rows.map(row => {
+      return this.db.remove(row.doc._id, row.doc._rev)
+    })
+
+    await Promise.all(deletePromises)
+    return result.rows.length
+  }
+
+  async clearAllData() {
+    const result = await this.db.allDocs({ include_docs: true })
+
+    const deletePromises = result.rows.map(row => {
+      return this.db.remove(row.doc._id, row.doc._rev)
+    })
+
+    await Promise.all(deletePromises)
+    return result.rows.length
+  }
 }
 
 export const database = new Database()
