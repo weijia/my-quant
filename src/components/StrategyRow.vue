@@ -134,6 +134,9 @@ const emit = defineEmits(['edit', 'delete', 'update-trend', 'batch-condition'])
 
 const localTrend = ref(props.strategy.trendJudgment || 'unset')
 
+// 【调试】监控 decreasePercentage 的值
+console.log(`[调试-StrategyRow] 渲染策略: ${props.strategy.name}(${props.strategy.stockCode}), decreasePercentage=${props.strategy.decreasePercentage}, 类型=${typeof props.strategy.decreasePercentage}`);
+
 watch(() => props.strategy.trendJudgment, (newVal) => {
   localTrend.value = newVal || 'unset'
 })

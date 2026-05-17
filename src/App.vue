@@ -267,26 +267,53 @@ const loadStrategies = async () => {
   // 为每个策略注入实时趋势值并清理名称
   if (result.length > 0) {
     let matchedCount = 0;
+    let decreaseInjectedCount = 0;
+    let decreaseMissingCount = 0;
     for (const strategy of result) {
       // 清理名称
       strategy.name = cleanName(strategy.name, strategy.stockCode);
+      
+      // 【调试】记录每个策略注入前的 decreasePercentage
+      console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 注入前 decreasePercentage: ${strategy.decreasePercentage}, 本地值: ${strategy.decreasePercentage}`);
       
       // 注入实时趋势值和下跌百分比
       if (trendData) {
         const trend = getTrendByStockCode(strategy.stockCode, trendData);
         if (trend) {
           strategy.trendJudgment = normalizeTrendValue(trend.trendValue);
+          
+          // 【调试】打印完整的 trend 对象
+          console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), trend 对象:`, JSON.stringify(trend));
+          
           // 始终用趋势数据覆盖下跌百分比
           // 优先使用 price_drop_ratio（90天内最高价与当前价的下跌百分比）
           if (trend.price_drop_ratio) {
             strategy.decreasePercentage = Math.round(trend.price_drop_ratio * 100) / 100;
+            decreaseInjectedCount++;
+            console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 使用 price_drop_ratio: ${strategy.decreasePercentage}`);
           } else if (trend.decreasePercentage) {
             strategy.decreasePercentage = trend.decreasePercentage;
+            decreaseInjectedCount++;
+            console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 使用 trend.decreasePercentage: ${strategy.decreasePercentage}`);
+          } else {
+            decreaseMissingCount++;
+            console.warn(`[调试-decreasePercentage] ⚠️ 策略: ${strategy.name}(${strategy.stockCode}), trend 匹配成功但 price_drop_ratio 和 decreasePercentage 均为空! trend 对象:`, JSON.stringify(trend));
           }
           matchedCount++;
+        } else {
+          // 【调试】trend 匹配失败
+          console.warn(`[调试-decreasePercentage] ⚠️ 策略: ${strategy.name}(${strategy.stockCode}), 未能匹配到趋势数据! trendData 的 keys:`, Object.keys(trendData).slice(0, 10));
         }
+      } else {
+        // 【调试】trendData 为空
+        console.warn(`[调试-decreasePercentage] ⚠️ 策略: ${strategy.name}(${strategy.stockCode}), trendData 为空，无法注入下跌百分比`);
       }
+      
+      // 【调试】记录注入后的最终值
+      console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 注入后 decreasePercentage: ${strategy.decreasePercentage}`);
     }
+    console.log(`[调试-decreasePercentage] ===== 汇总 =====`);
+    console.log(`[调试-decreasePercentage] 策略总数: ${result.length}, 趋势匹配数: ${matchedCount}, 下跌百分比注入数: ${decreaseInjectedCount}, 下跌百分比缺失数: ${decreaseMissingCount}`);
     console.log('loadStrategies: 为', matchedCount, '个策略注入了实时趋势值');
     if (!trendData) {
       console.warn('loadStrategies: 趋势数据为空，WebDAV 可能未配置或请求失败。策略将使用本地存储的下跌百分比。');
@@ -629,16 +656,46 @@ let trendDataPromise = null;
 
 // 获取趋势数据（带缓存）
 const getTrendData = async () => {
-  if (cachedTrendData) return cachedTrendData;
-  if (trendDataPromise) return trendDataPromise;
+  if (cachedTrendData) {
+    console.log('[调试-getTrendData] 使用缓存的趋势数据, keys 数量:', Object.keys(cachedTrendData).length);
+    return cachedTrendData;
+  }
+  if (trendDataPromise) {
+    console.log('[调试-getTrendData] 等待进行中的趋势数据请求...');
+    return trendDataPromise;
+  }
   
   trendDataPromise = (async () => {
     try {
       const { webdavImportService } = await import('./services/WebDAVImportService');
+      console.log('[调试-getTrendData] WebDAV 配置状态 - isConfigured:', webdavImportService.isConfigured(), 'trendBaseUrl:', webdavImportService.trendBaseUrl);
       cachedTrendData = await webdavImportService.fetchTrendJudgments();
+      
+      if (cachedTrendData) {
+        console.log('[调试-getTrendData] 获取趋势数据成功, keys 数量:', Object.keys(cachedTrendData).length);
+        // 【调试】打印前3条数据的结构，检查是否包含 price_drop_ratio 和 decreasePercentage
+        const sampleKeys = Object.keys(cachedTrendData).slice(0, 3);
+        for (const key of sampleKeys) {
+          console.log(`[调试-getTrendData] 样本数据 [${key}]:`, JSON.stringify(cachedTrendData[key]));
+        }
+        // 【调试】统计包含 price_drop_ratio / decreasePercentage 的数据条数
+        let hasPriceDropRatio = 0;
+        let hasDecreasePercentage = 0;
+        for (const k of Object.keys(cachedTrendData)) {
+          if (cachedTrendData[k].price_drop_ratio) hasPriceDropRatio++;
+          if (cachedTrendData[k].decreasePercentage) hasDecreasePercentage++;
+        }
+        console.log(`[调试-getTrendData] 统计: 含 price_drop_ratio 的条数: ${hasPriceDropRatio}, 含 decreasePercentage 的条数: ${hasDecreasePercentage}, 总条数: ${Object.keys(cachedTrendData).length}`);
+      } else {
+        console.warn('[调试-getTrendData] ⚠️ 获取趋势数据返回 null! 请检查:');
+        console.warn('  1. WebDAV 是否已配置 (点击"WebDAV设置"按钮)');
+        console.warn('  2. WebDAV 服务器是否可访问');
+        console.warn('  3. 趋势判断目录是否存在文件: trend_judgment_*.json');
+      }
+      
       return cachedTrendData;
     } catch (error) {
-      console.error('获取趋势数据失败:', error);
+      console.error('[调试-getTrendData] 获取趋势数据异常:', error);
       return null;
     }
   })();
@@ -657,36 +714,50 @@ const normalizeTrendValue = (value) => {
 
 // 根据 stockCode 获取趋势信息（包含趋势值和下跌百分比）
 const getTrendByStockCode = (stockCode, trendData) => {
-  if (!trendData || !stockCode) return null;
+  if (!trendData || !stockCode) {
+    console.log(`[调试-getTrendByStockCode] 参数为空 - stockCode: ${stockCode}, trendData: ${!!trendData}`);
+    return null;
+  }
   
   // 尝试多种匹配方式
   let trendInfo = trendData[stockCode];
+  let matchMethod = trendInfo ? '直接匹配' : null;
   
   if (!trendInfo && stockCode.includes('.')) {
-    trendInfo = trendData[stockCode.split('.')[0]];
+    const key = stockCode.split('.')[0];
+    trendInfo = trendData[key];
+    if (trendInfo) matchMethod = `去后缀匹配 (${key})`;
   }
   
   if (!trendInfo) {
-    trendInfo = trendData[stockCode + '.SH'];
+    const key = stockCode + '.SH';
+    trendInfo = trendData[key];
+    if (trendInfo) matchMethod = `加.SH匹配 (${key})`;
   }
   
   if (!trendInfo) {
-    trendInfo = trendData[stockCode + '.SZ'];
+    const key = stockCode + '.SZ';
+    trendInfo = trendData[key];
+    if (trendInfo) matchMethod = `加.SZ匹配 (${key})`;
   }
   
   if (!trendInfo && /\.\w+$/.test(stockCode)) {
-    trendInfo = trendData[stockCode.replace(/\.\w+$/, '')];
+    const key = stockCode.replace(/\.\w+$/, '');
+    trendInfo = trendData[key];
+    if (trendInfo) matchMethod = `去后缀匹配 (${key})`;
   }
   
   if (trendInfo) {
-    // 返回完整的趋势信息对象
-    return {
+    const result = {
       trendValue: trendInfo.autoTrendJudgment || trendInfo.trendJudgment,
       decreasePercentage: trendInfo.decreasePercentage || null,
       price_drop_ratio: trendInfo.price_drop_ratio || null
     };
+    console.log(`[调试-getTrendByStockCode] ✅ 匹配成功: stockCode=${stockCode}, 方法=${matchMethod}, result=`, JSON.stringify(result));
+    return result;
   }
   
+  console.warn(`[调试-getTrendByStockCode] ❌ 匹配失败: stockCode=${stockCode}, 尝试了所有匹配方式均未找到`);
   return null;
 };
 
