@@ -190,7 +190,7 @@ const getTrendClass = (trend) => {
 
 .name-cell {
   font-weight: bold;
-  min-width: 100px;
+  min-width: 60px;
 }
 
 .stock-code {

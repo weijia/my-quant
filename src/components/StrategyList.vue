@@ -378,7 +378,7 @@ const resetColumns = () => {
   left: 0;
   background-color: rgba(0,0,0,0.3);
   z-index: 5;
-  min-width: 100px;
+  min-width: 60px;
   border-right: 2px solid rgba(255,255,255,0.2);
 }
 
