@@ -25,7 +25,7 @@
                 </span>
               </div>
             </th>
-            <th v-if="visibleColumns.includes('quantity')">
+            <th v-if="visibleColumns.includes('quantity')" class="quantity-header">
               <div class="filter-header">
                 <span>股数</span>
                 <label class="toggle-filter">
@@ -373,8 +373,13 @@ const resetColumns = () => {
 }
 
 .market-value-header {
-  width: 96px;
-  max-width: 96px;
+  width: 88px;
+  max-width: 88px;
+}
+
+.quantity-header {
+  width: 88px;
+  max-width: 88px;
 }
 
 .strategy-table th:first-child,
@@ -383,8 +388,8 @@ const resetColumns = () => {
   left: 0;
   background-color: rgba(0,0,0,0.3);
   z-index: 5;
-  width: 96px;
-  max-width: 96px;
+  width: 88px;
+  max-width: 88px;
   border-right: 2px solid rgba(255,255,255,0.2);
 }
 

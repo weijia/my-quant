@@ -5,7 +5,7 @@
       <span v-if="strategy.stockCode" class="stock-code">[{{ strategy.stockCode }}]</span>
     </td>
     
-    <td v-if="visibleColumns.includes('quantity')" class="text-right">
+    <td v-if="visibleColumns.includes('quantity')" class="quantity-cell">
       {{ strategy.netPosition || 0 }}
     </td>
     
@@ -190,13 +190,19 @@ const getTrendClass = (trend) => {
 
 .name-cell {
   font-weight: bold;
-  width: 96px;
-  max-width: 96px;
+  width: 88px;
+  max-width: 88px;
 }
 
 .market-value-cell {
-  width: 96px;
-  max-width: 96px;
+  width: 88px;
+  max-width: 88px;
+  text-align: right;
+}
+
+.quantity-cell {
+  width: 88px;
+  max-width: 88px;
   text-align: right;
 }
 

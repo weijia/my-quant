@@ -55,13 +55,32 @@ class StrategyService {
         const order = filter.sortOrder === 'desc' ? -1 : 1
         const aVal = a[filter.sortBy] || ''
         const bVal = b[filter.sortBy] || ''
-        
+
+        // 尝试提取数值进行比较（支持"1.23万"、"4.56亿"等格式）
+        const parseValue = (val) => {
+          const str = String(val).trim()
+          if (!str) return 0
+          const match = str.match(/^([\d.]+)\s*(万|亿)?$/)
+          if (!match) return parseFloat(str) || 0
+          let num = parseFloat(match[1]) || 0
+          if (match[2] === '万') num *= 10000
+          if (match[2] === '亿') num *= 100000000
+          return num
+        }
+
+        const numA = parseValue(aVal)
+        const numB = parseValue(bVal)
+
+        // 如果两个值都能解析为非零数字，用数字比较
+        if (numA !== 0 || numB !== 0) {
+          return (numA - numB) * order
+        }
+
+        // 否则回退到字符串比较
         if (typeof aVal === 'string' && typeof bVal === 'string') {
           return aVal.localeCompare(bVal, 'zh-CN') * order
         }
-        
-        const numA = parseFloat(aVal) || 0
-        const numB = parseFloat(bVal) || 0
+
         return (numA - numB) * order
       })
     }
