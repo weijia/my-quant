@@ -38,7 +38,7 @@
                 </label>
               </div>
             </th>
-            <th v-if="visibleColumns.includes('marketValue')" class="sortable-header" @click="handleSort('marketValue')">
+            <th v-if="visibleColumns.includes('marketValue')" class="sortable-header market-value-header" @click="handleSort('marketValue')">
               <div class="sort-header-content">
                 <span class="header-text">市值</span>
                 <span class="sort-icon">
@@ -372,14 +372,19 @@ const resetColumns = () => {
   border-bottom: 2px solid rgba(255,255,255,0.3);
 }
 
+.market-value-header {
+  width: 96px;
+  max-width: 96px;
+}
+
 .strategy-table th:first-child,
 .strategy-table td:first-child {
   position: sticky;
   left: 0;
   background-color: rgba(0,0,0,0.3);
   z-index: 5;
-  width: 80px;
-  max-width: 80px;
+  width: 96px;
+  max-width: 96px;
   border-right: 2px solid rgba(255,255,255,0.2);
 }
 

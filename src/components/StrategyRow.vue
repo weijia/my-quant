@@ -9,7 +9,7 @@
       {{ strategy.netPosition || 0 }}
     </td>
     
-    <td v-if="visibleColumns.includes('marketValue')" class="text-right">
+    <td v-if="visibleColumns.includes('marketValue')" class="market-value-cell">
       {{ strategy.marketValue || '-' }}
     </td>
     
@@ -190,8 +190,14 @@ const getTrendClass = (trend) => {
 
 .name-cell {
   font-weight: bold;
-  width: 80px;
-  max-width: 80px;
+  width: 96px;
+  max-width: 96px;
+}
+
+.market-value-cell {
+  width: 96px;
+  max-width: 96px;
+  text-align: right;
 }
 
 .stock-code {
