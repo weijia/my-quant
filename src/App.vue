@@ -28,6 +28,17 @@
             </svg>
             添加策略
           </button>
+          <button @click="showToolsPanel = !showToolsPanel" class="btn btn-secondary toggle-btn" :class="{ active: showToolsPanel }">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            工具
+          </button>
+        </div>
+      </div>
+      <div class="tools-panel" :class="{ collapsed: !showToolsPanel }">
+        <div class="tools-panel-content">
           <button @click="exportData" class="btn btn-secondary">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -56,10 +67,18 @@
           </button>
         </div>
       </div>
+      </div>
     </header>
     
     <div class="filter-bar">
-      <div class="filter-group">
+      <button class="filter-toggle" @click="showFilterPanel = !showFilterPanel">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :style="{ transform: showFilterPanel ? 'rotate(90deg)' : 'rotate(0deg)' }">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+        过滤条件
+      </button>
+      <div class="filter-content" :class="{ collapsed: !showFilterPanel }">
+        <div class="filter-group">
         <label>账户类型:</label>
         <select v-model="filter.accountType" @change="loadStrategies" class="filter-select">
           <option value="all">全部</option>
@@ -95,8 +114,8 @@
           <option value="desc">降序</option>
         </select>
       </div>
+      </div>
     </div>
-    
     <main class="main-content">
       <StrategyList
         :strategies="filteredStrategies"
@@ -151,6 +170,8 @@ const editingStrategy = ref({});
 const showBatchConditionDialog = ref(false);
 const selectedStrategy = ref({});
 const searchQuery = ref('');
+const showToolsPanel = ref(false);
+const showFilterPanel = ref(false);
 const filter = reactive({
  accountType: 'all',
  trend: 'all',
@@ -710,12 +731,74 @@ onMounted(async () => {
   cursor: pointer;
 }
 
+.toggle-btn.active {
+  background-color: rgba(78, 205, 196, 0.3);
+  border: 1px solid rgba(78, 205, 196, 0.5);
+}
+
+.tools-panel {
+  max-height: 60px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+  opacity: 1;
+  padding: 8px 20px;
+  background-color: rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tools-panel.collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding: 0 20px;
+  border-bottom: none;
+}
+
+.tools-panel-content {
+  display: flex;
+  gap: 10px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
 .filter-bar {
   background-color: rgba(0,0,0,0.2);
-  padding: 10px 20px;
+  padding: 8px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 0;
+  margin-bottom: 4px;
+}
+
+.filter-toggle:hover {
+  color: white;
+}
+
+.filter-toggle svg {
+  transition: transform 0.3s ease;
+}
+
+.filter-content {
+  max-height: 50px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+  opacity: 1;
   display: flex;
   gap: 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.filter-content.collapsed {
+  max-height: 0;
+  opacity: 0;
 }
 
 .filter-group {
