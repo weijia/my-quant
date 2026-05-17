@@ -3,11 +3,57 @@
  * 用于通过 MQTT 协议向平安证券条件单脚本发送指令
  */
 
-const MQTT_CONFIG = {
-  broker: 'wss://broker.emqx.io:8084/mqtt',
-  topic: 'secure/stock-condition-order',
+// 预置公共服务器列表
+export const PRESET_SERVERS = [
+  {
+    id: 'emqx',
+    name: 'EMQX 公共集群',
+    url: 'wss://broker.emqx.io:8084/mqtt'
+  },
+  {
+    id: 'hivemq',
+    name: 'HiveMQ 公共 Broker',
+    url: 'wss://broker.hivemq.com:8884/mqtt'
+  },
+  {
+    id: 'mosquitto',
+    name: 'Mosquitto Test Server',
+    url: 'wss://test.mosquitto.org:8081/mqtt'
+  }
+];
+
+// 默认配置
+const DEFAULT_MQTT_CONFIG = {
+  serverType: 'emqx',           // 预置服务器 ID 或 'custom'
+  serverUrl: 'wss://broker.emqx.io:8084/mqtt',
+  serverName: 'EMQX 公共集群',
+  topic: 'user/myquant/orders',
   password: 'stock_condition_order_Secret',
   clientId: 'myquant_' + Math.random().toString(16).slice(2, 8)
+};
+
+// 从 localStorage 加载配置
+const loadConfig = () => {
+  try {
+    const saved = localStorage.getItem('mqttConditionConfig');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return { ...DEFAULT_MQTT_CONFIG, ...parsed };
+    }
+  } catch (e) {
+    console.error('[MQTT] 加载配置失败:', e);
+  }
+  return { ...DEFAULT_MQTT_CONFIG };
+};
+
+// 保存配置到 localStorage
+const saveConfig = (config) => {
+  localStorage.setItem('mqttConditionConfig', JSON.stringify(config));
+};
+
+// 获取当前运行时配置
+const getRuntimeConfig = () => {
+  return loadConfig();
 };
 
 class MQTTConditionOrderService {
@@ -19,6 +65,16 @@ class MQTTConditionOrderService {
     this.onConnectCallback = null;
   }
 
+  getConfig() {
+    return loadConfig();
+  }
+
+  updateConfig(newConfig) {
+    const current = loadConfig();
+    const merged = { ...current, ...newConfig };
+    saveConfig(merged);
+  }
+
   connect() {
     return new Promise((resolve, reject) => {
       if (this.client && this.connected) {
@@ -26,21 +82,23 @@ class MQTTConditionOrderService {
         return;
       }
 
+      const config = loadConfig();
+
       try {
-        this.client = mqtt.connect(MQTT_CONFIG.broker, {
-          clientId: MQTT_CONFIG.clientId,
+        this.client = mqtt.connect(config.serverUrl, {
+          clientId: config.clientId,
           reconnectPeriod: 5000
         });
 
         this.client.on('connect', () => {
-          console.log('[MQTT] Connected to broker');
+          console.log('[MQTT] Connected to broker:', config.serverUrl);
           this.connected = true;
-          this.client.subscribe(MQTT_CONFIG.topic, { qos: 1 }, (err) => {
+          this.client.subscribe(config.topic, { qos: 1 }, (err) => {
             if (err) {
               console.error('[MQTT] Subscribe error:', err);
               reject(err);
             } else {
-              console.log('[MQTT] Subscribed to topic:', MQTT_CONFIG.topic);
+              console.log('[MQTT] Subscribed to topic:', config.topic);
               if (this.onConnectCallback) this.onConnectCallback();
               resolve();
             }
@@ -71,7 +129,8 @@ class MQTTConditionOrderService {
 
   handleMessage(encryptedData) {
     try {
-      const bytes = CryptoJS.AES.decrypt(encryptedData, MQTT_CONFIG.password);
+      const config = loadConfig();
+      const bytes = CryptoJS.AES.decrypt(encryptedData, config.password);
       const raw = bytes.toString(CryptoJS.enc.Utf8);
       
       if (!raw) {
@@ -82,7 +141,7 @@ class MQTTConditionOrderService {
       const data = JSON.parse(raw);
       
       // 忽略自己的消息
-      if (data.id === MQTT_CONFIG.clientId) return;
+      if (data.id === config.clientId) return;
 
       // 解析 msg 字段
       let msgData;
@@ -107,10 +166,11 @@ class MQTTConditionOrderService {
         return;
       }
 
+      const config = loadConfig();
       const msgId = Date.now() + '_' + Math.random().toString(16).slice(2, 6);
       
       const payload = {
-        id: MQTT_CONFIG.clientId,
+        id: config.clientId,
         msgId: msgId,
         user: 'myquant',
         msg: JSON.stringify({ action, data }),
@@ -118,9 +178,9 @@ class MQTTConditionOrderService {
       };
 
       const payloadStr = JSON.stringify(payload);
-      const cipher = CryptoJS.AES.encrypt(payloadStr, MQTT_CONFIG.password).toString();
+      const cipher = CryptoJS.AES.encrypt(payloadStr, config.password).toString();
 
-      this.client.publish(MQTT_CONFIG.topic, cipher, { qos: 1 }, (err) => {
+      this.client.publish(config.topic, cipher, { qos: 1 }, (err) => {
         if (err) {
           console.error('[MQTT] Publish error:', err);
           reject(err);
@@ -220,4 +280,4 @@ class MQTTConditionOrderService {
 const mqttConditionService = new MQTTConditionOrderService();
 
 export default mqttConditionService;
-export { MQTTConditionOrderService };
+export { MQTTConditionOrderService, PRESET_SERVERS, getRuntimeConfig };

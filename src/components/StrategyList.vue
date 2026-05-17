@@ -79,6 +79,7 @@
             <th v-if="visibleColumns.includes('decreaseStrategy')">下跌减仓</th>
             <th v-if="visibleColumns.includes('increaseStrategy')">上涨加仓</th>
             <th v-if="visibleColumns.includes('manualNotes')">手工备注</th>
+            <th v-if="visibleColumns.includes('quickOrder')" style="width: 120px;">快速下单</th>
             <th v-if="visibleColumns.includes('actions')" style="width: 80px;">操作</th>
           </tr>
         </thead>

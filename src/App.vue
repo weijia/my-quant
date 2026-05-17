@@ -74,6 +74,15 @@
             </svg>
             WebDAV设置
           </button>
+          <button @click="openMQTTConfig" class="btn btn-secondary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+              <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+              <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+              <line x1="12" x2="12.01" y1="20" y2="20"/>
+            </svg>
+            MQTT设置
+          </button>
         </div>
       </div>
     </header>
@@ -198,6 +207,54 @@
         </div>
       </div>
     </div>
+
+    <!-- MQTT 配置弹窗 -->
+    <div v-if="showMQTTConfigDialog" class="modal-overlay" @click.self="showMQTTConfigDialog = false">
+      <div class="modal-content mqtt-config-modal">
+        <h2>MQTT 条件单设置</h2>
+        <p class="config-hint">配置用于向平安证券条件单脚本发送指令。配置存储在浏览器本地 (localStorage)。</p>
+        
+        <div class="form-group">
+          <label>服务器类型</label>
+          <select v-model="mqttConfigForm.serverType" @change="handleServerTypeChange" class="form-input">
+            <option v-for="server in presetServers" :key="server.id" :value="server.id">
+              {{ server.name }}
+            </option>
+            <option value="custom">自定义服务器</option>
+          </select>
+        </div>
+        
+        <div class="form-group" v-if="mqttConfigForm.serverType === 'custom'">
+          <label>自定义服务器 URL</label>
+          <input v-model="mqttConfigForm.serverUrl" type="text" placeholder="wss://your-broker.com/mqtt" class="form-input" />
+        </div>
+        
+        <div class="form-group">
+          <label>Topic 主题</label>
+          <input v-model="mqttConfigForm.topic" type="text" placeholder="user/xxxx/orders" class="form-input" />
+        </div>
+        
+        <div class="form-group">
+          <label>加密密码 (AES)</label>
+          <input v-model="mqttConfigForm.password" type="password" placeholder="your-secret-password" class="form-input" />
+        </div>
+        
+        <div class="mqtt-status">
+          <span class="status-label">连接状态:</span>
+          <span :class="['status-value', mqttConnected ? 'connected' : 'disconnected']">
+            {{ mqttConnected ? '已连接' : '未连接' }}
+          </span>
+          <button @click="testMqttConnection" class="btn btn-secondary btn-sm" :disabled="testingConnection">
+            {{ testingConnection ? '测试中...' : '测试连接' }}
+          </button>
+        </div>
+        
+        <div class="modal-actions">
+          <button @click="showMQTTConfigDialog = false" class="btn btn-secondary">取消</button>
+          <button @click="saveMQTTConfig" class="btn btn-primary">保存</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -206,7 +263,7 @@ import { strategyService } from './services/StrategyService';
 import { trendService } from './services/TrendService';
 import { database } from './utils/Database';
 import { webdavImportService } from './services/WebDAVImportService';
-import mqttConditionService from './services/MQTTConditionService';
+import mqttConditionService, { PRESET_SERVERS } from './services/MQTTConditionService';
 import StrategyList from './components/StrategyList.vue';
 import StrategyDialog from './components/StrategyDialog.vue';
 import BatchConditionDialog from './components/BatchConditionDialog.vue';
@@ -222,6 +279,16 @@ const webdavConfigForm = reactive({
   username: '',
   password: ''
 });
+const showMQTTConfigDialog = ref(false);
+const presetServers = PRESET_SERVERS;
+const mqttConfigForm = reactive({
+  serverType: 'emqx',
+  serverUrl: '',
+  topic: '',
+  password: ''
+});
+const mqttConnected = ref(false);
+const testingConnection = ref(false);
 const searchQuery = ref('');
 const showToolsPanel = ref(false);
 const showFilterPanel = ref(false);
@@ -481,6 +548,62 @@ const loadWebDAVConfig = () => {
     }
   }
 };
+
+// MQTT 配置方法
+const loadMQTTConfig = () => {
+  const config = mqttConditionService.getConfig();
+  mqttConfigForm.serverType = config.serverType || 'emqx';
+  mqttConfigForm.serverUrl = config.serverUrl || '';
+  mqttConfigForm.topic = config.topic || '';
+  mqttConfigForm.password = config.password || '';
+  mqttConnected.value = mqttConditionService.connected;
+};
+
+const saveMQTTConfig = () => {
+  const selectedServer = presetServers.find(s => s.id === mqttConfigForm.serverType);
+  mqttConditionService.updateConfig({
+    serverType: mqttConfigForm.serverType,
+    serverUrl: selectedServer ? selectedServer.url : mqttConfigForm.serverUrl,
+    topic: mqttConfigForm.topic,
+    password: mqttConfigForm.password
+  });
+  showMQTTConfigDialog.value = false;
+  alert('MQTT 配置已保存');
+};
+
+const handleServerTypeChange = () => {
+  const selectedServer = presetServers.find(s => s.id === mqttConfigForm.serverType);
+  if (selectedServer) {
+    mqttConfigForm.serverUrl = selectedServer.url;
+  }
+};
+
+const testMqttConnection = async () => {
+  // 先保存配置
+  saveMQTTConfig();
+  
+  testingConnection.value = true;
+  try {
+    // 断开现有连接
+    mqttConditionService.disconnect();
+    
+    // 连接
+    await mqttConditionService.connect();
+    mqttConnected.value = true;
+    alert('MQTT 连接成功！');
+  } catch (error) {
+    mqttConnected.value = false;
+    alert('MQTT 连接失败: ' + error.message);
+  } finally {
+    testingConnection.value = false;
+  }
+};
+
+const openMQTTConfig = () => {
+  loadMQTTConfig();
+  showMQTTConfigDialog.value = true;
+};
+
 const importFromWebDAV = async () => {
  const confirmed = confirm('确定要从 WebDAV 同步数据吗？\n\n此操作将清空当前所有策略数据，然后从 WebDAV 重新导入。');
  if (!confirmed) {
@@ -769,6 +892,19 @@ const getTrendByStockCode = (stockCode, trendData) => {
 onMounted(async () => {
   console.log('App: 开始初始化...');
   loadWebDAVConfig();
+  
+  // 尝试连接 MQTT
+  try {
+    mqttConditionService.connect().then(() => {
+      mqttConnected.value = true;
+    }).catch(err => {
+      console.log('[App] MQTT 连接失败（不影响主功能）:', err.message);
+      mqttConnected.value = false;
+    });
+  } catch (e) {
+    console.log('[App] MQTT 初始化失败:', e.message);
+  }
+  
   await loadMockData();
   console.log('App: loadMockData 完成');
   
@@ -1144,5 +1280,43 @@ onMounted(async () => {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 16px;
+}
+
+/* MQTT 配置弹窗样式 */
+.mqtt-config-modal {
+  max-width: 500px;
+}
+
+.mqtt-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+.status-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.status-value {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.status-value.connected {
+  color: #28a745;
+}
+
+.status-value.disconnected {
+  color: #dc3545;
+}
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
 }
 </style>

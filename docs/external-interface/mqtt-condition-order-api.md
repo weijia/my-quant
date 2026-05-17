@@ -4,14 +4,72 @@
 
 ## 目录
 
-- [1. 消息信封](#1-消息信封)
-- [2. 操作指令](#2-操作指令)
-- [3. 响应消息](#3-响应消息)
-- [4. 格式对比](#4-格式对比)
+- [1. 配置参数](#1-配置参数)
+- [2. 消息信封](#2-消息信封)
+- [3. 操作指令](#3-操作指令)
+- [4. 响应消息](#4-响应消息)
+- [5. 格式对比](#5-格式对比)
 
 ---
 
-## 1. 消息信封
+## 1. 配置参数
+
+### 1.1 预置公共服务器
+
+| 服务器名称 | WebSocket URL | 适用场景 |
+|-----------|---------------|----------|
+| EMQX 公共集群 | `wss://broker.emqx.io:8084/mqtt` | 测试、小规模使用 |
+| HiveMQ 公共 Broker | `wss://broker.hivemq.com:8884/mqtt` | 临时测试、无需注册 |
+| Mosquitto Test Server | `wss://test.mosquitto.org:8081/mqtt` | 简单验证 |
+
+### 1.2 自定义服务器
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| serverUrl | string | 是 | MQTT Broker WebSocket 地址，如 `ws://192.168.1.100:8083/mqtt` 或 `wss://your-broker.com/mqtt` |
+| serverName | string | 否 | 服务器名称标识，仅用于显示 |
+
+### 1.3 Topic 配置
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| topic | string | 是 | MQTT 主题路径，建议格式：`user/{userId}/orders`，如 `user/xxxx/orders` |
+
+### 1.4 认证配置
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| password | string | 是 | AES 加密密钥，用于加密/解密消息内容，建议使用 16 位及以上字符串 |
+| clientId | string | 否 | 客户端唯一标识，默认自动生成 |
+| username | string | 否 | MQTT 用户名（部分 Broker 需要） |
+| authPassword | string | 否 | MQTT 认证密码（部分 Broker 需要） |
+
+### 1.5 配置示例
+
+```javascript
+// 使用公共服务器
+const config = {
+  serverUrl: 'wss://broker.emqx.io:8084/mqtt',
+  topic: 'user/xxxx/orders',
+  password: 'your-aes-password-here',
+  clientId: 'client_' + Date.now()
+};
+
+// 使用自定义服务器
+const config = {
+  serverUrl: 'wss://your-private-broker.com/mqtt',
+  serverName: 'My MQTT Server',
+  topic: 'user/xxxx/orders',
+  password: 'your-aes-password-here',
+  clientId: 'client_' + Date.now(),
+  username: 'mqtt_user',      // 可选
+  authPassword: 'mqtt_pass'   // 可选
+};
+```
+
+---
+
+## 2. 消息信封
 
 所有 MQTT 消息采用统一的双层 JSON 结构：
 
@@ -27,7 +85,7 @@
 }
 ```
 
-### 1.2 msg 字段（条件单命令）
+### 2.2 msg 字段（条件单命令）
 
 msg 字段是 JSON 字符串，包含 `action` 和 `data` 两个必需字段：
 
@@ -42,7 +100,7 @@ msg 字段是 JSON 字符串，包含 `action` 和 `data` 两个必需字段：
 }
 ```
 
-### 1.3 加密传输
+### 2.3 加密传输
 
 消息使用 AES 加密后通过 MQTT 发布：
 
@@ -65,9 +123,9 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 
 ---
 
-## 2. 操作指令
+## 3. 操作指令
 
-### 2.1 create - 创建条件单
+### 3.1 create - 创建条件单
 
 **功能**: 创建新的买入和卖出条件单
 
@@ -97,11 +155,11 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 }
 ```
 
-**响应**: 见 [3. 响应消息](#3-响应消息)
+**响应**: 见 [4. 响应消息](#4-响应消息)
 
 ---
 
-### 2.2 cancel - 取消订单
+### 3.2 cancel - 取消订单
 
 **功能**: 取消指定的订单
 
@@ -123,7 +181,7 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 
 ---
 
-### 2.4 list - 列出订单
+### 3.3 list - 列出订单
 
 **功能**: 列出所有订单
 
@@ -143,7 +201,7 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 
 ---
 
-### 2.5 ping - 连接测试
+### 3.4 ping - 连接测试
 
 **功能**: 测试 MQTT 连接是否正常
 
@@ -173,9 +231,9 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 
 ---
 
-## 3. 响应消息
+## 4. 响应消息
 
-### 3.1 创建成功
+### 4.1 创建成功
 
 ```json
 {
@@ -185,7 +243,7 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 }
 ```
 
-### 3.2 创建失败
+### 4.2 创建失败
 
 ```json
 {
@@ -195,7 +253,7 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 }
 ```
 
-### 3.3 取消成功
+### 4.3 取消成功
 
 ```json
 {
@@ -205,7 +263,7 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 }
 ```
 
-### 3.4 列出订单
+### 4.4 列出订单
 
 ```json
 {
@@ -223,9 +281,9 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 
 ---
 
-## 4. 格式对比
+## 5. 格式对比
 
-### 4.1 各端点消息格式
+### 5.1 各端点消息格式
 
 | 端点 | action 字段 | data 字段 | 特点 |
 |------|-------------|-----------|------|
@@ -234,7 +292,7 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 | server.js (接收) | ❌ 无 | ❌ 无 | 直接 `msg` 字段作为 code 执行 |
 | server.js (发送) | ❌ 无 | ❌ 无 | 直接 JSON 字符串 |
 
-### 4.2 统一规范
+### 5.2 统一规范
 
 为保证跨端点兼容性，发送命令时使用以下格式：
 
