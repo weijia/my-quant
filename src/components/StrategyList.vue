@@ -381,8 +381,8 @@ const resetColumns = () => {
 }
 
 .decrease-pct-header {
-  width: 16px;
-  max-width: 16px;
+  width: 3ch;
+  min-width: 3ch;
 }
 
 .strategy-table th:first-child,

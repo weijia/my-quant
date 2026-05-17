@@ -210,8 +210,8 @@ const getTrendClass = (trend) => {
 }
 
 .decrease-pct-cell {
-  width: 16px;
-  max-width: 16px;
+  width: 3ch;
+  min-width: 3ch;
   text-align: right;
 }
 
