@@ -226,11 +226,11 @@ const getTrendClass = (trend) => {
 }
 
 .positive {
-  color: #28a745;
+  color: #dc3545;
 }
 
 .negative {
-  color: #dc3545;
+  color: #28a745;
 }
 
 .trend-select {
