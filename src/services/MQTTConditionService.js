@@ -280,4 +280,4 @@ class MQTTConditionOrderService {
 const mqttConditionService = new MQTTConditionOrderService();
 
 export default mqttConditionService;
-export { MQTTConditionOrderService, PRESET_SERVERS, getRuntimeConfig };
+export { MQTTConditionOrderService, getRuntimeConfig };
