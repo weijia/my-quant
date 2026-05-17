@@ -26,7 +26,7 @@
     </td>
     
     <td v-if="visibleColumns.includes('decreasePercentage')" class="decrease-pct-cell">
-      {{ strategy.decreasePercentage || '-' }}%
+      <span :class="strategy.decreasePercentage ? 'decrease-value' : ''">{{ strategy.decreasePercentage ? '-' + strategy.decreasePercentage : '-' }}%</span>
     </td>
     
     <td v-if="visibleColumns.includes('autoTrend')">
@@ -320,8 +320,8 @@ const getTrendClass = (trend) => {
 }
 
 .decrease-pct-cell {
-  width: 16px;
-  max-width: 16px;
+  width: 3ch;
+  min-width: 3ch;
   text-align: right;
 }
 
@@ -336,11 +336,15 @@ const getTrendClass = (trend) => {
 }
 
 .positive {
-  color: #28a745;
+  color: #dc3545;
 }
 
 .negative {
-  color: #dc3545;
+  color: #28a745;
+}
+
+.decrease-value {
+  color: white;
 }
 
 .trend-select {

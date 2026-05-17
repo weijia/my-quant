@@ -288,12 +288,13 @@ const loadStrategies = async () => {
           
           // 始终用趋势数据覆盖下跌百分比
           // 优先使用 price_drop_ratio（90天内最高价与当前价的下跌百分比）
+          // 根据最新文档格式：price_drop_ratio 位于 volatilityMetrics 内，且已经是百分比格式（如 19.77）
           // 修复：使用 != null 判断，避免 0 被当作 falsy 值处理
           if (trend.price_drop_ratio != null) {
-            // price_drop_ratio 是 0-1 的小数，转换为百分比显示
-            strategy.decreasePercentage = Math.round(trend.price_drop_ratio * 10000) / 100;
+            // price_drop_ratio 已经是百分比格式，直接使用
+            strategy.decreasePercentage = Math.round(trend.price_drop_ratio * 100) / 100;
             decreaseInjectedCount++;
-            console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 使用 price_drop_ratio: ${trend.price_drop_ratio} -> ${strategy.decreasePercentage}%`);
+            console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 使用 price_drop_ratio: ${trend.price_drop_ratio}%`);
           } else if (trend.decreasePercentage != null) {
             strategy.decreasePercentage = trend.decreasePercentage;
             decreaseInjectedCount++;

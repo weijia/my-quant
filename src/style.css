@@ -171,12 +171,12 @@ body {
 }
 
 .tag-up {
-  background-color: #28a745;
+  background-color: #dc3545;
   color: white;
 }
 
 .tag-down {
-  background-color: #dc3545;
+  background-color: #28a745;
   color: white;
 }
 
