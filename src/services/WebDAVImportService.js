@@ -317,10 +317,45 @@ class DataConverter {
 
 class WebDAVImportService {
   constructor() {
-    // 请替换为你的 WebDAV 服务器地址
-    this.webdavBaseUrl = 'https://your-webdav-server.com/dav/app_data/stocks/'
-    this.holdingsBaseUrl = 'https://your-webdav-server.com/dav/app_data/holdings/pingan/'
-    this.trendBaseUrl = 'https://your-webdav-server.com/dav/app_data/stocks/trend_judgments/'
+    this.loadConfig();
+  }
+
+  loadConfig() {
+    const configStr = localStorage.getItem('webdavConfig');
+    if (configStr) {
+      try {
+        const config = JSON.parse(configStr);
+        const baseUrl = (config.url || '').replace(/\/+$/, '');
+        this.webdavBaseUrl = baseUrl + '/app_data/stocks/';
+        this.holdingsBaseUrl = baseUrl + '/app_data/holdings/pingan/';
+        this.trendBaseUrl = baseUrl + '/app_data/stocks/trend_judgments/';
+        this.authHeader = 'Basic ' + btoa((config.username || '') + ':' + (config.password || ''));
+      } catch (e) {
+        console.error('解析 WebDAV 配置失败:', e);
+        this.setDefaultUrls();
+      }
+    } else {
+      this.setDefaultUrls();
+    }
+  }
+
+  setDefaultUrls() {
+    this.webdavBaseUrl = '';
+    this.holdingsBaseUrl = '';
+    this.trendBaseUrl = '';
+    this.authHeader = null;
+  }
+
+  getAuthHeaders() {
+    const headers = {};
+    if (this.authHeader) {
+      headers['Authorization'] = this.authHeader;
+    }
+    return headers;
+  }
+
+  isConfigured() {
+    return !!this.webdavBaseUrl;
   }
   
   async fetchFromWebDAV(filename = 'all_strategies.json') {
@@ -331,7 +366,8 @@ class WebDAVImportService {
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          ...this.getAuthHeaders()
         }
       })
       
@@ -356,7 +392,8 @@ class WebDAVImportService {
         method: 'PROPFIND',
         headers: {
           'Depth': '1',
-          'Content-Type': 'application/xml'
+          'Content-Type': 'application/xml',
+          ...this.getAuthHeaders()
         }
       })
       
@@ -404,7 +441,8 @@ class WebDAVImportService {
       const response = await fetch(fileUrl, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          ...this.getAuthHeaders()
         }
       })
       
@@ -431,7 +469,8 @@ class WebDAVImportService {
         method: 'PROPFIND',
         headers: {
           'Depth': '1',
-          'Content-Type': 'application/xml'
+          'Content-Type': 'application/xml',
+          ...this.getAuthHeaders()
         }
       })
 
@@ -486,7 +525,8 @@ class WebDAVImportService {
           const response = await fetch(fileUrl, {
             method: 'GET',
             headers: {
-              'Accept': 'application/json'
+              'Accept': 'application/json',
+              ...this.getAuthHeaders()
             }
           })
 
