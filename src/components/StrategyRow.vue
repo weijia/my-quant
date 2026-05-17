@@ -456,10 +456,10 @@ const getTrendClass = (trend) => {
 }
 
 .actions-cell {
-  display: flex;
-  gap: 4px;
-  justify-content: center;
+  display: table-cell;
+  vertical-align: middle;
   width: 80px;
+  min-width: 80px;
 }
 
 .action-btn {
@@ -491,12 +491,14 @@ const getTrendClass = (trend) => {
 
 /* 快速下单按钮样式 */
 .quick-order-cell {
-  display: flex;
-  gap: 3px;
-  justify-content: center;
-  width: 120px;
-  max-width: 120px;
-  padding: 4px 6px;
+  display: table-cell;
+  vertical-align: middle;
+  width: 160px;
+  min-width: 160px;
+}
+
+.quick-order-cell .quick-order-btn {
+  margin: 0 2px;
 }
 
 .quick-order-btn {
