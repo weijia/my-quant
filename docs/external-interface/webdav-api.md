@@ -153,59 +153,121 @@
 | 属性 | 值 |
 |------|-----|
 | 方法 | `GET` |
-| URL | `https://your-webdav-server.com/dav/app_data/stocks/trend_judgments/trend_judgment_{stockCode}.json` |
+| URL | `https://your-webdav-server.com/dav/app_data/stocks/trend_judgments/trend_judgment_{stockName}_{date}_{time}.json` |
 | 请求头 | `Accept: application/json` |
 
 ### 单个文件响应格式
 
 ```json
 {
-  "stockCode": "600519",
-  "trendJudgment": "up",
-  "trendJudgmentUpdatedAt": "2025-01-01T00:00:00.000Z",
+  "name": "星湖科技",
+  "stockCode": "600866",
+  "trendJudgment": "down",
+  "trendJudgmentUpdatedAt": "2025-11-15T11:34:00.559Z",
   "autoTrendJudgment": "up",
-  "autoTrendJudgmentUpdatedAt": "2025-01-01T00:00:00.000Z",
-  "decreasePercentage": 5.2,
-  "price_drop_ratio": 0.052
+  "autoTrendJudgmentUpdatedAt": "2025-12-19T00:00:00",
+  "volatilityMetrics": {
+    "daily_price_volatility": 0.0117,
+    "price_range_volatility": 0.0117,
+    "close_position_volatility": 0.0088,
+    "volatility_5d_ma": 0.0205,
+    "volatility_10d_ma": 0.0178,
+    "volatility_15d_ma": 0.0156,
+    "max_high_price": 8.55,
+    "current_price": 6.86,
+    "price_drop_value": 1.69,
+    "price_drop_ratio": 19.77
+  },
+  "volatilityMetricsUpdatedAt": "2025-12-19T19:40:46.510916",
+  "fiveYearAverageDividendYield": 0.92,
+  "fiveYearAverageDividendYieldUpdatedAt": "2025-12-05T19:10:15.656062Z",
+  "previousDayChangePercent": 0.29,
+  "previousDayChangePercentUpdatedAt": "2025-12-19T19:40:46.510916",
+  "createTime": "2025-12-07T12:11:49.191830",
+  "previousDayChangeDate": "2025-12-19T00:00:00"
 }
 ```
 
 ### 字段说明
 
+#### 核心字段
+
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `stockCode` | string | 股票代码 |
+| `name` | string | 股票名称 |
+| `stockCode` | string | 股票代码（如 `600866`） |
 | `trendJudgment` | string | 手动趋势判断值 |
 | `trendJudgmentUpdatedAt` | string | 手动判断更新时间（ISO 8601） |
 | `autoTrendJudgment` | string | 自动趋势判断值 |
 | `autoTrendJudgmentUpdatedAt` | string | 自动判断更新时间（ISO 8601） |
-| `decreasePercentage` | number | 下跌百分比 |
-| `price_drop_ratio` | number | 90天内最高价与当前价的下跌比率（0-1） |
 
-### 趋势值映射
+#### volatilityMetrics（波动率指标）
 
-| 原始值 | 标准值 | 显示名 |
-|--------|--------|--------|
-| `up` | `trend_up` | 上涨趋势 |
-| `down` | `trend_down` | 下跌趋势 |
-| `oscillation` | `trend_oscillation` | 震荡趋势 |
-| `pullback` | `trend_pullback` | 回踩趋势 |
-| `breakdown` | `trend_breakdown` | 下跌破位 |
-| `unknown` | `trend_unknown` | 未知趋势 |
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `daily_price_volatility` | number | 日价格波动率 |
+| `price_range_volatility` | number | 价格区间波动率 |
+| `close_position_volatility` | number | 收盘位置波动率 |
+| `volatility_5d_ma` | number | 5日波动率移动平均 |
+| `volatility_10d_ma` | number | 10日波动率移动平均 |
+| `volatility_15d_ma` | number | 15日波动率移动平均 |
+| `max_high_price` | number | 90天内最高价 |
+| `current_price` | number | 当前价格 |
+| `price_drop_value` | number | 相对最高价的下跌金额 |
+| `price_drop_ratio` | number | 相对最高价的下跌百分比（%） |
+| `volatilityMetricsUpdatedAt` | string | 波动率指标更新时间 |
+
+#### 其他字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `fiveYearAverageDividendYield` | number | 五年平均股息率 |
+| `fiveYearAverageDividendYieldUpdatedAt` | string | 五年平均股息率更新时间 |
+| `previousDayChangePercent` | number | 前一日涨跌幅（%） |
+| `previousDayChangePercentUpdatedAt` | string | 前一日涨跌幅更新时间 |
+| `previousDayChangeDate` | string | 前一日日期 |
+| `createTime` | string | 记录创建时间 |
+
+### 趋势值说明
+
+#### 原始趋势值（WebDAV 文件中的值）
+
+| 原始值 | 说明 |
+|--------|------|
+| `up` | 上涨趋势 |
+| `down` | 下跌趋势 |
+| `oscillation` | 震荡趋势 |
+| `pullback` | 回踩趋势 |
+| `breakdown` | 下跌破位 |
+| `unset` | 未设置 |
+| `high_volatility` | 高波动 |
+| `medium_volatility` | 中波动 |
+| `low_volatility` | 低波动 |
+| `trend_breakdown` | 下跌破位 |
+
+#### 标准趋势值（my-quant 内部存储的格式）
+
+如果原始值没有前缀，导入时会自动添加 `trend_` 前缀：
+
+| 原始值 | 标准值 |
+|--------|--------|
+| `up` | `trend_up` |
+| `down` | `trend_down` |
+| `oscillation` | `trend_oscillation` |
 
 ### 聚合后返回格式
 
-以 `stockCode` 为 key 的 Map 对象：
+以 `stockCode` 为 key 的 Map 对象，按更新时间合并多条记录：
 
 ```javascript
 {
-  "600519": {
-    trendJudgment: "up",
-    trendJudgmentUpdatedAt: "...",
+  "600866": {
+    trendJudgment: "down",
+    trendJudgmentUpdatedAt: "2025-11-15T11:34:00.559Z",
     autoTrendJudgment: "up",
-    autoTrendJudgmentUpdatedAt: "...",
-    decreasePercentage: 5.2,
-    price_drop_ratio: 0.052
+    autoTrendJudgmentUpdatedAt: "2025-12-19T00:00:00",
+    decreasePercentage: null,
+    price_drop_ratio: 19.77
   }
 }
 ```
