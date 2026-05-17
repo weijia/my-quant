@@ -346,12 +346,10 @@ const resetColumns = () => {
 
 .strategy-table {
   min-width: 1000px;
-  width: 100%;
   border-collapse: collapse;
   font-size: 12px;
   color: white;
   position: relative;
-  table-layout: fixed;
 }
 
 .strategy-table th,
