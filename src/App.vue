@@ -225,14 +225,12 @@ const loadStrategies = async () => {
         const trend = getTrendByStockCode(strategy.stockCode, trendData);
         if (trend) {
           strategy.trendJudgment = normalizeTrendValue(trend.trendValue);
-          // 如果策略没有 decreasePercentage，从趋势数据中获取
+          // 始终用趋势数据覆盖下跌百分比
           // 优先使用 price_drop_ratio（90天内最高价与当前价的下跌百分比）
-          if (!strategy.decreasePercentage) {
-            if (trend.price_drop_ratio) {
-              strategy.decreasePercentage = Math.round(trend.price_drop_ratio * 100) / 100;
-            } else if (trend.decreasePercentage) {
-              strategy.decreasePercentage = trend.decreasePercentage;
-            }
+          if (trend.price_drop_ratio) {
+            strategy.decreasePercentage = Math.round(trend.price_drop_ratio * 100) / 100;
+          } else if (trend.decreasePercentage) {
+            strategy.decreasePercentage = trend.decreasePercentage;
           }
           matchedCount++;
         }
