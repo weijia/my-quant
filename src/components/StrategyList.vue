@@ -51,7 +51,7 @@
             <th v-if="visibleColumns.includes('profitLoss')">盈亏%</th>
             <th v-if="visibleColumns.includes('dividendYield')">5年平均股息率</th>
             <th v-if="visibleColumns.includes('changePercent')">涨跌%</th>
-            <th v-if="visibleColumns.includes('decreasePercentage')">下跌百分比</th>
+            <th v-if="visibleColumns.includes('decreasePercentage')" class="decrease-pct-header">下跌百分比</th>
             <th v-if="visibleColumns.includes('autoTrend')">
               <div class="filter-header">
                 <span>自动生成趋势</span>
@@ -380,6 +380,11 @@ const resetColumns = () => {
 .quantity-header {
   width: 88px;
   max-width: 88px;
+}
+
+.decrease-pct-header {
+  width: 16px;
+  max-width: 16px;
 }
 
 .strategy-table th:first-child,

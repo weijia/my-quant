@@ -25,7 +25,7 @@
       <span :class="getChangeClass(strategy.changePercent)">{{ strategy.changePercent || '-' }}</span>
     </td>
     
-    <td v-if="visibleColumns.includes('decreasePercentage')" class="text-right">
+    <td v-if="visibleColumns.includes('decreasePercentage')" class="decrease-pct-cell">
       {{ strategy.decreasePercentage || '-' }}%
     </td>
     
@@ -203,6 +203,12 @@ const getTrendClass = (trend) => {
 .quantity-cell {
   width: 88px;
   max-width: 88px;
+  text-align: right;
+}
+
+.decrease-pct-cell {
+  width: 16px;
+  max-width: 16px;
   text-align: right;
 }
 
