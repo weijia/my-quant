@@ -288,6 +288,9 @@ const loadStrategies = async () => {
       }
     }
     console.log('loadStrategies: 为', matchedCount, '个策略注入了实时趋势值');
+    if (!trendData) {
+      console.warn('loadStrategies: 趋势数据为空，WebDAV 可能未配置或请求失败。策略将使用本地存储的下跌百分比。');
+    }
   }
    
   strategies.value = result;
