@@ -533,10 +533,16 @@ class WebDAVImportService {
           if (!response.ok) continue
 
           const content = await response.json()
-          const { stockCode, trendJudgment, autoTrendJudgment, trendJudgmentUpdatedAt, autoTrendJudgmentUpdatedAt, decreasePercentage, price_drop_ratio } = content
+          const { stockCode, trendJudgment, autoTrendJudgment, trendJudgmentUpdatedAt, autoTrendJudgmentUpdatedAt, decreasePercentage, price_drop_ratio, volatilityMetrics } = content
+
+          // 根据最新文档格式，price_drop_ratio 位于 volatilityMetrics 对象内
+          // 且 price_drop_ratio 已经是百分比格式（如 19.77），不需要再乘以 100
+          const actualPriceDropRatio = volatilityMetrics?.price_drop_ratio != null 
+            ? volatilityMetrics.price_drop_ratio 
+            : (price_drop_ratio != null ? price_drop_ratio : null)
 
           const key = stockCode
-          if (key && (trendJudgment || autoTrendJudgment || decreasePercentage || price_drop_ratio)) {
+          if (key && (trendJudgment || autoTrendJudgment || decreasePercentage != null || actualPriceDropRatio != null)) {
             // 检查是否已有更新的数据
             const existing = trendJudgmentsMap[key]
             const currentUpdateTime = trendJudgmentUpdatedAt || autoTrendJudgmentUpdatedAt
@@ -553,9 +559,10 @@ class WebDAVImportService {
                 trendJudgmentUpdatedAt: trendJudgmentUpdatedAt || null,
                 autoTrendJudgment: autoTrendJudgment || null,
                 autoTrendJudgmentUpdatedAt: autoTrendJudgmentUpdatedAt || null,
-                // 修复：使用 != null 判断，避免 0 被当作 falsy 值处理
+                // decreasePercentage 已废弃，优先使用 volatilityMetrics.price_drop_ratio
                 decreasePercentage: decreasePercentage != null ? decreasePercentage : null,
-                price_drop_ratio: price_drop_ratio != null ? price_drop_ratio : null
+                // price_drop_ratio 从 volatilityMetrics 获取，已经是百分比格式
+                price_drop_ratio: actualPriceDropRatio
               }
               validCount++
             }
