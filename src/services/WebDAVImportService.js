@@ -553,8 +553,9 @@ class WebDAVImportService {
                 trendJudgmentUpdatedAt: trendJudgmentUpdatedAt || null,
                 autoTrendJudgment: autoTrendJudgment || null,
                 autoTrendJudgmentUpdatedAt: autoTrendJudgmentUpdatedAt || null,
-                decreasePercentage: decreasePercentage || null,
-                price_drop_ratio: price_drop_ratio || null
+                // 修复：使用 != null 判断，避免 0 被当作 falsy 值处理
+                decreasePercentage: decreasePercentage != null ? decreasePercentage : null,
+                price_drop_ratio: price_drop_ratio != null ? price_drop_ratio : null
               }
               validCount++
             }

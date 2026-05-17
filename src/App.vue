@@ -287,11 +287,13 @@ const loadStrategies = async () => {
           
           // 始终用趋势数据覆盖下跌百分比
           // 优先使用 price_drop_ratio（90天内最高价与当前价的下跌百分比）
-          if (trend.price_drop_ratio) {
-            strategy.decreasePercentage = Math.round(trend.price_drop_ratio * 100) / 100;
+          // 修复：使用 != null 判断，避免 0 被当作 falsy 值处理
+          if (trend.price_drop_ratio != null) {
+            // price_drop_ratio 是 0-1 的小数，转换为百分比显示
+            strategy.decreasePercentage = Math.round(trend.price_drop_ratio * 10000) / 100;
             decreaseInjectedCount++;
-            console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 使用 price_drop_ratio: ${strategy.decreasePercentage}`);
-          } else if (trend.decreasePercentage) {
+            console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 使用 price_drop_ratio: ${trend.price_drop_ratio} -> ${strategy.decreasePercentage}%`);
+          } else if (trend.decreasePercentage != null) {
             strategy.decreasePercentage = trend.decreasePercentage;
             decreaseInjectedCount++;
             console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 使用 trend.decreasePercentage: ${strategy.decreasePercentage}`);
@@ -750,8 +752,9 @@ const getTrendByStockCode = (stockCode, trendData) => {
   if (trendInfo) {
     const result = {
       trendValue: trendInfo.autoTrendJudgment || trendInfo.trendJudgment,
-      decreasePercentage: trendInfo.decreasePercentage || null,
-      price_drop_ratio: trendInfo.price_drop_ratio || null
+      // 修复：使用 != null 判断，避免 0 被当作 falsy 值处理
+      decreasePercentage: trendInfo.decreasePercentage != null ? trendInfo.decreasePercentage : null,
+      price_drop_ratio: trendInfo.price_drop_ratio != null ? trendInfo.price_drop_ratio : null
     };
     console.log(`[调试-getTrendByStockCode] ✅ 匹配成功: stockCode=${stockCode}, 方法=${matchMethod}, result=`, JSON.stringify(result));
     return result;
