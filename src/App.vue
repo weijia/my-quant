@@ -67,6 +67,13 @@
             </svg>
             同步WebDAV
           </button>
+          <button @click="showWebDAVConfigDialog = true" class="btn btn-secondary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            WebDAV设置
+          </button>
         </div>
       </div>
     </header>
@@ -153,6 +160,44 @@
       @update:visible="showBatchConditionDialog = false"
       @submit="handleBatchConditionSubmit"
     />
+
+    <!-- WebDAV 配置弹窗 -->
+    <div v-if="showWebDAVConfigDialog" class="modal-overlay" @click.self="showWebDAVConfigDialog = false">
+      <div class="modal-content webdav-config-modal">
+        <h2>WebDAV 设置</h2>
+        <p class="config-hint">配置存储在浏览器本地 (localStorage)，不会上传到 Git。</p>
+        <div class="config-paths">
+          <div class="path-item">
+            <span class="path-label">策略数据</span>
+            <code class="path-value">{{ webdavConfigForm.url || '...' }}/app_data/stocks/</code>
+          </div>
+          <div class="path-item">
+            <span class="path-label">持仓数据</span>
+            <code class="path-value">{{ webdavConfigForm.url || '...' }}/app_data/holdings/pingan/</code>
+          </div>
+          <div class="path-item">
+            <span class="path-label">趋势判断</span>
+            <code class="path-value">{{ webdavConfigForm.url || '...' }}/app_data/stocks/trend_judgments/</code>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>服务器 URL</label>
+          <input v-model="webdavConfigForm.url" type="text" placeholder="https://your-server.com/dav/" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label>用户名</label>
+          <input v-model="webdavConfigForm.username" type="text" placeholder="username" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label>密码</label>
+          <input v-model="webdavConfigForm.password" type="password" placeholder="password" class="form-input" />
+        </div>
+        <div class="modal-actions">
+          <button @click="showWebDAVConfigDialog = false" class="btn btn-secondary">取消</button>
+          <button @click="saveWebDAVConfig" class="btn btn-primary">保存</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -170,6 +215,12 @@ const isEditing = ref(false);
 const editingStrategy = ref({});
 const showBatchConditionDialog = ref(false);
 const selectedStrategy = ref({});
+const showWebDAVConfigDialog = ref(false);
+const webdavConfigForm = reactive({
+  url: '',
+  username: '',
+  password: ''
+});
 const searchQuery = ref('');
 const showToolsPanel = ref(false);
 const showFilterPanel = ref(false);
@@ -216,29 +267,59 @@ const loadStrategies = async () => {
   // 为每个策略注入实时趋势值并清理名称
   if (result.length > 0) {
     let matchedCount = 0;
+    let decreaseInjectedCount = 0;
+    let decreaseMissingCount = 0;
     for (const strategy of result) {
       // 清理名称
       strategy.name = cleanName(strategy.name, strategy.stockCode);
+      
+      // 【调试】记录每个策略注入前的 decreasePercentage
+      console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 注入前 decreasePercentage: ${strategy.decreasePercentage}, 本地值: ${strategy.decreasePercentage}`);
       
       // 注入实时趋势值和下跌百分比
       if (trendData) {
         const trend = getTrendByStockCode(strategy.stockCode, trendData);
         if (trend) {
           strategy.trendJudgment = normalizeTrendValue(trend.trendValue);
-          // 如果策略没有 decreasePercentage，从趋势数据中获取
+          
+          // 【调试】打印完整的 trend 对象
+          console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), trend 对象:`, JSON.stringify(trend));
+          
+          // 始终用趋势数据覆盖下跌百分比
           // 优先使用 price_drop_ratio（90天内最高价与当前价的下跌百分比）
-          if (!strategy.decreasePercentage) {
-            if (trend.price_drop_ratio) {
-              strategy.decreasePercentage = Math.round(trend.price_drop_ratio * 100) / 100;
-            } else if (trend.decreasePercentage) {
-              strategy.decreasePercentage = trend.decreasePercentage;
-            }
+          // 修复：使用 != null 判断，避免 0 被当作 falsy 值处理
+          if (trend.price_drop_ratio != null) {
+            // price_drop_ratio 是 0-1 的小数，转换为百分比显示
+            strategy.decreasePercentage = Math.round(trend.price_drop_ratio * 10000) / 100;
+            decreaseInjectedCount++;
+            console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 使用 price_drop_ratio: ${trend.price_drop_ratio} -> ${strategy.decreasePercentage}%`);
+          } else if (trend.decreasePercentage != null) {
+            strategy.decreasePercentage = trend.decreasePercentage;
+            decreaseInjectedCount++;
+            console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 使用 trend.decreasePercentage: ${strategy.decreasePercentage}`);
+          } else {
+            decreaseMissingCount++;
+            console.warn(`[调试-decreasePercentage] ⚠️ 策略: ${strategy.name}(${strategy.stockCode}), trend 匹配成功但 price_drop_ratio 和 decreasePercentage 均为空! trend 对象:`, JSON.stringify(trend));
           }
           matchedCount++;
+        } else {
+          // 【调试】trend 匹配失败
+          console.warn(`[调试-decreasePercentage] ⚠️ 策略: ${strategy.name}(${strategy.stockCode}), 未能匹配到趋势数据! trendData 的 keys:`, Object.keys(trendData).slice(0, 10));
         }
+      } else {
+        // 【调试】trendData 为空
+        console.warn(`[调试-decreasePercentage] ⚠️ 策略: ${strategy.name}(${strategy.stockCode}), trendData 为空，无法注入下跌百分比`);
       }
+      
+      // 【调试】记录注入后的最终值
+      console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 注入后 decreasePercentage: ${strategy.decreasePercentage}`);
     }
+    console.log(`[调试-decreasePercentage] ===== 汇总 =====`);
+    console.log(`[调试-decreasePercentage] 策略总数: ${result.length}, 趋势匹配数: ${matchedCount}, 下跌百分比注入数: ${decreaseInjectedCount}, 下跌百分比缺失数: ${decreaseMissingCount}`);
     console.log('loadStrategies: 为', matchedCount, '个策略注入了实时趋势值');
+    if (!trendData) {
+      console.warn('loadStrategies: 趋势数据为空，WebDAV 可能未配置或请求失败。策略将使用本地存储的下跌百分比。');
+    }
   }
    
   strategies.value = result;
@@ -373,6 +454,30 @@ const importData = async (event) => {
  alert('导入数据失败，请确保文件格式正确');
  }
  event.target.value = '';
+};
+const saveWebDAVConfig = () => {
+  const config = {
+    url: webdavConfigForm.url.replace(/\/+$/, ''),
+    username: webdavConfigForm.username,
+    password: webdavConfigForm.password
+  };
+  localStorage.setItem('webDavConfig', JSON.stringify(config));
+  webdavImportService.loadConfig();
+  showWebDAVConfigDialog = false;
+  alert('WebDAV 配置已保存');
+};
+const loadWebDAVConfig = () => {
+  const configStr = localStorage.getItem('webDavConfig');
+  if (configStr) {
+    try {
+      const config = JSON.parse(configStr);
+      webdavConfigForm.url = config.url || '';
+      webdavConfigForm.username = config.username || '';
+      webdavConfigForm.password = config.password || '';
+    } catch (e) {
+      console.error('加载 WebDAV 配置失败:', e);
+    }
+  }
 };
 const importFromWebDAV = async () => {
  const confirmed = confirm('确定要从 WebDAV 同步数据吗？\n\n此操作将清空当前所有策略数据，然后从 WebDAV 重新导入。');
@@ -553,16 +658,46 @@ let trendDataPromise = null;
 
 // 获取趋势数据（带缓存）
 const getTrendData = async () => {
-  if (cachedTrendData) return cachedTrendData;
-  if (trendDataPromise) return trendDataPromise;
+  if (cachedTrendData) {
+    console.log('[调试-getTrendData] 使用缓存的趋势数据, keys 数量:', Object.keys(cachedTrendData).length);
+    return cachedTrendData;
+  }
+  if (trendDataPromise) {
+    console.log('[调试-getTrendData] 等待进行中的趋势数据请求...');
+    return trendDataPromise;
+  }
   
   trendDataPromise = (async () => {
     try {
       const { webdavImportService } = await import('./services/WebDAVImportService');
+      console.log('[调试-getTrendData] WebDAV 配置状态 - isConfigured:', webdavImportService.isConfigured(), 'trendBaseUrl:', webdavImportService.trendBaseUrl);
       cachedTrendData = await webdavImportService.fetchTrendJudgments();
+      
+      if (cachedTrendData) {
+        console.log('[调试-getTrendData] 获取趋势数据成功, keys 数量:', Object.keys(cachedTrendData).length);
+        // 【调试】打印前3条数据的结构，检查是否包含 price_drop_ratio 和 decreasePercentage
+        const sampleKeys = Object.keys(cachedTrendData).slice(0, 3);
+        for (const key of sampleKeys) {
+          console.log(`[调试-getTrendData] 样本数据 [${key}]:`, JSON.stringify(cachedTrendData[key]));
+        }
+        // 【调试】统计包含 price_drop_ratio / decreasePercentage 的数据条数
+        let hasPriceDropRatio = 0;
+        let hasDecreasePercentage = 0;
+        for (const k of Object.keys(cachedTrendData)) {
+          if (cachedTrendData[k].price_drop_ratio) hasPriceDropRatio++;
+          if (cachedTrendData[k].decreasePercentage) hasDecreasePercentage++;
+        }
+        console.log(`[调试-getTrendData] 统计: 含 price_drop_ratio 的条数: ${hasPriceDropRatio}, 含 decreasePercentage 的条数: ${hasDecreasePercentage}, 总条数: ${Object.keys(cachedTrendData).length}`);
+      } else {
+        console.warn('[调试-getTrendData] ⚠️ 获取趋势数据返回 null! 请检查:');
+        console.warn('  1. WebDAV 是否已配置 (点击"WebDAV设置"按钮)');
+        console.warn('  2. WebDAV 服务器是否可访问');
+        console.warn('  3. 趋势判断目录是否存在文件: trend_judgment_*.json');
+      }
+      
       return cachedTrendData;
     } catch (error) {
-      console.error('获取趋势数据失败:', error);
+      console.error('[调试-getTrendData] 获取趋势数据异常:', error);
       return null;
     }
   })();
@@ -581,41 +716,57 @@ const normalizeTrendValue = (value) => {
 
 // 根据 stockCode 获取趋势信息（包含趋势值和下跌百分比）
 const getTrendByStockCode = (stockCode, trendData) => {
-  if (!trendData || !stockCode) return null;
+  if (!trendData || !stockCode) {
+    console.log(`[调试-getTrendByStockCode] 参数为空 - stockCode: ${stockCode}, trendData: ${!!trendData}`);
+    return null;
+  }
   
   // 尝试多种匹配方式
   let trendInfo = trendData[stockCode];
+  let matchMethod = trendInfo ? '直接匹配' : null;
   
   if (!trendInfo && stockCode.includes('.')) {
-    trendInfo = trendData[stockCode.split('.')[0]];
+    const key = stockCode.split('.')[0];
+    trendInfo = trendData[key];
+    if (trendInfo) matchMethod = `去后缀匹配 (${key})`;
   }
   
   if (!trendInfo) {
-    trendInfo = trendData[stockCode + '.SH'];
+    const key = stockCode + '.SH';
+    trendInfo = trendData[key];
+    if (trendInfo) matchMethod = `加.SH匹配 (${key})`;
   }
   
   if (!trendInfo) {
-    trendInfo = trendData[stockCode + '.SZ'];
+    const key = stockCode + '.SZ';
+    trendInfo = trendData[key];
+    if (trendInfo) matchMethod = `加.SZ匹配 (${key})`;
   }
   
   if (!trendInfo && /\.\w+$/.test(stockCode)) {
-    trendInfo = trendData[stockCode.replace(/\.\w+$/, '')];
+    const key = stockCode.replace(/\.\w+$/, '');
+    trendInfo = trendData[key];
+    if (trendInfo) matchMethod = `去后缀匹配 (${key})`;
   }
   
   if (trendInfo) {
-    // 返回完整的趋势信息对象
-    return {
+    const result = {
       trendValue: trendInfo.autoTrendJudgment || trendInfo.trendJudgment,
-      decreasePercentage: trendInfo.decreasePercentage || null,
-      price_drop_ratio: trendInfo.price_drop_ratio || null
+      // 修复：使用 != null 判断，避免 0 被当作 falsy 值处理
+      decreasePercentage: trendInfo.decreasePercentage != null ? trendInfo.decreasePercentage : null,
+      price_drop_ratio: trendInfo.price_drop_ratio != null ? trendInfo.price_drop_ratio : null
     };
+    console.log(`[调试-getTrendByStockCode] ✅ 匹配成功: stockCode=${stockCode}, 方法=${matchMethod}, result=`, JSON.stringify(result));
+    return result;
   }
   
+  console.warn(`[调试-getTrendByStockCode] ❌ 匹配失败: stockCode=${stockCode}, 尝试了所有匹配方式均未找到`);
   return null;
 };
 
 onMounted(async () => {
   console.log('App: 开始初始化...');
+  loadWebDAVConfig();
   await loadMockData();
   console.log('App: loadMockData 完成');
   
@@ -879,5 +1030,104 @@ onMounted(async () => {
     flex-wrap: wrap;
     gap: 10px;
   }
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: #16213e;
+  border-radius: 8px;
+  padding: 24px;
+  min-width: 420px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  color: white;
+}
+
+.modal-content h2 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  color: #4ecdc4;
+}
+
+.config-hint {
+  margin: 0 0 16px 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.config-paths {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.path-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.path-item:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.path-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  min-width: 60px;
+}
+
+.path-value {
+  font-size: 12px;
+  color: #4ecdc4;
+  word-break: break-all;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 4px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.form-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
 }
 </style>
