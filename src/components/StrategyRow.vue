@@ -26,7 +26,7 @@
     </td>
     
     <td v-if="visibleColumns.includes('decreasePercentage')" class="decrease-pct-cell">
-      {{ strategy.decreasePercentage || '-' }}%
+      <span :class="strategy.decreasePercentage ? 'negative' : ''">{{ strategy.decreasePercentage ? '-' + strategy.decreasePercentage : '-' }}%</span>
     </td>
     
     <td v-if="visibleColumns.includes('autoTrend')">
