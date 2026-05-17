@@ -175,21 +175,29 @@ const getAccountType = () => {
   return props.strategy.accountType === 'credit' ? 'credit' : 'default'
 }
 
+// 计算下单数量：持仓的1/4，向下取整到100的倍数
+const calculateTradeVolume = (netPosition) => {
+  if (!netPosition || netPosition < 100) return 100
+  const quarter = Math.floor(netPosition / 4)
+  return Math.floor(quarter / 100) * 100  // 向下取整到100的倍数
+}
+
 // 上涨买入
 const handleQuickBuy = async () => {
   if (!props.strategy.stockCode) return
   sendingBuy.value = true
+  const tradeVolume = calculateTradeVolume(props.strategy.netPosition)
   
   try {
     await mqttConditionService.sendBuyOrder({
       stockCode: props.strategy.stockCode,
       stockName: props.strategy.name,
-      tradeVolume: props.strategy.netPosition || 100,
+      tradeVolume,
       percentage: 0.5,
       provider: props.strategy.provider || 'pingan',
       accountType: getAccountType()
     })
-    console.log('[快速下单] 上涨0.5%买入已发送:', props.strategy.stockCode)
+    console.log(`[快速下单] 上涨0.5%买入已发送: ${props.strategy.stockCode}, 数量: ${tradeVolume}`)
   } catch (error) {
     console.error('[快速下单] 买入失败:', error)
     alert('发送失败，请检查MQTT连接')
@@ -202,17 +210,18 @@ const handleQuickBuy = async () => {
 const handleQuickSell = async () => {
   if (!props.strategy.stockCode) return
   sendingSell.value = true
+  const tradeVolume = calculateTradeVolume(props.strategy.netPosition)
   
   try {
     await mqttConditionService.sendSellOrder({
       stockCode: props.strategy.stockCode,
       stockName: props.strategy.name,
-      tradeVolume: props.strategy.netPosition || 100,
+      tradeVolume,
       percentage: 0.5,
       provider: props.strategy.provider || 'pingan',
       accountType: getAccountType()
     })
-    console.log('[快速下单] 下跌0.5%卖出已发送:', props.strategy.stockCode)
+    console.log(`[快速下单] 下跌0.5%卖出已发送: ${props.strategy.stockCode}, 数量: ${tradeVolume}`)
   } catch (error) {
     console.error('[快速下单] 卖出失败:', error)
     alert('发送失败，请检查MQTT连接')
@@ -225,17 +234,18 @@ const handleQuickSell = async () => {
 const handleQuickBoth = async () => {
   if (!props.strategy.stockCode) return
   sendingBoth.value = true
+  const tradeVolume = calculateTradeVolume(props.strategy.netPosition)
   
   try {
     await mqttConditionService.sendBothOrders({
       stockCode: props.strategy.stockCode,
       stockName: props.strategy.name,
-      tradeVolume: props.strategy.netPosition || 100,
+      tradeVolume,
       percentage: 0.5,
       provider: props.strategy.provider || 'pingan',
       accountType: getAccountType()
     })
-    console.log('[快速下单] 双向条件单已发送:', props.strategy.stockCode)
+    console.log(`[快速下单] 双向条件单已发送: ${props.strategy.stockCode}, 数量: ${tradeVolume}`)
   } catch (error) {
     console.error('[快速下单] 双向下单失败:', error)
     alert('发送失败，请检查MQTT连接')
