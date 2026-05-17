@@ -321,7 +321,7 @@ class WebDAVImportService {
   }
 
   loadConfig() {
-    const configStr = localStorage.getItem('webdavConfig');
+    const configStr = localStorage.getItem('webDavConfig');
     if (configStr) {
       try {
         const config = JSON.parse(configStr);
