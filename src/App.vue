@@ -67,7 +67,6 @@
           </button>
         </div>
       </div>
-      </div>
     </header>
     
     <div class="filter-bar">
