@@ -46,7 +46,7 @@ set USERNAME=weijia
 set PROJ=my-quant
 set ROOT=%USERNAME%/%PROJ%
 
-# 设置 WebDAV 凭据
+# 设置 WebDAV 凭据（请替换为你的实际值）
 gh secret set WEBDAV_URL --repo %ROOT% --body https://your-webdav-server.com/dav/
 gh secret set WEBDAV_USERNAME --repo %ROOT% --body YOUR_USERNAME
 gh secret set WEBDAV_PASSWORD --repo %ROOT% --body YOUR_PASSWORD

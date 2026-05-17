@@ -317,6 +317,7 @@ class DataConverter {
 
 class WebDAVImportService {
   constructor() {
+    // 请替换为你的 WebDAV 服务器地址
     this.webdavBaseUrl = 'https://your-webdav-server.com/dav/app_data/stocks/'
     this.holdingsBaseUrl = 'https://your-webdav-server.com/dav/app_data/holdings/pingan/'
     this.trendBaseUrl = 'https://your-webdav-server.com/dav/app_data/stocks/trend_judgments/'
