@@ -351,6 +351,7 @@ const resetColumns = () => {
   font-size: 12px;
   color: white;
   position: relative;
+  table-layout: fixed;
 }
 
 .strategy-table th,
