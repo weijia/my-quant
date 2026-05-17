@@ -3,11 +3,13 @@
     <header class="app-header">
       <div class="header-content">
         <div class="logo-section">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4ecdc4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 3v18h18"/>
-            <path d="M18 9l-5 5-4-4-3 3"/>
-          </svg>
-          <h1>my-quant</h1>
+          <a href="https://github.com/weijia/my-quant" target="_blank" rel="noopener noreferrer" class="logo-link">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4ecdc4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 3v18h18"/>
+              <path d="M18 9l-5 5-4-4-3 3"/>
+            </svg>
+            <h1>my-quant</h1>
+          </a>
         </div>
         
         <div class="search-section">
@@ -662,6 +664,18 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.logo-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.logo-link:hover h1 {
+  opacity: 0.8;
 }
 
 .logo-section h1 {
