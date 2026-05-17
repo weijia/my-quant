@@ -92,6 +92,33 @@
       <span :title="strategy.manualNotes">{{ strategy.manualNotes || '-' }}</span>
     </td>
     
+    <td v-if="visibleColumns.includes('quickOrder')" class="quick-order-cell">
+      <button 
+        class="quick-order-btn buy-btn" 
+        @click="handleQuickBuy" 
+        :disabled="!strategy.stockCode || sendingBuy"
+        title="上涨0.5%买入"
+      >
+        {{ sendingBuy ? '...' : '↑买入' }}
+      </button>
+      <button 
+        class="quick-order-btn sell-btn" 
+        @click="handleQuickSell" 
+        :disabled="!strategy.stockCode || sendingSell"
+        title="下跌0.5%卖出"
+      >
+        {{ sendingSell ? '...' : '↓卖出' }}
+      </button>
+      <button 
+        class="quick-order-btn both-btn" 
+        @click="handleQuickBoth" 
+        :disabled="!strategy.stockCode || sendingBoth"
+        title="上涨0.5%买入及下跌0.5%卖出"
+      >
+        {{ sendingBoth ? '...' : '双向' }}
+      </button>
+    </td>
+    
     <td v-if="visibleColumns.includes('actions')" class="actions-cell">
       <button class="action-btn edit-btn" @click="$emit('edit', strategy)" title="编辑">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -118,6 +145,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import mqttConditionService from '../services/MQTTConditionService.js'
 
 const props = defineProps({
   strategy: {
@@ -133,6 +161,88 @@ const props = defineProps({
 const emit = defineEmits(['edit', 'delete', 'update-trend', 'batch-condition'])
 
 const localTrend = ref(props.strategy.trendJudgment || 'unset')
+
+// 快速下单发送状态
+const sendingBuy = ref(false)
+const sendingSell = ref(false)
+const sendingBoth = ref(false)
+
+// 获取账户类型
+const getAccountType = () => {
+  if (props.strategy.provider === 'pingan') {
+    return 'default'
+  }
+  return props.strategy.accountType === 'credit' ? 'credit' : 'default'
+}
+
+// 上涨买入
+const handleQuickBuy = async () => {
+  if (!props.strategy.stockCode) return
+  sendingBuy.value = true
+  
+  try {
+    await mqttConditionService.sendBuyOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume: props.strategy.netPosition || 100,
+      percentage: 0.5,
+      provider: props.strategy.provider || 'pingan',
+      accountType: getAccountType()
+    })
+    console.log('[快速下单] 上涨0.5%买入已发送:', props.strategy.stockCode)
+  } catch (error) {
+    console.error('[快速下单] 买入失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingBuy.value = false
+  }
+}
+
+// 下跌卖出
+const handleQuickSell = async () => {
+  if (!props.strategy.stockCode) return
+  sendingSell.value = true
+  
+  try {
+    await mqttConditionService.sendSellOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume: props.strategy.netPosition || 100,
+      percentage: 0.5,
+      provider: props.strategy.provider || 'pingan',
+      accountType: getAccountType()
+    })
+    console.log('[快速下单] 下跌0.5%卖出已发送:', props.strategy.stockCode)
+  } catch (error) {
+    console.error('[快速下单] 卖出失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingSell.value = false
+  }
+}
+
+// 双向下单
+const handleQuickBoth = async () => {
+  if (!props.strategy.stockCode) return
+  sendingBoth.value = true
+  
+  try {
+    await mqttConditionService.sendBothOrders({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume: props.strategy.netPosition || 100,
+      percentage: 0.5,
+      provider: props.strategy.provider || 'pingan',
+      accountType: getAccountType()
+    })
+    console.log('[快速下单] 双向条件单已发送:', props.strategy.stockCode)
+  } catch (error) {
+    console.error('[快速下单] 双向下单失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingBoth.value = false
+  }
+}
 
 // 【调试】监控 decreasePercentage 的值
 console.log(`[调试-StrategyRow] 渲染策略: ${props.strategy.name}(${props.strategy.stockCode}), decreasePercentage=${props.strategy.decreasePercentage}, 类型=${typeof props.strategy.decreasePercentage}`);
@@ -363,5 +473,63 @@ const getTrendClass = (trend) => {
 
 .condition-btn:hover {
   color: #ffc107;
+}
+
+/* 快速下单按钮样式 */
+.quick-order-cell {
+  display: flex;
+  gap: 3px;
+  justify-content: center;
+  width: 120px;
+  max-width: 120px;
+  padding: 4px 6px;
+}
+
+.quick-order-btn {
+  padding: 3px 6px;
+  border: none;
+  border-radius: 3px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.quick-order-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.quick-order-btn.buy-btn {
+  background-color: rgba(40, 167, 69, 0.3);
+  color: #28a745;
+  border: 1px solid rgba(40, 167, 69, 0.5);
+}
+
+.quick-order-btn.buy-btn:hover:not(:disabled) {
+  background-color: rgba(40, 167, 69, 0.5);
+  color: white;
+}
+
+.quick-order-btn.sell-btn {
+  background-color: rgba(220, 53, 69, 0.3);
+  color: #dc3545;
+  border: 1px solid rgba(220, 53, 69, 0.5);
+}
+
+.quick-order-btn.sell-btn:hover:not(:disabled) {
+  background-color: rgba(220, 53, 69, 0.5);
+  color: white;
+}
+
+.quick-order-btn.both-btn {
+  background-color: rgba(255, 193, 7, 0.3);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.5);
+}
+
+.quick-order-btn.both-btn:hover:not(:disabled) {
+  background-color: rgba(255, 193, 7, 0.5);
+  color: white;
 }
 </style>

@@ -213,6 +213,7 @@ const allColumns = [
   { key: 'decreaseStrategy', label: '下跌减仓' },
   { key: 'increaseStrategy', label: '上涨加仓' },
   { key: 'manualNotes', label: '手工备注' },
+  { key: 'quickOrder', label: '快速下单' },
   { key: 'actions', label: '操作' }
 ]
 
@@ -229,6 +230,7 @@ const defaultVisibleColumns = [
   'decreaseStrategy',
   'increaseStrategy',
   'manualNotes',
+  'quickOrder',
   'actions'
 ]
 
