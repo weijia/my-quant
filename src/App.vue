@@ -1205,6 +1205,17 @@ onMounted(async () => {
   .action-buttons {
     flex-wrap: wrap;
     justify-content: center;
+    gap: 6px;
+  }
+  
+  .action-buttons .btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  
+  .action-buttons .btn svg {
+    width: 14px;
+    height: 14px;
   }
   
   .filter-bar {
