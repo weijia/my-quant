@@ -623,6 +623,18 @@ const resetColumns = () => {
     font-size: 11px;
     padding: 6px 2px;
   }
+  
+  .quantity-header,
+  .quantity-cell {
+    width: 44px;
+    min-width: 44px;
+  }
+  
+  .decrease-pct-header,
+  .decrease-pct-cell {
+    width: 44px;
+    min-width: 44px;
+  }
 }
 
 @media (min-width: 1400px) {
