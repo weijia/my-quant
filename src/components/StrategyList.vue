@@ -378,12 +378,12 @@ const resetColumns = () => {
 
 .market-value-header {
   width: 88px;
-  max-width: 88px;
+  min-width: 88px;
 }
 
 .quantity-header {
   width: 88px;
-  max-width: 88px;
+  min-width: 88px;
 }
 
 .decrease-pct-header {
@@ -404,8 +404,8 @@ const resetColumns = () => {
   left: 0;
   background-color: rgba(0,0,0,0.3);
   z-index: 5;
-  width: 88px;
-  max-width: 88px;
+  width: 64px;
+  min-width: 64px;
   border-right: 2px solid rgba(255,255,255,0.2);
 }
 
@@ -613,7 +613,21 @@ const resetColumns = () => {
     white-space: normal;
     word-break: break-word;
     font-size: 11px;
-    padding: 6px 8px;
+    padding: 6px 4px;
+  }
+  
+  .strategy-table th:first-child,
+  .strategy-table td:first-child {
+    width: 48px;
+    min-width: 48px;
+    font-size: 11px;
+    padding: 6px 2px;
+  }
+}
+
+@media (min-width: 1400px) {
+  .strategy-table {
+    width: 100%;
   }
 }
 </style>
