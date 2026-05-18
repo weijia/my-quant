@@ -55,6 +55,7 @@
             <th v-if="visibleColumns.includes('dividendYield')">5年平均股息率</th>
             <th v-if="visibleColumns.includes('changePercent')">涨跌%</th>
             <th v-if="visibleColumns.includes('decreasePercentage')" class="decrease-pct-header">下跌百分比</th>
+            <th v-if="visibleColumns.includes('trendIcon')" class="trend-icon-header" title="趋势">势</th>
             <th v-if="visibleColumns.includes('autoTrend')">
               <div class="filter-header">
                 <span>自动生成趋势</span>
@@ -82,7 +83,7 @@
             <th v-if="visibleColumns.includes('decreaseStrategy')">下跌减仓</th>
             <th v-if="visibleColumns.includes('increaseStrategy')">上涨加仓</th>
             <th v-if="visibleColumns.includes('manualNotes')">手工备注</th>
-            <th v-if="visibleColumns.includes('quickOrder')" style="width: 120px;">快速下单</th>
+            <th v-if="visibleColumns.includes('quickOrder')" style="width: 80px;">快捷</th>
             <th v-if="visibleColumns.includes('actions')" style="width: 80px;">操作</th>
           </tr>
         </thead>
@@ -238,12 +239,13 @@ const allColumns = [
   { key: 'dividendYield', label: '5年平均股息率' },
   { key: 'changePercent', label: '涨跌%' },
   { key: 'decreasePercentage', label: '下跌百分比' },
+  { key: 'trendIcon', label: '趋势' },
   { key: 'autoTrend', label: '自动生成趋势' },
   { key: 'oscillationGrid', label: '震荡时网格' },
   { key: 'decreaseStrategy', label: '下跌减仓' },
   { key: 'increaseStrategy', label: '上涨加仓' },
   { key: 'manualNotes', label: '手工备注' },
-  { key: 'quickOrder', label: '快速下单' },
+  { key: 'quickOrder', label: '快捷' },
   { key: 'actions', label: '操作' }
 ]
 
@@ -255,6 +257,7 @@ const defaultVisibleColumns = [
   'dividendYield',
   'changePercent',
   'decreasePercentage',
+  'trendIcon',
   'autoTrend',
   'oscillationGrid',
   'decreaseStrategy',
@@ -423,17 +426,24 @@ const resetColumns = () => {
 
 .market-value-header {
   width: 88px;
-  max-width: 88px;
+  min-width: 88px;
 }
 
 .quantity-header {
   width: 88px;
-  max-width: 88px;
+  min-width: 88px;
 }
 
 .decrease-pct-header {
   width: 3ch;
   min-width: 3ch;
+}
+
+.trend-icon-header {
+  width: 1.5ch;
+  min-width: 1.5ch;
+  text-align: center;
+  padding: 8px 4px;
 }
 
 .strategy-table th:first-child,
@@ -442,8 +452,8 @@ const resetColumns = () => {
   left: 0;
   background-color: rgba(0,0,0,0.3);
   z-index: 5;
-  width: 88px;
-  max-width: 88px;
+  width: 64px;
+  min-width: 64px;
   border-right: 2px solid rgba(255,255,255,0.2);
 }
 
@@ -650,8 +660,48 @@ const resetColumns = () => {
   .strategy-table td {
     white-space: normal;
     word-break: break-word;
-    font-size: 11px;
-    padding: 6px 8px;
+    font-size: 10px;
+    padding: 4px 2px;
+  }
+  
+  .strategy-table th:first-child,
+  .strategy-table td:first-child {
+    width: 36px;
+    min-width: 36px;
+    font-size: 10px;
+    padding: 4px 1px;
+  }
+  
+  .name-cell {
+    width: 36px;
+    max-width: 36px;
+    font-size: 10px;
+  }
+  
+  .name-cell span {
+    display: inline-block;
+    max-width: 32px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .quantity-header,
+  .quantity-cell {
+    width: 32px;
+    min-width: 32px;
+  }
+  
+  .decrease-pct-header,
+  .decrease-pct-cell {
+    width: 32px;
+    min-width: 32px;
+  }
+}
+
+@media (min-width: 1400px) {
+  .strategy-table {
+    width: 100%;
   }
 }
 </style>
