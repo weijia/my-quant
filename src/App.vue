@@ -139,6 +139,8 @@
         :sort-by="filter.sortBy"
         :sort-order="filter.sortOrder"
         :trend-filter="filter.trend"
+        :mqtt-connected="mqttConnected"
+        :agent-online="agentOnline"
         @edit-strategy="editStrategy"
         @delete-strategy="deleteStrategy"
         @update-trend-judgment="updateTrendJudgment"
@@ -288,6 +290,7 @@ const mqttConfigForm = reactive({
   password: ''
 });
 const mqttConnected = ref(false);
+const agentOnline = ref(false);
 const testingConnection = ref(false);
 const searchQuery = ref('');
 const showToolsPanel = ref(false);
@@ -900,10 +903,21 @@ onMounted(async () => {
     }).catch(err => {
       console.log('[App] MQTT 连接失败（不影响主功能）:', err.message);
       mqttConnected.value = false;
+      agentOnline.value = false;
     });
   } catch (e) {
     console.log('[App] MQTT 初始化失败:', e.message);
   }
+  
+  // 监听 MQTT 消息
+  mqttConditionService.onMessage((data, msgData) => {
+    console.log('[App] MQTT消息:', data, msgData);
+  });
+
+  // 监听 Agent 在线状态
+  mqttConditionService.onAgentStatus((online) => {
+    agentOnline.value = online;
+  });
   
   await loadMockData();
   console.log('App: loadMockData 完成');
@@ -919,20 +933,6 @@ onMounted(async () => {
   // 策略加载完成后，异步同步趋势到数据库（不阻塞界面）
   trendService.syncTrendJudgmentsFromWebDAV().then(result => {
     console.log('App: 后台趋势同步完成:', result);
-    // 可选：重新加载策略以刷新数据库中的趋势值
-  });
-  
-  // 初始化 MQTT 连接（用于快速下单）
-  console.log('App: 初始化MQTT连接...');
-  mqttConditionService.connect().then(() => {
-    console.log('App: MQTT连接成功');
-  }).catch(err => {
-    console.error('App: MQTT连接失败:', err);
-  });
-  
-  // 监听 MQTT 消息
-  mqttConditionService.onMessage((data, msgData) => {
-    console.log('[App] MQTT消息:', data, msgData);
   });
   
   console.log('App: 初始化完成（界面已可交互）');

@@ -60,9 +60,13 @@ class MQTTConditionOrderService {
   constructor() {
     this.client = null;
     this.connected = false;
+    this.agentOnline = false;
     this.pendingMessages = new Map();
     this.onMessageCallback = null;
     this.onConnectCallback = null;
+    this.onAgentStatusCallback = null;
+    this._pingTimer = null;
+    this._pongTimeout = null;
   }
 
   getConfig() {
@@ -101,6 +105,9 @@ class MQTTConditionOrderService {
               console.log('[MQTT] Subscribed to topic:', config.topic);
               if (this.onConnectCallback) this.onConnectCallback();
               resolve();
+              // 连接成功后立即 ping 一次，然后定时 ping
+              this.ping();
+              this.startPingInterval();
             }
           });
         });
@@ -118,6 +125,9 @@ class MQTTConditionOrderService {
         this.client.on('close', () => {
           console.log('[MQTT] Connection closed');
           this.connected = false;
+          this.agentOnline = false;
+          this.stopPingInterval();
+          if (this.onAgentStatusCallback) this.onAgentStatusCallback(false);
         });
 
       } catch (error) {
@@ -142,6 +152,18 @@ class MQTTConditionOrderService {
       
       // 忽略自己的消息
       if (data.id === config.clientId) return;
+
+      // 处理 pong 响应
+      if (data.msg === 'pong') {
+        console.log('[MQTT] Received pong from agent:', data.id);
+        this.agentOnline = true;
+        if (this._pongTimeout) {
+          clearTimeout(this._pongTimeout);
+          this._pongTimeout = null;
+        }
+        if (this.onAgentStatusCallback) this.onAgentStatusCallback(true);
+        return;
+      }
 
       // 解析 msg 字段
       let msgData;
@@ -290,10 +312,74 @@ class MQTTConditionOrderService {
   }
 
   disconnect() {
+    this.stopPingInterval();
     if (this.client) {
       this.client.end(true);
       this.connected = false;
     }
+    this.agentOnline = false;
+  }
+
+  /**
+   * 发送 ping 消息检测 agent 是否在线
+   */
+  ping() {
+    if (!this.connected) return;
+
+    const config = loadConfig();
+    const payload = {
+      id: config.clientId,
+      msgId: Date.now() + '_ping',
+      user: 'myquant',
+      msg: 'ping',
+      time: Date.now()
+    };
+
+    const payloadStr = JSON.stringify(payload);
+    const cipher = CryptoJS.AES.encrypt(payloadStr, config.password).toString();
+
+    this.client.publish(config.topic, cipher, { qos: 1 }, (err) => {
+      if (err) {
+        console.error('[MQTT] Ping publish error:', err);
+      } else {
+        console.log('[MQTT] Ping sent');
+      }
+    });
+
+    // 设置超时：5秒内未收到 pong 则标记 agent 离线
+    if (this._pongTimeout) clearTimeout(this._pongTimeout);
+    this._pongTimeout = setTimeout(() => {
+      if (this.agentOnline) {
+        this.agentOnline = false;
+        if (this.onAgentStatusCallback) this.onAgentStatusCallback(false);
+        console.log('[MQTT] Agent ping timeout, marking offline');
+      }
+    }, 5000);
+  }
+
+  /**
+   * 定时 ping（每 30 秒）
+   */
+  startPingInterval() {
+    this.stopPingInterval();
+    this._pingTimer = setInterval(() => {
+      this.ping();
+    }, 30000);
+  }
+
+  stopPingInterval() {
+    if (this._pingTimer) {
+      clearInterval(this._pingTimer);
+      this._pingTimer = null;
+    }
+    if (this._pongTimeout) {
+      clearTimeout(this._pongTimeout);
+      this._pongTimeout = null;
+    }
+  }
+
+  onAgentStatus(callback) {
+    this.onAgentStatusCallback = callback;
   }
 }
 

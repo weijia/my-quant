@@ -1,7 +1,10 @@
 <template>
   <div class="strategy-list">
     <div class="table-header">
-      <h3 class="table-title">高级策略监控列表</h3>
+      <h3 class="table-title">
+        <span class="status-indicator" :class="statusClass" :title="statusTitle">●</span>
+        {{ statusText }}
+      </h3>
       <button 
         class="column-select-button"
         @click="showColumnSelectDialog = true"
@@ -182,7 +185,33 @@ const props = defineProps({
   trendFilter: {
     type: String,
     default: 'all'
+  },
+  mqttConnected: {
+    type: Boolean,
+    default: false
+  },
+  agentOnline: {
+    type: Boolean,
+    default: false
   }
+})
+
+const statusClass = computed(() => {
+  if (props.agentOnline) return 'status-online'
+  if (props.mqttConnected) return 'status-mqtt-only'
+  return 'status-offline'
+})
+
+const statusText = computed(() => {
+  if (props.agentOnline) return '条件单代理已连接'
+  if (props.mqttConnected) return 'MQTT已连接·代理离线'
+  return 'MQTT未连接'
+})
+
+const statusTitle = computed(() => {
+  if (props.agentOnline) return 'MQTT已连接，条件单代理在线'
+  if (props.mqttConnected) return 'MQTT已连接，但条件单代理未响应'
+  return 'MQTT未连接'
 })
 
 const emit = defineEmits([
@@ -322,6 +351,25 @@ const resetColumns = () => {
   font-size: 16px;
   font-weight: bold;
   color: white;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-indicator {
+  font-size: 12px;
+}
+
+.status-online {
+  color: #4ecdc4;
+}
+
+.status-mqtt-only {
+  color: #fd7e14;
+}
+
+.status-offline {
+  color: #e74c3c;
 }
 
 .column-select-button {
