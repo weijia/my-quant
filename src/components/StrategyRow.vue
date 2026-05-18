@@ -29,6 +29,10 @@
       <span :class="strategy.decreasePercentage ? 'decrease-value' : ''">{{ strategy.decreasePercentage ? '-' + strategy.decreasePercentage : '-' }}%</span>
     </td>
     
+    <td v-if="visibleColumns.includes('trendIcon')" class="trend-icon-cell" :title="getTrendTooltip(localTrend)">
+      <span class="trend-icon" :class="getTrendIconClass(localTrend)">{{ getTrendIcon(localTrend) }}</span>
+    </td>
+    
     <td v-if="visibleColumns.includes('autoTrend')">
       <select 
         v-model="localTrend" 
@@ -166,6 +170,57 @@ const localTrend = ref(props.strategy.trendJudgment || 'unset')
 const sendingBuy = ref(false)
 const sendingSell = ref(false)
 const sendingBoth = ref(false)
+
+// 获取趋势图标
+const getTrendIcon = (trend) => {
+  const icons = {
+    'trend_up': '↑',
+    'trend_down': '↓',
+    'trend_breakdown': '⇓',
+    'trend_oscillation': '↔',
+    'trend_pullback': '↘',
+    'trend_unknown': '?',
+    'high_volatility': '⚡',
+    'medium_volatility': '∼',
+    'low_volatility': '─',
+    'unset': '·'
+  }
+  return icons[trend] || '·'
+}
+
+// 获取趋势图标样式类
+const getTrendIconClass = (trend) => {
+  const classes = {
+    'trend_up': 'trend-up',
+    'trend_down': 'trend-down',
+    'trend_breakdown': 'trend-breakdown',
+    'trend_oscillation': 'trend-oscillation',
+    'trend_pullback': 'trend-pullback',
+    'trend_unknown': 'trend-unknown',
+    'high_volatility': 'trend-high-vol',
+    'medium_volatility': 'trend-medium-vol',
+    'low_volatility': 'trend-low-vol',
+    'unset': 'trend-unset'
+  }
+  return classes[trend] || 'trend-unset'
+}
+
+// 获取趋势提示文本
+const getTrendTooltip = (trend) => {
+  const tooltips = {
+    'trend_up': '上涨趋势',
+    'trend_down': '下跌趋势',
+    'trend_breakdown': '下跌破位',
+    'trend_oscillation': '震荡趋势',
+    'trend_pullback': '回踩趋势',
+    'trend_unknown': '未知趋势',
+    'high_volatility': '高波动率',
+    'medium_volatility': '中等波动率',
+    'low_volatility': '低波动率',
+    'unset': '未设置'
+  }
+  return tooltips[trend] || '未设置'
+}
 
 // 获取账户类型
 const getAccountType = () => {
@@ -334,6 +389,29 @@ const getTrendClass = (trend) => {
   min-width: 3ch;
   text-align: right;
 }
+
+.trend-icon-cell {
+  width: 1.5ch;
+  min-width: 1.5ch;
+  text-align: center;
+  padding: 8px 4px;
+}
+
+.trend-icon {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.trend-icon.trend-up { color: #dc3545; }
+.trend-icon.trend-down { color: #28a745; }
+.trend-icon.trend-breakdown { color: #dc3545; }
+.trend-icon.trend-oscillation { color: #ffc107; }
+.trend-icon.trend-pullback { color: #17a2b8; }
+.trend-icon.trend-unknown { color: #6c757d; }
+.trend-icon.trend-high-vol { color: #fd7e14; }
+.trend-icon.trend-medium-vol { color: #20c997; }
+.trend-icon.trend-low-vol { color: #6c757d; }
+.trend-icon.trend-unset { color: rgba(255, 255, 255, 0.3); }
 
 .stock-code {
   color: rgba(255, 255, 255, 0.5);

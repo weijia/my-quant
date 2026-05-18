@@ -52,6 +52,7 @@
             <th v-if="visibleColumns.includes('dividendYield')">5年平均股息率</th>
             <th v-if="visibleColumns.includes('changePercent')">涨跌%</th>
             <th v-if="visibleColumns.includes('decreasePercentage')" class="decrease-pct-header">下跌百分比</th>
+            <th v-if="visibleColumns.includes('trendIcon')" class="trend-icon-header" title="趋势">势</th>
             <th v-if="visibleColumns.includes('autoTrend')">
               <div class="filter-header">
                 <span>自动生成趋势</span>
@@ -209,6 +210,7 @@ const allColumns = [
   { key: 'dividendYield', label: '5年平均股息率' },
   { key: 'changePercent', label: '涨跌%' },
   { key: 'decreasePercentage', label: '下跌百分比' },
+  { key: 'trendIcon', label: '趋势' },
   { key: 'autoTrend', label: '自动生成趋势' },
   { key: 'oscillationGrid', label: '震荡时网格' },
   { key: 'decreaseStrategy', label: '下跌减仓' },
@@ -226,6 +228,7 @@ const defaultVisibleColumns = [
   'dividendYield',
   'changePercent',
   'decreasePercentage',
+  'trendIcon',
   'autoTrend',
   'oscillationGrid',
   'decreaseStrategy',
@@ -386,6 +389,13 @@ const resetColumns = () => {
 .decrease-pct-header {
   width: 3ch;
   min-width: 3ch;
+}
+
+.trend-icon-header {
+  width: 1.5ch;
+  min-width: 1.5ch;
+  text-align: center;
+  padding: 8px 4px;
 }
 
 .strategy-table th:first-child,
