@@ -624,6 +624,20 @@ const resetColumns = () => {
     padding: 4px 1px;
   }
   
+  .name-cell {
+    width: 36px;
+    max-width: 36px;
+    font-size: 10px;
+  }
+  
+  .name-cell span {
+    display: inline-block;
+    max-width: 32px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
   .quantity-header,
   .quantity-cell {
     width: 32px;
