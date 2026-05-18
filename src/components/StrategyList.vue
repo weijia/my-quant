@@ -612,28 +612,28 @@ const resetColumns = () => {
   .strategy-table td {
     white-space: normal;
     word-break: break-word;
-    font-size: 11px;
-    padding: 6px 4px;
+    font-size: 10px;
+    padding: 4px 2px;
   }
   
   .strategy-table th:first-child,
   .strategy-table td:first-child {
-    width: 48px;
-    min-width: 48px;
-    font-size: 11px;
-    padding: 6px 2px;
+    width: 36px;
+    min-width: 36px;
+    font-size: 10px;
+    padding: 4px 1px;
   }
   
   .quantity-header,
   .quantity-cell {
-    width: 44px;
-    min-width: 44px;
+    width: 32px;
+    min-width: 32px;
   }
   
   .decrease-pct-header,
   .decrease-pct-cell {
-    width: 44px;
-    min-width: 44px;
+    width: 32px;
+    min-width: 32px;
   }
 }
 
