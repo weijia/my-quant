@@ -53,47 +53,47 @@
       </div>
       <div class="tools-panel" :class="{ collapsed: !showToolsPanel }">
         <div class="tools-panel-content">
-          <button @click="exportData" class="btn btn-secondary">
+          <button @click="exportData" class="btn btn-secondary" title="导出数据">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="7 10 12 15 17 10"/>
               <line x1="12" x2="12" y1="15" y2="3"/>
             </svg>
-            导出数据
+            
           </button>
-          <label class="import-btn btn btn-secondary">
+          <label class="import-btn btn btn-secondary" title="导入数据">
             <input type="file" accept=".json" @change="importData" style="display: none;">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
               <line x1="12" x2="12" y1="3" y2="15"/>
             </svg>
-            导入数据
+            
           </label>
-          <button @click="importFromWebDAV" class="btn btn-secondary">
+          <button @click="importFromWebDAV" class="btn btn-secondary" title="同步WebDAV">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
               <path d="M3 3v5h5"/>
               <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
               <path d="M16 16h5v5"/>
             </svg>
-            同步WebDAV
+            
           </button>
-          <button @click="showWebDAVConfigDialog = true" class="btn btn-secondary">
+          <button @click="showWebDAVConfigDialog = true" class="btn btn-secondary" title="WebDAV设置">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
               <circle cx="12" cy="12" r="3"/>
             </svg>
-            WebDAV设置
+            
           </button>
-          <button @click="openMQTTConfig" class="btn btn-secondary">
+          <button @click="openMQTTConfig" class="btn btn-secondary" title="MQTT设置">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
               <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
               <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
               <line x1="12" x2="12.01" y1="20" y2="20"/>
             </svg>
-            MQTT设置
+            
           </button>
         </div>
       </div>
@@ -508,8 +508,8 @@ const exportData = async () => {
  URL.revokeObjectURL(url);
  }
  catch (error) {
- console.error('导出数据失败:', error);
- alert('导出数据失败');
+ console.error('失败:', error);
+ alert('失败');
  }
 };
 const importData = async (event) => {
@@ -545,8 +545,8 @@ const importData = async (event) => {
  alert(result.message);
  }
  catch (error) {
- console.error('导入数据失败:', error);
- alert('导入数据失败，请确保文件格式正确');
+ console.error('失败:', error);
+ alert('失败，请确保文件格式正确');
  }
  event.target.value = '';
 };
@@ -647,8 +647,8 @@ const importFromWebDAV = async () => {
  }
  }
  catch (error) {
- console.error('从WebDAV导入数据失败:', error);
- alert('从WebDAV导入数据失败');
+ console.error('从WebDAV失败:', error);
+ alert('从WebDAV失败');
  }
 };
 const handleSearch = () => {
@@ -841,7 +841,7 @@ const getTrendData = async () => {
         console.log(`[调试-getTrendData] 统计: 含 price_drop_ratio 的条数: ${hasPriceDropRatio}, 含 decreasePercentage 的条数: ${hasDecreasePercentage}, 总条数: ${Object.keys(cachedTrendData).length}`);
       } else {
         console.warn('[调试-getTrendData] ⚠️ 获取趋势数据返回 null! 请检查:');
-        console.warn('  1. WebDAV 是否已配置 (点击"WebDAV设置"按钮)');
+        console.warn('  1. WebDAV 是否已配置 (点击""按钮)');
         console.warn('  2. WebDAV 服务器是否可访问');
         console.warn('  3. 趋势判断目录是否存在文件: trend_judgment_*.json');
       }
