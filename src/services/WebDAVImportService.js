@@ -109,7 +109,7 @@ class DataConverter {
               name: holding.secuName || '',
               stockCode: holding.secuCode,
               accountType: 'default',
-              provider: 'pingan',
+              provider: holding.provider || 'pingan',
               isMarginAccount: false,
               netPosition: this.parseNumber(holding.mktQty || 0),
               marketValue: this.formatMarketValue(holding.mktVal || ''),

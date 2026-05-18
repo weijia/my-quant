@@ -230,7 +230,7 @@ const getTrendTooltip = (trend) => {
 
 // 获取账户类型
 const getAccountType = () => {
-  if (props.strategy.provider === 'pingan') {
+  if (props.strategy.provider === 'pingan' || props.strategy.provider === 'founder') {
     return 'default'
   }
   return props.strategy.accountType === 'credit' ? 'credit' : 'default'
