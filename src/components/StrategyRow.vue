@@ -108,7 +108,7 @@
         :disabled="!strategy.stockCode || sendingBuy"
         title="上涨0.5%买入"
       >
-        {{ sendingBuy ? '...' : '↑买入' }}
+        {{ sendingBuy ? '...' : '买' }}
       </button>
       <button 
         class="quick-order-btn sell-btn" 
@@ -116,7 +116,7 @@
         :disabled="!strategy.stockCode || sendingSell"
         title="下跌0.5%卖出"
       >
-        {{ sendingSell ? '...' : '↓卖出' }}
+        {{ sendingSell ? '...' : '卖' }}
       </button>
       <button 
         class="quick-order-btn both-btn" 
