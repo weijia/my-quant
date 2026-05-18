@@ -29,8 +29,13 @@
       <span :class="strategy.decreasePercentage ? 'decrease-value' : ''">{{ strategy.decreasePercentage ? '-' + strategy.decreasePercentage : '-' }}%</span>
     </td>
     
-    <td v-if="visibleColumns.includes('trendIcon')" class="trend-icon-cell" :title="getTrendTooltip(localTrend)">
-      <span class="trend-icon" :class="getTrendIconClass(localTrend)">{{ getTrendIcon(localTrend) }}</span>
+    <td v-if="visibleColumns.includes('trendIcon')" class="trend-icon-cell">
+      <span 
+        class="trend-icon" 
+        :class="getTrendIconClass(localTrend)"
+        @click="showTrendTip = !showTrendTip"
+      >{{ getTrendIcon(localTrend) }}</span>
+      <span v-if="showTrendTip" class="trend-tip" @click.stop="showTrendTip = false">{{ getTrendTooltip(localTrend) }}</span>
     </td>
     
     <td v-if="visibleColumns.includes('autoTrend')">
@@ -170,6 +175,7 @@ const localTrend = ref(props.strategy.trendJudgment || 'unset')
 const sendingBuy = ref(false)
 const sendingSell = ref(false)
 const sendingBoth = ref(false)
+const showTrendTip = ref(false)
 
 // 获取趋势图标
 const getTrendIcon = (trend) => {
@@ -395,11 +401,30 @@ const getTrendClass = (trend) => {
   min-width: 1.5ch;
   text-align: center;
   padding: 8px 4px;
+  position: relative;
 }
 
 .trend-icon {
   font-size: 14px;
   font-weight: bold;
+  cursor: pointer;
+}
+
+.trend-tip {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.85);
+  color: white;
+  font-size: 12px;
+  font-weight: normal;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 100;
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 .trend-icon.trend-up { color: #dc3545; }
