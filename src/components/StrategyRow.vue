@@ -255,7 +255,7 @@ const handleQuickBuy = async () => {
       stockName: props.strategy.name,
       tradeVolume,
       percentage: 0.5,
-      provider: props.strategy.provider || 'pingan',
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
       accountType: getAccountType()
     })
     console.log(`[快速下单] 上涨0.5%买入已发送: ${props.strategy.stockCode}, 数量: ${tradeVolume}`)
@@ -279,7 +279,7 @@ const handleQuickSell = async () => {
       stockName: props.strategy.name,
       tradeVolume,
       percentage: 0.5,
-      provider: props.strategy.provider || 'pingan',
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
       accountType: getAccountType()
     })
     console.log(`[快速下单] 下跌0.5%卖出已发送: ${props.strategy.stockCode}, 数量: ${tradeVolume}`)
@@ -303,7 +303,7 @@ const handleQuickBoth = async () => {
       stockName: props.strategy.name,
       tradeVolume,
       percentage: 0.5,
-      provider: props.strategy.provider || 'pingan',
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
       accountType: getAccountType()
     })
     console.log(`[快速下单] 双向条件单已发送: ${props.strategy.stockCode}, 数量: ${tradeVolume}`)
