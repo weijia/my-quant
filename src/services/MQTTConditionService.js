@@ -193,56 +193,17 @@ class MQTTConditionOrderService {
   }
 
   /**
-   * 发送买入条件单
+   * 添加按钮到列表
    * @param {Object} params - 参数
    * @param {string} params.stockCode - 股票代码
    * @param {string} params.stockName - 股票名称
-   * @param {number} params.tradeVolume - 交易数量
-   * @param {number} params.percentage - 触发百分比
+   * @param {number} params.tradeVolume - 预设交易数量
+   * @param {number} params.percentage - 预设触发百分比
    * @param {string} params.provider - 券商名称，默认 "pingan"
    * @param {string} params.accountType - 账户类型，默认 "default"
    */
-  async sendBuyOrder({ stockCode, stockName, tradeVolume = 100, percentage = 0.5, provider = 'pingan', accountType = 'default' }) {
-    // 买入使用正百分比
-    return this.sendCommand('create', {
-      provider,
-      accountType,
-      stockCode,
-      stockName,
-      tradeVolume,
-      percentage: Math.abs(percentage)
-    });
-  }
-
-  /**
-   * 发送卖出条件单
-   * @param {Object} params - 参数
-   * @param {string} params.stockCode - 股票代码
-   * @param {string} params.stockName - 股票名称
-   * @param {number} params.tradeVolume - 交易数量
-   * @param {number} params.percentage - 触发百分比
-   * @param {string} params.provider - 券商名称，默认 "pingan"
-   * @param {string} params.accountType - 账户类型，默认 "default"
-   */
-  async sendSellOrder({ stockCode, stockName, tradeVolume = 100, percentage = 0.5, provider = 'pingan', accountType = 'default' }) {
-    // 卖出使用负百分比（下跌）
-    return this.sendCommand('create', {
-      provider,
-      accountType,
-      stockCode,
-      stockName,
-      tradeVolume,
-      percentage: -Math.abs(percentage)
-    });
-  }
-
-  /**
-   * 发送双向条件单（同时创建买入和卖出）
-   * @param {Object} params - 参数
-   */
-  async sendBothOrders({ stockCode, stockName, tradeVolume = 100, percentage = 0.5, provider = 'pingan', accountType = 'default' }) {
-    // 发送一次 create，会同时创建买入和卖出条件单
-    return this.sendCommand('create', {
+  async addButton({ stockCode, stockName, tradeVolume = 100, percentage = 0.5, provider = 'pingan', accountType = 'default' }) {
+    return this.sendCommand('add', {
       provider,
       accountType,
       stockCode,
@@ -253,11 +214,71 @@ class MQTTConditionOrderService {
   }
 
   /**
-   * 取消条件单
+   * 创建实际条件单
+   * @param {Object} params - 参数
+   * @param {string} params.stockCode - 股票代码
+   * @param {number} params.tradeVolume - 交易数量
+   * @param {number} params.percentage - 触发百分比
+   */
+  async createConditionOrder({ stockCode, tradeVolume = 100, percentage = 0.5 }) {
+    return this.sendCommand('create', {
+      stockCode,
+      tradeVolume,
+      percentage
+    });
+  }
+
+  /**
+   * 发送买入条件单
+   */
+  async sendBuyOrder({ stockCode, stockName, tradeVolume = 100, percentage = 0.5, provider = 'pingan', accountType = 'default' }) {
+    return this.sendCommand('buy', {
+      stockCode,
+      stockName,
+      tradeVolume,
+      percentage: Math.abs(percentage),
+      provider,
+      accountType
+    });
+  }
+
+  /**
+   * 发送卖出条件单
+   */
+  async sendSellOrder({ stockCode, stockName, tradeVolume = 100, percentage = 0.5, provider = 'pingan', accountType = 'default' }) {
+    return this.sendCommand('sell', {
+      stockCode,
+      stockName,
+      tradeVolume,
+      percentage: Math.abs(percentage),
+      provider,
+      accountType
+    });
+  }
+
+  /**
+   * 发送双向条件单（同时创建买入和卖出）
+   */
+  async sendBothOrders({ stockCode, stockName, tradeVolume = 100, percentage = 0.5, provider = 'pingan', accountType = 'default' }) {
+    const buyResult = await this.sendBuyOrder({ stockCode, stockName, tradeVolume, percentage, provider, accountType });
+    const sellResult = await this.sendSellOrder({ stockCode, stockName, tradeVolume, percentage, provider, accountType });
+    return { buyResult, sellResult };
+  }
+
+  /**
+   * 移除按钮
+   * @param {string} stockCode - 股票代码
+   */
+  async removeButton(stockCode) {
+    return this.sendCommand('remove', { stockCode });
+  }
+
+  /**
+   * 取消条件单（仅移除按钮）
    * @param {string} stockCode - 股票代码
    */
   async cancelOrder(stockCode) {
-    return this.sendCommand('cancel', { stockCode });
+    return this.removeButton(stockCode);
   }
 
   onMessage(callback) {

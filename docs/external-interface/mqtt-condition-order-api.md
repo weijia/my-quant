@@ -73,14 +73,14 @@ const config = {
 
 所有 MQTT 消息采用统一的双层 JSON 结构：
 
-### 1.1 外层信封（固定格式）
+### 2.1 外层信封（固定格式）
 
 ```javascript
 {
   "id": "clientId_xxxx",       // 客户端唯一标识，用于识别自己发送的消息
   "msgId": "timestamp_random", // 消息唯一ID，用于去重
   "user": "User_xxxx",         // 用户标识
-  "msg": "...",                // 消息内容（见 1.2）
+  "msg": "...",                // 消息内容（见 2.2）
   "time": 1704067200000        // 时间戳（毫秒）
 }
 ```
@@ -91,8 +91,8 @@ msg 字段是 JSON 字符串，包含 `action` 和 `data` 两个必需字段：
 
 ```javascript
 {
-  "action": "create",         // 操作类型
-  "data": {                   // 操作数据
+  "action": "buy",          // 操作类型
+  "data": {                 // 操作数据
     "stockCode": "002475",
     "stockName": "立讯精密",
     "tradeVolume": "300"
@@ -110,7 +110,7 @@ const payload = JSON.stringify({
   id: clientId,
   msgId: msgId,
   user: 'User_xxxx',
-  msg: JSON.stringify({ action: 'create', data: {...} }),
+  msg: JSON.stringify({ action: 'buy', data: {...} }),
   time: Date.now()
 });
 const encrypted = CryptoJS.AES.encrypt(payload, password).toString();
@@ -125,32 +125,28 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 
 ## 3. 操作指令
 
-### 3.1 create - 创建条件单
+> **注意**：按钮管理命令（add/remove/list）请参阅 [api/add.md](./add.md)
 
-**功能**: 创建新的买入和卖出条件单
+### 3.1 buy - 创建买入条件单
+
+**功能**: 创建买入条件单
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| action | string | 是 | 固定值: `create` |
-| data.provider | string | 否 | 券商名称，默认 "pingan" (平安证券) |
-| data.accountType | string | 否 | 账户类型: `default`=普通账户, `credit`=信用账户，默认 "default" |
-| data.stockCode | string | 是 | 股票代码 (6位数字) |
-| data.stockName | string | 否 | 股票名称，不填显示"未知股票" |
-| data.tradeVolume | number | 否 | 交易数量（100的倍数），默认 100 |
-| data.percentage | number | 否 | 触发百分比，如 5 表示涨跌 5% 后触发，默认 0.5 |
+| action | string | 是 | 固定值: `buy` |
+| data.stockCode | string | 是 | 股票代码 |
+| data.tradeVolume | number | 否 | 交易数量 |
+| data.percentage | number | 否 | 上涨触发百分比 |
 
 **请求示例**:
 
 ```json
 {
-  "action": "create",
+  "action": "buy",
   "data": {
-    "provider": "pingan",
-    "accountType": "default",
     "stockCode": "002475",
-    "stockName": "立讯精密",
     "tradeVolume": 300,
-    "percentage": 5
+    "percentage": 0.5
   }
 }
 ```
@@ -159,125 +155,73 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 
 ---
 
-### 3.2 cancel - 取消订单
+### 3.2 sell - 创建卖出条件单
 
-**功能**: 取消指定的订单
+**功能**: 创建卖出条件单
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| action | string | 是 | 固定值: `cancel` |
+| action | string | 是 | 固定值: `sell` |
 | data.stockCode | string | 是 | 股票代码 |
+| data.tradeVolume | number | 否 | 交易数量 |
+| data.percentage | number | 否 | 下跌触发百分比 |
 
 **请求示例**:
 
 ```json
 {
-  "action": "cancel",
+  "action": "sell",
   "data": {
-    "stockCode": "002475"
+    "stockCode": "002475",
+    "tradeVolume": 300,
+    "percentage": 0.5
   }
 }
 ```
 
----
-
-### 3.3 list - 列出订单
-
-**功能**: 列出所有订单
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| action | string | 是 | 固定值: `list` |
-| data | object | 是 | 空对象 `{}` |
-
-**请求示例**:
-
-```json
-{
-  "action": "list",
-  "data": {}
-}
-```
-
----
-
-### 3.4 ping - 连接测试
-
-**功能**: 测试 MQTT 连接是否正常
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| action | string | 是 | 固定值: `ping` |
-| data | object | 是 | 空对象 `{}` |
-
-**请求示例**:
-
-```json
-{
-  "action": "ping",
-  "data": {}
-}
-```
-
-**响应**:
-
-```json
-{
-  "msg": "pong",
-  "user": "User_xxxx",
-  "time": 1704067200000
-}
-```
+**响应**: 见 [4. 响应消息](#4-响应消息)
 
 ---
 
 ## 4. 响应消息
 
-### 4.1 创建成功
+### 4.1 创建买入条件单成功
 
 ```json
 {
-  "type": "order_created",
+  "type": "buy_order_created",
   "status": "success",
   "orderId": "002475"
 }
 ```
 
-### 4.2 创建失败
+### 4.2 创建卖出条件单成功
+
+```json
+{
+  "type": "sell_order_created",
+  "status": "success",
+  "orderId": "002475"
+}
+```
+
+### 4.3 创建条件单失败
 
 ```json
 {
   "type": "order_created",
   "status": "error",
-  "message": "错误描述"
+  "message": "按钮不存在，请先使用 add 命令添加"
 }
 ```
 
-### 4.3 取消成功
+### 4.4 按钮相关响应
 
-```json
-{
-  "type": "order_canceled",
-  "status": "success",
-  "orderId": "002475"
-}
-```
+按钮管理响应的详细格式请参阅 [api/add.md](./add.md)：
 
-### 4.4 列出订单
-
-```json
-{
-  "type": "order_list",
-  "total": 2,
-  "data": [
-    {
-      "name": "立讯精密",
-      "stockCode": "002475",
-      "amount": "300"
-    }
-  ]
-}
-```
+- `button_added` - 添加按钮成功/失败
+- `button_removed` - 移除按钮成功
+- `order_list` - 按钮列表
 
 ---
 
@@ -303,7 +247,7 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
   msgId: msgId,
   user: 'User_xxxx',
   msg: JSON.stringify({
-    action: 'create',  // 统一使用 action + data 结构
+    action: 'buy',  // 统一使用 action + data 结构
     data: {...}
   }),
   time: Date.now()
@@ -315,10 +259,50 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
   msgId: msgId,
   user: 'User_xxxx',
   msg: JSON.stringify({
-    type: 'order_created',  // 使用 type 表示响应类型
+    type: 'buy_order_created',  // 使用 type 表示响应类型
     status: 'success',
     data: {...}
   }),
   time: Date.now()
 }
+```
+
+---
+
+## 6. 工作流程
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                       上层应用                               │
+│  (同时发送 buy + sell，自动创建双向条件单)              │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              │ add (添加按钮)
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    pingan-condition-order.user.js           │
+│                   (Userscript - 按钮管理)                      │
+└─────────────────────────────────────────────────────────────┘
+                              │
+              ┌───────────────┴───────────────┐
+              │                               │
+              │ buy (买入条件单)                │ sell (卖出条件单)
+              ▼                               ▼
+┌─────────────────────────┐     ┌─────────────────────────┐
+│  平安证券 - 反弹买入     │     │  平安证券 - 回落卖出     │
+│  /reboundBuy            │     │  /fallingSell           │
+└─────────────────────────┘     └─────────────────────────┘
+```
+
+### 典型使用场景
+
+```javascript
+// 1. 创建买入条件单
+service.sendBuyOrder({ stockCode: '002475', stockName: '立讯精密', tradeVolume: 300, percentage: 0.5 });
+
+// 2. 创建卖出条件单
+service.sendSellOrder({ stockCode: '002475', stockName: '立讯精密', tradeVolume: 300, percentage: 0.5 });
+
+// 3. 创建双向条件单
+service.sendBothOrders({ stockCode: '002475', stockName: '立讯精密', tradeVolume: 300, percentage: 0.5 });
 ```
