@@ -164,19 +164,37 @@
       <div class="advanced-order-row">
         <button 
           class="advanced-order-btn amount-buy-btn" 
-          @click="handleAmountBuy" 
-          :disabled="!strategy.stockCode || sendingAmountBuy"
-          title="定金额买入"
+          @click="handleAmountBuy01" 
+          :disabled="!strategy.stockCode || sendingAmountBuy01"
+          :title="`上涨0.1%买入 金额:${defaultTradeAmount || 20000}`"
         >
-          {{ sendingAmountBuy ? '...' : '额买' }}
+          {{ sendingAmountBuy01 ? '...' : `0.1%额买${formatAmount(defaultTradeAmount)}` }}
         </button>
         <button 
-          class="advanced-order-btn amount-sell-btn" 
-          @click="handleAmountSell" 
-          :disabled="!strategy.stockCode || sendingAmountSell"
-          title="定金额卖出"
+          class="advanced-order-btn amount-buy-btn-05" 
+          @click="handleAmountBuy05" 
+          :disabled="!strategy.stockCode || sendingAmountBuy05"
+          :title="`上涨0.5%买入 金额:${defaultTradeAmount || 20000}`"
         >
-          {{ sendingAmountSell ? '...' : '额卖' }}
+          {{ sendingAmountBuy05 ? '...' : `0.5%额买${formatAmount(defaultTradeAmount)}` }}
+        </button>
+      </div>
+      <div class="advanced-order-row">
+        <button 
+          class="advanced-order-btn amount-sell-btn" 
+          @click="handleAmountSell01" 
+          :disabled="!strategy.stockCode || sendingAmountSell01"
+          :title="`下跌0.1%卖出 金额:${defaultTradeAmount || 20000}`"
+        >
+          {{ sendingAmountSell01 ? '...' : `0.1%额卖${formatAmount(defaultTradeAmount)}` }}
+        </button>
+        <button 
+          class="advanced-order-btn amount-sell-btn-05" 
+          @click="handleAmountSell05" 
+          :disabled="!strategy.stockCode || sendingAmountSell05"
+          :title="`下跌0.5%卖出 金额:${defaultTradeAmount || 20000}`"
+        >
+          {{ sendingAmountSell05 ? '...' : `0.5%额卖${formatAmount(defaultTradeAmount)}` }}
         </button>
       </div>
       <div class="advanced-order-row">
@@ -184,35 +202,17 @@
           class="advanced-order-btn volume-buy-btn" 
           @click="handleVolumeBuy" 
           :disabled="!strategy.stockCode || sendingVolumeBuy"
-          title="定数量买入"
+          :title="`定数量买入 数量:${getEffectiveTradeVolume()}`"
         >
-          {{ sendingVolumeBuy ? '...' : '量买' }}
+          {{ sendingVolumeBuy ? '...' : `量买${getEffectiveTradeVolume()}` }}
         </button>
         <button 
           class="advanced-order-btn volume-sell-btn" 
           @click="handleVolumeSell" 
           :disabled="!strategy.stockCode || sendingVolumeSell"
-          title="定数量卖出"
+          :title="`定数量卖出 数量:${getEffectiveTradeVolume()}`"
         >
-          {{ sendingVolumeSell ? '...' : '量卖' }}
-        </button>
-      </div>
-      <div class="advanced-order-row">
-        <button 
-          class="advanced-order-btn pct01-buy-btn" 
-          @click="handlePct01Buy" 
-          :disabled="!strategy.stockCode || sendingPct01Buy"
-          title="上涨0.1%买入"
-        >
-          {{ sendingPct01Buy ? '...' : '0.1%买' }}
-        </button>
-        <button 
-          class="advanced-order-btn pct01-sell-btn" 
-          @click="handlePct01Sell" 
-          :disabled="!strategy.stockCode || sendingPct01Sell"
-          title="下跌0.1%卖出"
-        >
-          {{ sendingPct01Sell ? '...' : '0.1%卖' }}
+          {{ sendingVolumeSell ? '...' : `量卖${getEffectiveTradeVolume()}` }}
         </button>
       </div>
     </td>
@@ -273,12 +273,21 @@ const showTrendTip = ref(false)
 // 高级快捷下单设置
 const defaultTradeAmount = ref(20000)  // 缺省下单金额
 const defaultTradeVolume = ref(null)   // 缺省下单数量（null表示使用1/4持仓）
-const sendingAmountBuy = ref(false)    // 定金额买入状态
-const sendingAmountSell = ref(false)   // 定金额卖出状态
+const sendingAmountBuy01 = ref(false)  // 0.1%定金额买入状态
+const sendingAmountBuy05 = ref(false)  // 0.5%定金额买入状态
+const sendingAmountSell01 = ref(false) // 0.1%定金额卖出状态
+const sendingAmountSell05 = ref(false) // 0.5%定金额卖出状态
 const sendingVolumeBuy = ref(false)    // 定数量买入状态
 const sendingVolumeSell = ref(false)   // 定数量卖出状态
-const sendingPct01Buy = ref(false)     // 0.1%买入状态
-const sendingPct01Sell = ref(false)    // 0.1%卖出状态
+
+// 格式化金额显示（超过10000显示为x万）
+const formatAmount = (amount) => {
+  const val = amount || 20000
+  if (val >= 10000) {
+    return (val / 10000).toFixed(1) + 'w'
+  }
+  return val.toString()
+}
 
 // 计算持仓的1/4，向下取整到100的倍数
 const getQuarterPosition = () => {
@@ -462,11 +471,36 @@ const handleQuickBoth = async () => {
   }
 }
 
-// 高级快捷下单：定金额买入
-const handleAmountBuy = async () => {
+// 高级快捷下单：0.1%定金额买入
+const handleAmountBuy01 = async () => {
   if (!props.strategy.stockCode) return
-  sendingAmountBuy.value = true
-  const tradeAmount = defaultTradeAmount.value || 1000
+  sendingAmountBuy01.value = true
+  const tradeAmount = defaultTradeAmount.value || 20000
+  
+  try {
+    await mqttConditionService.sendBuyOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeAmount,
+      percentage: 0.1,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getBuySide()
+    })
+    console.log(`[高级快捷] 0.1%定金额买入已发送: ${props.strategy.stockCode}, 金额: ${tradeAmount}`)
+  } catch (error) {
+    console.error('[高级快捷] 0.1%定金额买入失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingAmountBuy01.value = false
+  }
+}
+
+// 高级快捷下单：0.5%定金额买入
+const handleAmountBuy05 = async () => {
+  if (!props.strategy.stockCode) return
+  sendingAmountBuy05.value = true
+  const tradeAmount = defaultTradeAmount.value || 20000
   
   try {
     await mqttConditionService.sendBuyOrder({
@@ -478,20 +512,45 @@ const handleAmountBuy = async () => {
       accountType: getAccountType(),
       side: getBuySide()
     })
-    console.log(`[高级快捷] 定金额买入已发送: ${props.strategy.stockCode}, 金额: ${tradeAmount}`)
+    console.log(`[高级快捷] 0.5%定金额买入已发送: ${props.strategy.stockCode}, 金额: ${tradeAmount}`)
   } catch (error) {
-    console.error('[高级快捷] 定金额买入失败:', error)
+    console.error('[高级快捷] 0.5%定金额买入失败:', error)
     alert('发送失败，请检查MQTT连接')
   } finally {
-    sendingAmountBuy.value = false
+    sendingAmountBuy05.value = false
   }
 }
 
-// 高级快捷下单：定金额卖出
-const handleAmountSell = async () => {
+// 高级快捷下单：0.1%定金额卖出
+const handleAmountSell01 = async () => {
   if (!props.strategy.stockCode) return
-  sendingAmountSell.value = true
-  const tradeAmount = defaultTradeAmount.value || 1000
+  sendingAmountSell01.value = true
+  const tradeAmount = defaultTradeAmount.value || 20000
+  
+  try {
+    await mqttConditionService.sendSellOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeAmount,
+      percentage: 0.1,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getSellSide()
+    })
+    console.log(`[高级快捷] 0.1%定金额卖出已发送: ${props.strategy.stockCode}, 金额: ${tradeAmount}`)
+  } catch (error) {
+    console.error('[高级快捷] 0.1%定金额卖出失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingAmountSell01.value = false
+  }
+}
+
+// 高级快捷下单：0.5%定金额卖出
+const handleAmountSell05 = async () => {
+  if (!props.strategy.stockCode) return
+  sendingAmountSell05.value = true
+  const tradeAmount = defaultTradeAmount.value || 20000
   
   try {
     await mqttConditionService.sendSellOrder({
@@ -503,12 +562,12 @@ const handleAmountSell = async () => {
       accountType: getAccountType(),
       side: getSellSide()
     })
-    console.log(`[高级快捷] 定金额卖出已发送: ${props.strategy.stockCode}, 金额: ${tradeAmount}`)
+    console.log(`[高级快捷] 0.5%定金额卖出已发送: ${props.strategy.stockCode}, 金额: ${tradeAmount}`)
   } catch (error) {
-    console.error('[高级快捷] 定金额卖出失败:', error)
+    console.error('[高级快捷] 0.5%定金额卖出失败:', error)
     alert('发送失败，请检查MQTT连接')
   } finally {
-    sendingAmountSell.value = false
+    sendingAmountSell05.value = false
   }
 }
 
@@ -559,54 +618,6 @@ const handleVolumeSell = async () => {
     alert('发送失败，请检查MQTT连接')
   } finally {
     sendingVolumeSell.value = false
-  }
-}
-
-// 高级快捷下单：上涨0.1%买入
-const handlePct01Buy = async () => {
-  if (!props.strategy.stockCode) return
-  sendingPct01Buy.value = true
-  
-  try {
-    await mqttConditionService.sendBuyOrder({
-      stockCode: props.strategy.stockCode,
-      stockName: props.strategy.name,
-      tradeVolume: getEffectiveTradeVolume(),
-      percentage: 0.1,
-      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
-      accountType: getAccountType(),
-      side: getBuySide()
-    })
-    console.log(`[高级快捷] 上涨0.1%买入已发送: ${props.strategy.stockCode}`)
-  } catch (error) {
-    console.error('[高级快捷] 上涨0.1%买入失败:', error)
-    alert('发送失败，请检查MQTT连接')
-  } finally {
-    sendingPct01Buy.value = false
-  }
-}
-
-// 高级快捷下单：下跌0.1%卖出
-const handlePct01Sell = async () => {
-  if (!props.strategy.stockCode) return
-  sendingPct01Sell.value = true
-  
-  try {
-    await mqttConditionService.sendSellOrder({
-      stockCode: props.strategy.stockCode,
-      stockName: props.strategy.name,
-      tradeVolume: getEffectiveTradeVolume(),
-      percentage: 0.1,
-      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
-      accountType: getAccountType(),
-      side: getSellSide()
-    })
-    console.log(`[高级快捷] 下跌0.1%卖出已发送: ${props.strategy.stockCode}`)
-  } catch (error) {
-    console.error('[高级快捷] 下跌0.1%卖出失败:', error)
-    alert('发送失败，请检查MQTT连接')
-  } finally {
-    sendingPct01Sell.value = false
   }
 }
 
@@ -1047,12 +1058,28 @@ const getTrendClass = (trend) => {
   background-color: rgba(220, 53, 69, 0.5);
 }
 
+.advanced-order-btn.amount-buy-btn-05 {
+  background-color: rgba(200, 53, 69, 0.4);
+}
+
+.advanced-order-btn.amount-buy-btn-05:hover:not(:disabled) {
+  background-color: rgba(200, 53, 69, 0.6);
+}
+
 .advanced-order-btn.amount-sell-btn {
   background-color: rgba(40, 167, 69, 0.3);
 }
 
 .advanced-order-btn.amount-sell-btn:hover:not(:disabled) {
   background-color: rgba(40, 167, 69, 0.5);
+}
+
+.advanced-order-btn.amount-sell-btn-05 {
+  background-color: rgba(40, 147, 69, 0.4);
+}
+
+.advanced-order-btn.amount-sell-btn-05:hover:not(:disabled) {
+  background-color: rgba(40, 147, 69, 0.6);
 }
 
 .advanced-order-btn.volume-buy-btn {
@@ -1069,22 +1096,6 @@ const getTrendClass = (trend) => {
 
 .advanced-order-btn.volume-sell-btn:hover:not(:disabled) {
   background-color: rgba(255, 193, 7, 0.5);
-}
-
-.advanced-order-btn.pct01-buy-btn {
-  background-color: rgba(111, 66, 193, 0.3);
-}
-
-.advanced-order-btn.pct01-buy-btn:hover:not(:disabled) {
-  background-color: rgba(111, 66, 193, 0.5);
-}
-
-.advanced-order-btn.pct01-sell-btn {
-  background-color: rgba(32, 201, 151, 0.3);
-}
-
-.advanced-order-btn.pct01-sell-btn:hover:not(:disabled) {
-  background-color: rgba(32, 201, 151, 0.5);
 }
 
 @media (max-width: 768px) {
