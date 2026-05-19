@@ -151,9 +151,9 @@
               <tr><td>ctx.volatility15d</td><td>number</td><td>15日平均波动率（小数，如1.65%存为0.0165）</td><td>0.0165</td></tr>
               <tr><td>ctx.priceDropRatio</td><td>number</td><td>最高价到当前价的下跌比率</td><td>0.05（表示5%）</td></tr>
               <tr><td>ctx.isMarginAccount</td><td>boolean</td><td>是否为融资融券账户</td><td>false</td></tr>
-              <tr><td>ctx.defaultBuyVolume</td><td>number</td><td>用户设置的缺省买入数量</td><td>100</td></tr>
-              <tr><td>ctx.defaultSellVolume</td><td>number</td><td>用户设置的缺省卖出数量</td><td>25</td></tr>
-              <tr><td>ctx.defaultAmount</td><td>number</td><td>用户设置的缺省交易金额</td><td>20000</td></tr>
+              <tr><td>ctx.defaultBuyVolume</td><td>number</td><td>缺省买入数量，来自策略的震荡时网格交易数量</td><td>100</td></tr>
+              <tr><td>ctx.defaultSellVolume</td><td>number</td><td>缺省卖出数量，为持仓的1/4（向下取整到100的倍数）</td><td>25</td></tr>
+              <tr><td>ctx.defaultAmount</td><td>number</td><td>缺省交易金额，固定值20000元</td><td>20000</td></tr>
               <tr><td>ctx.provider</td><td>string</td><td>券商代码</td><td>"pingan"</td></tr>
               <tr><td>ctx.accountType</td><td>string</td><td>账户类型</td><td>"default"或"credit"</td></tr>
             </tbody>
@@ -173,6 +173,28 @@
               <tr><td>"high_volatility"</td><td>高波动率</td></tr>
               <tr><td>"medium_volatility"</td><td>中等波动率</td></tr>
               <tr><td>"low_volatility"</td><td>低波动率</td></tr>
+            </tbody>
+          </table>
+
+          <h4>缺省数量来源说明：</h4>
+          <table class="api-table">
+            <thead><tr><th>字段</th><th>来源</th><th>计算方式</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>defaultBuyVolume</td>
+                <td>策略数据</td>
+                <td>优先使用 strategy.oscillationTradeAmount（震荡时网格交易数量），如果不存在则使用100</td>
+              </tr>
+              <tr>
+                <td>defaultSellVolume</td>
+                <td>动态计算</td>
+                <td>Math.floor(ctx.netPosition / 4 / 100) * 100，即持仓的1/4向下取整到100的倍数</td>
+              </tr>
+              <tr>
+                <td>defaultAmount</td>
+                <td>固定值</td>
+                <td>固定为20000元，用于额买额卖时的金额计算</td>
+              </tr>
             </tbody>
           </table>
 
