@@ -128,6 +128,72 @@
       </button>
     </td>
     
+    <td v-if="visibleColumns.includes('advancedOrderSettings')" class="advanced-settings-cell">
+      <div class="settings-inputs">
+        <div class="setting-item">
+          <span class="setting-label">额</span>
+          <input 
+            v-model.number="defaultTradeAmount" 
+            type="number" 
+            class="setting-input"
+            placeholder="1000"
+            min="0"
+            step="100"
+          />
+        </div>
+        <div class="setting-item">
+          <span class="setting-label">量</span>
+          <input 
+            v-model.number="defaultTradeVolume" 
+            type="number" 
+            class="setting-input"
+            placeholder="100"
+            min="0"
+            step="100"
+          />
+        </div>
+      </div>
+    </td>
+    
+    <td v-if="visibleColumns.includes('advancedOrder')" class="advanced-order-cell">
+      <div class="advanced-order-row">
+        <button 
+          class="advanced-order-btn amount-buy-btn" 
+          @click="handleAmountBuy" 
+          :disabled="!strategy.stockCode || sendingAmountBuy"
+          title="定金额买入"
+        >
+          {{ sendingAmountBuy ? '...' : '额买' }}
+        </button>
+        <button 
+          class="advanced-order-btn amount-sell-btn" 
+          @click="handleAmountSell" 
+          :disabled="!strategy.stockCode || sendingAmountSell"
+          title="定金额卖出"
+        >
+          {{ sendingAmountSell ? '...' : '额卖' }}
+        </button>
+      </div>
+      <div class="advanced-order-row">
+        <button 
+          class="advanced-order-btn volume-buy-btn" 
+          @click="handleVolumeBuy" 
+          :disabled="!strategy.stockCode || sendingVolumeBuy"
+          title="定数量买入"
+        >
+          {{ sendingVolumeBuy ? '...' : '量买' }}
+        </button>
+        <button 
+          class="advanced-order-btn volume-sell-btn" 
+          @click="handleVolumeSell" 
+          :disabled="!strategy.stockCode || sendingVolumeSell"
+          title="定数量卖出"
+        >
+          {{ sendingVolumeSell ? '...' : '量卖' }}
+        </button>
+      </div>
+    </td>
+    
     <td v-if="visibleColumns.includes('actions')" class="actions-cell">
       <button class="action-btn edit-btn" @click="$emit('edit', strategy)" title="编辑">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -176,6 +242,14 @@ const sendingBuy = ref(false)
 const sendingSell = ref(false)
 const sendingBoth = ref(false)
 const showTrendTip = ref(false)
+
+// 高级快捷下单设置
+const defaultTradeAmount = ref(1000)  // 缺省下单金额
+const defaultTradeVolume = ref(100)   // 缺省下单数量
+const sendingAmountBuy = ref(false)   // 定金额买入状态
+const sendingAmountSell = ref(false) // 定金额卖出状态
+const sendingVolumeBuy = ref(false)   // 定数量买入状态
+const sendingVolumeSell = ref(false) // 定数量卖出状态
 
 // 获取趋势图标
 const getTrendIcon = (trend) => {
@@ -312,6 +386,102 @@ const handleQuickBoth = async () => {
     alert('发送失败，请检查MQTT连接')
   } finally {
     sendingBoth.value = false
+  }
+}
+
+// 高级快捷下单：定金额买入
+const handleAmountBuy = async () => {
+  if (!props.strategy.stockCode) return
+  sendingAmountBuy.value = true
+  const tradeAmount = defaultTradeAmount.value || 1000
+  
+  try {
+    await mqttConditionService.sendBuyOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeAmount,
+      percentage: 0.5,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType()
+    })
+    console.log(`[高级快捷] 定金额买入已发送: ${props.strategy.stockCode}, 金额: ${tradeAmount}`)
+  } catch (error) {
+    console.error('[高级快捷] 定金额买入失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingAmountBuy.value = false
+  }
+}
+
+// 高级快捷下单：定金额卖出
+const handleAmountSell = async () => {
+  if (!props.strategy.stockCode) return
+  sendingAmountSell.value = true
+  const tradeAmount = defaultTradeAmount.value || 1000
+  
+  try {
+    await mqttConditionService.sendSellOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeAmount,
+      percentage: 0.5,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType()
+    })
+    console.log(`[高级快捷] 定金额卖出已发送: ${props.strategy.stockCode}, 金额: ${tradeAmount}`)
+  } catch (error) {
+    console.error('[高级快捷] 定金额卖出失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingAmountSell.value = false
+  }
+}
+
+// 高级快捷下单：定数量买入
+const handleVolumeBuy = async () => {
+  if (!props.strategy.stockCode) return
+  sendingVolumeBuy.value = true
+  const tradeVolume = defaultTradeVolume.value || 100
+  
+  try {
+    await mqttConditionService.sendBuyOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume,
+      percentage: 0.5,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType()
+    })
+    console.log(`[高级快捷] 定数量买入已发送: ${props.strategy.stockCode}, 数量: ${tradeVolume}`)
+  } catch (error) {
+    console.error('[高级快捷] 定数量买入失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingVolumeBuy.value = false
+  }
+}
+
+// 高级快捷下单：定数量卖出
+const handleVolumeSell = async () => {
+  if (!props.strategy.stockCode) return
+  sendingVolumeSell.value = true
+  const tradeVolume = defaultTradeVolume.value || 100
+  
+  try {
+    await mqttConditionService.sendSellOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume,
+      percentage: 0.5,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType()
+    })
+    console.log(`[高级快捷] 定数量卖出已发送: ${props.strategy.stockCode}, 数量: ${tradeVolume}`)
+  } catch (error) {
+    console.error('[高级快捷] 定数量卖出失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingVolumeSell.value = false
   }
 }
 
@@ -650,5 +820,131 @@ const getTrendClass = (trend) => {
 .quick-order-btn.both-btn:hover:not(:disabled) {
   background-color: rgba(255, 193, 7, 0.5);
   color: white;
+}
+
+/* 高级快捷下单设置 */
+.advanced-settings-cell {
+  padding: 4px;
+}
+
+.settings-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.setting-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.setting-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  min-width: 12px;
+}
+
+.setting-input {
+  width: 50px;
+  padding: 2px 4px;
+  font-size: 11px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  color: white;
+}
+
+.setting-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* 高级快捷下单 */
+.advanced-order-cell {
+  padding: 4px;
+}
+
+.advanced-order-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.advanced-order-row:last-child {
+  margin-bottom: 0;
+}
+
+.advanced-order-btn {
+  flex: 1;
+  padding: 4px 6px;
+  font-size: 10px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.advanced-order-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.advanced-order-btn.amount-buy-btn {
+  background-color: rgba(220, 53, 69, 0.3);
+}
+
+.advanced-order-btn.amount-buy-btn:hover:not(:disabled) {
+  background-color: rgba(220, 53, 69, 0.5);
+}
+
+.advanced-order-btn.amount-sell-btn {
+  background-color: rgba(40, 167, 69, 0.3);
+}
+
+.advanced-order-btn.amount-sell-btn:hover:not(:disabled) {
+  background-color: rgba(40, 167, 69, 0.5);
+}
+
+.advanced-order-btn.volume-buy-btn {
+  background-color: rgba(23, 162, 184, 0.3);
+}
+
+.advanced-order-btn.volume-buy-btn:hover:not(:disabled) {
+  background-color: rgba(23, 162, 184, 0.5);
+}
+
+.advanced-order-btn.volume-sell-btn {
+  background-color: rgba(255, 193, 7, 0.3);
+}
+
+.advanced-order-btn.volume-sell-btn:hover:not(:disabled) {
+  background-color: rgba(255, 193, 7, 0.5);
+}
+
+@media (max-width: 768px) {
+  .advanced-settings-cell {
+    padding: 2px;
+  }
+  
+  .setting-input {
+    width: 36px;
+    font-size: 10px;
+    padding: 2px;
+  }
+  
+  .setting-label {
+    font-size: 9px;
+  }
+  
+  .advanced-order-cell {
+    padding: 2px;
+  }
+  
+  .advanced-order-btn {
+    font-size: 9px;
+    padding: 2px 4px;
+  }
 }
 </style>
