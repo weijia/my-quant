@@ -28,7 +28,7 @@ jobs:
       - name: Build the project
         run: npm run build
 
-      - name: Upload to WebDAV
+      - name: Upload to WebDAV (online/my-quant)
         uses: weijia/action-upload-webdav@master
         with:
           webdav-url: ${{ secrets.WEBDAV_URL }}
@@ -36,3 +36,13 @@ jobs:
           webdav-password: ${{ secrets.WEBDAV_PASSWORD }}
           webdav-root: online/my-quant
           source-directory: ./dist
+
+      - name: Clear and Upload to WebDAV (latest)
+        uses: weijia/action-upload-webdav@master
+        with:
+          webdav-url: ${{ secrets.WEBDAV_URL }}
+          webdav-username: ${{ secrets.WEBDAV_USERNAME }}
+          webdav-password: ${{ secrets.WEBDAV_PASSWORD }}
+          webdav-root: latest
+          source-directory: ./dist
+          clear-before-upload: true
