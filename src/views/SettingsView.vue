@@ -310,12 +310,12 @@ if (ctx.trendJudgment === 'trend_up') {
             <div class="form-group trend-matches-group">
               <label>匹配趋势（多选）</label>
               <div class="trend-checkboxes">
-                <label v-for="trend in availableTrends" :key="trend.value" class="trend-checkbox-label" :class="{ 'selected': template.trendMatches?.includes(trend.value) }">
+                <label v-for="trend in availableTrends" :key="trend.value" class="trend-checkbox-label" :class="{ 'selected': (template.trendMatches || []).includes(trend.value) }">
                   <input
                     type="checkbox"
                     :value="trend.value"
                     v-model="template.trendMatches"
-                    @change="saveTemplates"
+                    @change="onTrendMatchesChange(index)"
                   />
                   <span class="trend-name">{{ trend.label }}</span>
                 </label>
@@ -603,7 +603,11 @@ const loadTemplates = () => {
         }))
         saveTemplates()
       } else {
-        templates.value = parsed
+        // 修复旧数据：确保每个模板都有 trendMatches 数组
+        templates.value = parsed.map(t => ({
+          ...t,
+          trendMatches: Array.isArray(t.trendMatches) ? t.trendMatches : []
+        }))
       }
     } catch (e) {
       console.error('加载策略模板失败:', e)
@@ -647,6 +651,15 @@ const removeTemplate = (index) => {
 }
 
 const onScriptChange = (index) => {
+  saveTemplates()
+}
+
+const onTrendMatchesChange = (index) => {
+  // 确保 trendMatches 始终是数组
+  const template = templates.value[index]
+  if (!Array.isArray(template.trendMatches)) {
+    template.trendMatches = []
+  }
   saveTemplates()
 }
 
