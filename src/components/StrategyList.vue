@@ -97,7 +97,19 @@
               </div>
             </th>
             <th v-if="visibleColumns.includes('advancedOrderSettings')" style="width: 140px;">高级设置</th>
-            <th v-if="visibleColumns.includes('advancedOrder')" style="width: 120px;">高级快捷</th>
+            <th v-if="visibleColumns.includes('advancedOrder')" style="width: 120px;">
+              <div class="filter-header">
+                <span>高级快捷</span>
+                <label class="toggle-filter">
+                  <input 
+                    type="checkbox" 
+                    v-model="useMarginTrade"
+                    @change="saveUseMarginTrade"
+                  >
+                  <span class="toggle-label">融资</span>
+                </label>
+              </div>
+            </th>
             <th v-if="visibleColumns.includes('actions')" style="width: 80px;">操作</th>
           </tr>
         </thead>
