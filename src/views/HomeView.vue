@@ -157,6 +157,7 @@
     <footer class="app-footer">
       <p>数据存储于本地浏览器 (PouchDB)</p>
       <p>共 {{ strategies.length }} 个策略</p>
+      <p class="version-info">版本: {{ versionDisplay }} | 构建时间: {{ buildTimeDisplay }}</p>
     </footer>
 
     <StrategyDialog
@@ -187,6 +188,7 @@ import { database } from '../utils/Database'
 import { webdavImportService } from '../services/WebDAVImportService'
 import mqttConditionService from '../services/MQTTConditionService'
 import { defaultStrategyService } from '../services/DefaultStrategyService'
+import { versionDisplay, buildTimeDisplay } from '../version'
 import StrategyList from '../components/StrategyList.vue'
 import StrategyDialog from '../components/StrategyDialog.vue'
 import BatchConditionDialog from '../components/BatchConditionDialog.vue'
@@ -1216,6 +1218,11 @@ onMounted(async () => {
   margin: 0;
   color: rgba(255,255,255,0.5);
   font-size: 12px;
+}
+
+.app-footer .version-info {
+  color: rgba(78, 205, 196, 0.7);
+  font-size: 11px;
 }
 
 @media (max-width: 768px) {
