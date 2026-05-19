@@ -153,6 +153,18 @@
             step="100"
           />
         </div>
+        <div class="setting-item" :class="{ 'price-missing': !effectivePrice }">
+          <span class="setting-label">价</span>
+          <input 
+            :value="manualPrice ?? (strategy.currentPrice || '')"
+            @input="manualPrice = Number($event.target.value) || null"
+            type="number" 
+            class="setting-input"
+            placeholder="输入价格"
+            min="0"
+            step="0.01"
+          />
+        </div>
         <div class="quick-set-btns">
           <button @click="setDefaultVolumeQuarter" class="quick-set-btn" title="设置为1/4持仓">1/4</button>
           <button @click="setDefaultVolumeHalf" class="quick-set-btn" title="设置为1/2持仓">1/2</button>
@@ -165,36 +177,36 @@
         <button
           class="advanced-order-btn amount-buy-btn"
           @click="handleAmountBuy01"
-          :disabled="!strategy.stockCode || sendingAmountBuy01"
-          :title="`上涨0.1%买入 金额:${defaultTradeAmount || 20000} 数量:${calculateVolumeFromAmount(defaultTradeAmount || 20000, strategy.currentPrice)}`"
+          :disabled="!strategy.stockCode || sendingAmountBuy01 || !effectivePrice"
+          :title="effectivePrice ? `上涨0.1%买入 金额:${defaultTradeAmount || 20000} 数量:${calculateVolumeFromAmount(defaultTradeAmount || 20000, effectivePrice)}` : '请先输入价格'"
         >
-          {{ sendingAmountBuy01 ? '...' : `0.1%买${calculateVolumeFromAmount(defaultTradeAmount || 20000, strategy.currentPrice)}` }}
+          {{ sendingAmountBuy01 ? '...' : (effectivePrice ? `0.1%买${calculateVolumeFromAmount(defaultTradeAmount || 20000, effectivePrice)}` : '0.1%买') }}
         </button>
         <button
           class="advanced-order-btn amount-buy-btn-05"
           @click="handleAmountBuy05"
-          :disabled="!strategy.stockCode || sendingAmountBuy05"
-          :title="`上涨0.5%买入 金额:${defaultTradeAmount || 20000} 数量:${calculateVolumeFromAmount(defaultTradeAmount || 20000, strategy.currentPrice)}`"
+          :disabled="!strategy.stockCode || sendingAmountBuy05 || !effectivePrice"
+          :title="effectivePrice ? `上涨0.5%买入 金额:${defaultTradeAmount || 20000} 数量:${calculateVolumeFromAmount(defaultTradeAmount || 20000, effectivePrice)}` : '请先输入价格'"
         >
-          {{ sendingAmountBuy05 ? '...' : `0.5%买${calculateVolumeFromAmount(defaultTradeAmount || 20000, strategy.currentPrice)}` }}
+          {{ sendingAmountBuy05 ? '...' : (effectivePrice ? `0.5%买${calculateVolumeFromAmount(defaultTradeAmount || 20000, effectivePrice)}` : '0.5%买') }}
         </button>
       </div>
       <div class="advanced-order-row">
         <button
           class="advanced-order-btn amount-sell-btn"
           @click="handleAmountSell01"
-          :disabled="!strategy.stockCode || sendingAmountSell01"
-          :title="`下跌0.1%卖出 金额:${defaultTradeAmount || 20000} 数量:${calculateVolumeFromAmount(defaultTradeAmount || 20000, strategy.currentPrice)}`"
+          :disabled="!strategy.stockCode || sendingAmountSell01 || !effectivePrice"
+          :title="effectivePrice ? `下跌0.1%卖出 金额:${defaultTradeAmount || 20000} 数量:${calculateVolumeFromAmount(defaultTradeAmount || 20000, effectivePrice)}` : '请先输入价格'"
         >
-          {{ sendingAmountSell01 ? '...' : `0.1%卖${calculateVolumeFromAmount(defaultTradeAmount || 20000, strategy.currentPrice)}` }}
+          {{ sendingAmountSell01 ? '...' : (effectivePrice ? `0.1%卖${calculateVolumeFromAmount(defaultTradeAmount || 20000, effectivePrice)}` : '0.1%卖') }}
         </button>
         <button
           class="advanced-order-btn amount-sell-btn-05"
           @click="handleAmountSell05"
-          :disabled="!strategy.stockCode || sendingAmountSell05"
-          :title="`下跌0.5%卖出 金额:${defaultTradeAmount || 20000} 数量:${calculateVolumeFromAmount(defaultTradeAmount || 20000, strategy.currentPrice)}`"
+          :disabled="!strategy.stockCode || sendingAmountSell05 || !effectivePrice"
+          :title="effectivePrice ? `下跌0.5%卖出 金额:${defaultTradeAmount || 20000} 数量:${calculateVolumeFromAmount(defaultTradeAmount || 20000, effectivePrice)}` : '请先输入价格'"
         >
-          {{ sendingAmountSell05 ? '...' : `0.5%卖${calculateVolumeFromAmount(defaultTradeAmount || 20000, strategy.currentPrice)}` }}
+          {{ sendingAmountSell05 ? '...' : (effectivePrice ? `0.5%卖${calculateVolumeFromAmount(defaultTradeAmount || 20000, effectivePrice)}` : '0.5%卖') }}
         </button>
       </div>
       <div class="advanced-order-row">
@@ -260,7 +272,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import mqttConditionService from '../services/MQTTConditionService.js'
 
 const props = defineProps({
@@ -279,6 +291,14 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['edit', 'delete', 'update-trend', 'batch-condition'])
+
+// 手动输入的价格（当 currentPrice 为空时使用）
+const manualPrice = ref(null)
+
+// 获取有效价格：优先使用策略中的 currentPrice，其次使用手动输入
+const effectivePrice = computed(() => {
+  return props.strategy.currentPrice || manualPrice.value || null
+})
 
 const localTrend = ref(props.strategy.trendJudgment || 'unset')
 
@@ -491,11 +511,13 @@ const handleQuickBoth = async () => {
 
 // 高级快捷下单：0.1%定金额买入
 const handleAmountBuy01 = async () => {
-  if (!props.strategy.stockCode) return
+  if (!props.strategy.stockCode || !effectivePrice.value) {
+    if (!effectivePrice.value) alert('请先在设置中输入价格')
+    return
+  }
   sendingAmountBuy01.value = true
   const tradeAmount = defaultTradeAmount.value || 20000
-  const currentPrice = props.strategy.currentPrice
-  const tradeVolume = calculateVolumeFromAmount(tradeAmount, currentPrice)
+  const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
 
   try {
     await mqttConditionService.sendBuyOrder({
@@ -507,7 +529,7 @@ const handleAmountBuy01 = async () => {
       accountType: getAccountType(),
       side: getBuySide()
     })
-    console.log(`[高级快捷] 0.1%定金额买入已发送: ${props.strategy.stockCode}, 金额: ${tradeAmount}, 价格: ${currentPrice}, 数量: ${tradeVolume}`)
+    console.log(`[高级快捷] 0.1%定金额买入已发送: ${props.strategy.stockCode}, 金额: ${tradeAmount}, 价格: ${effectivePrice.value}, 数量: ${tradeVolume}`)
   } catch (error) {
     console.error('[高级快捷] 0.1%定金额买入失败:', error)
     alert('发送失败，请检查MQTT连接')
@@ -518,11 +540,13 @@ const handleAmountBuy01 = async () => {
 
 // 高级快捷下单：0.5%定金额买入
 const handleAmountBuy05 = async () => {
-  if (!props.strategy.stockCode) return
+  if (!props.strategy.stockCode || !effectivePrice.value) {
+    if (!effectivePrice.value) alert('请先在设置中输入价格')
+    return
+  }
   sendingAmountBuy05.value = true
   const tradeAmount = defaultTradeAmount.value || 20000
-  const currentPrice = props.strategy.currentPrice
-  const tradeVolume = calculateVolumeFromAmount(tradeAmount, currentPrice)
+  const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
 
   try {
     await mqttConditionService.sendBuyOrder({
@@ -534,7 +558,7 @@ const handleAmountBuy05 = async () => {
       accountType: getAccountType(),
       side: getBuySide()
     })
-    console.log(`[高级快捷] 0.5%定金额买入已发送: ${props.strategy.stockCode}, 金额: ${tradeAmount}, 价格: ${currentPrice}, 数量: ${tradeVolume}`)
+    console.log(`[高级快捷] 0.5%定金额买入已发送: ${props.strategy.stockCode}, 金额: ${tradeAmount}, 价格: ${effectivePrice.value}, 数量: ${tradeVolume}`)
   } catch (error) {
     console.error('[高级快捷] 0.5%定金额买入失败:', error)
     alert('发送失败，请检查MQTT连接')
@@ -545,11 +569,13 @@ const handleAmountBuy05 = async () => {
 
 // 高级快捷下单：0.1%定金额卖出
 const handleAmountSell01 = async () => {
-  if (!props.strategy.stockCode) return
+  if (!props.strategy.stockCode || !effectivePrice.value) {
+    if (!effectivePrice.value) alert('请先在设置中输入价格')
+    return
+  }
   sendingAmountSell01.value = true
   const tradeAmount = defaultTradeAmount.value || 20000
-  const currentPrice = props.strategy.currentPrice
-  const tradeVolume = calculateVolumeFromAmount(tradeAmount, currentPrice)
+  const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
 
   try {
     await mqttConditionService.sendSellOrder({
@@ -561,7 +587,7 @@ const handleAmountSell01 = async () => {
       accountType: getAccountType(),
       side: getSellSide()
     })
-    console.log(`[高级快捷] 0.1%定金额卖出已发送: ${props.strategy.stockCode}, 金额: ${tradeAmount}, 价格: ${currentPrice}, 数量: ${tradeVolume}`)
+    console.log(`[高级快捷] 0.1%定金额卖出已发送: ${props.strategy.stockCode}, 金额: ${tradeAmount}, 价格: ${effectivePrice.value}, 数量: ${tradeVolume}`)
   } catch (error) {
     console.error('[高级快捷] 0.1%定金额卖出失败:', error)
     alert('发送失败，请检查MQTT连接')
@@ -572,11 +598,13 @@ const handleAmountSell01 = async () => {
 
 // 高级快捷下单：0.5%定金额卖出
 const handleAmountSell05 = async () => {
-  if (!props.strategy.stockCode) return
+  if (!props.strategy.stockCode || !effectivePrice.value) {
+    if (!effectivePrice.value) alert('请先在设置中输入价格')
+    return
+  }
   sendingAmountSell05.value = true
   const tradeAmount = defaultTradeAmount.value || 20000
-  const currentPrice = props.strategy.currentPrice
-  const tradeVolume = calculateVolumeFromAmount(tradeAmount, currentPrice)
+  const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
 
   try {
     await mqttConditionService.sendSellOrder({
@@ -588,7 +616,7 @@ const handleAmountSell05 = async () => {
       accountType: getAccountType(),
       side: getSellSide()
     })
-    console.log(`[高级快捷] 0.5%定金额卖出已发送: ${props.strategy.stockCode}, 金额: ${tradeAmount}, 价格: ${currentPrice}, 数量: ${tradeVolume}`)
+    console.log(`[高级快捷] 0.5%定金额卖出已发送: ${props.strategy.stockCode}, 金额: ${tradeAmount}, 价格: ${effectivePrice.value}, 数量: ${tradeVolume}`)
   } catch (error) {
     console.error('[高级快捷] 0.5%定金额卖出失败:', error)
     alert('发送失败，请检查MQTT连接')
@@ -1069,6 +1097,15 @@ const getTrendClass = (trend) => {
 
 .setting-input::placeholder {
   color: rgba(255, 255, 255, 0.3);
+}
+
+.price-missing .setting-input {
+  border-color: rgba(255, 193, 7, 0.6);
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+.price-missing .setting-label {
+  color: #ffc107;
 }
 
 .quick-set-btns {
