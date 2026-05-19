@@ -469,7 +469,7 @@ const handleExecuteStrategy = async (strategy) => {
 
   // 3. 构建上下文数据
   const trend = strategy.trendJudgment || 'unset'
-  const oscillationTradeAmount = parseInt(strategy.oscillationTradeAmount) || 100
+  const defaultBuyVolume = parseInt(strategy.increaseAmount) || 100  // 从策略的加仓数量获取
   const sellVolume = Math.floor((strategy.netPosition || 0) / 4 / 100) * 100
   const currentPrice = strategy.currentPrice || 0
 
@@ -483,7 +483,7 @@ const handleExecuteStrategy = async (strategy) => {
     volatility15d: strategy.volatility15d || 0,
     priceDropRatio: strategy.price_drop_ratio || 0,
     isMarginAccount: strategy.isMarginAccount || false,
-    defaultBuyVolume: oscillationTradeAmount,
+    defaultBuyVolume: defaultBuyVolume,
     defaultSellVolume: sellVolume,
     defaultAmount: 20000,
     provider: strategy.provider || 'pingan',

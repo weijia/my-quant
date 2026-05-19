@@ -183,7 +183,7 @@
               <tr>
                 <td>defaultBuyVolume</td>
                 <td>策略数据</td>
-                <td>优先使用 strategy.oscillationTradeAmount（震荡时网格交易数量），如果不存在则使用100</td>
+                <td>来自策略的加仓数量（increaseAmount），如果不存在则使用100</td>
               </tr>
               <tr>
                 <td>defaultSellVolume</td>
