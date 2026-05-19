@@ -587,12 +587,17 @@ const loadMQTTConfig = () => {
 
 const saveMQTTConfig = () => {
   const selectedServer = presetServers.find(s => s.id === mqttConfigForm.serverType);
-  mqttConditionService.updateConfig({
+  const config = {
     serverType: mqttConfigForm.serverType,
     serverUrl: selectedServer ? selectedServer.url : mqttConfigForm.serverUrl,
     topic: mqttConfigForm.topic,
     password: mqttConfigForm.password
-  });
+  };
+  mqttConditionService.updateConfig(config);
+  
+  // 同步保存到 WebDAV
+  webdavImportService.saveMQTTConfig(config);
+  
   showMQTTConfigDialog.value = false;
   alert('MQTT 配置已保存');
 };
@@ -635,11 +640,18 @@ const importFromWebDAV = async () => {
  if (!confirmed) {
  return;
  }
- 
+
  try {
  const result = await webdavImportService.importFromWebDAV(true);
  if (result.success) {
  await loadStrategies();
+ 
+ // 如果 WebDAV 上有 MQTT 配置，加载并应用
+ if (result.mqttConfig) {
+   mqttConditionService.updateConfig(result.mqttConfig);
+   console.log('已从 WebDAV 加载 MQTT 配置');
+ }
+ 
  alert(result.message);
  }
  else {

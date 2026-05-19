@@ -582,10 +582,11 @@ class WebDAVImportService {
 
   async importFromWebDAV(clearBeforeImport = true) {
     try {
-      const [webdavData, holdingsData, trendJudgments] = await Promise.all([
+      const [webdavData, holdingsData, trendJudgments, mqttConfig] = await Promise.all([
         this.fetchFromWebDAV(),
         this.fetchHoldings(),
-        this.fetchTrendJudgments()
+        this.fetchTrendJudgments(),
+        this.fetchMQTTConfig()
       ])
 
       if (holdingsData) {
@@ -596,7 +597,14 @@ class WebDAVImportService {
         webdavData.trendJudgments = trendJudgments
       }
 
-      return await this.importFromData(webdavData, clearBeforeImport)
+      const result = await this.importFromData(webdavData, clearBeforeImport)
+      
+      // 如果获取到了 MQTT 配置，附加到结果中
+      if (mqttConfig) {
+        result.mqttConfig = mqttConfig
+      }
+      
+      return result
     } catch (error) {
       console.error('从 WebDAV 导入数据失败:', error)
       return {
@@ -604,6 +612,78 @@ class WebDAVImportService {
         count: 0,
         message: '从 WebDAV 导入数据失败: ' + error.message
       }
+    }
+  }
+
+  // 保存 MQTT 配置到 WebDAV
+  async saveMQTTConfig(config) {
+    if (!this.isConfigured()) {
+      console.warn('WebDAV 未配置，无法保存 MQTT 配置')
+      return false
+    }
+
+    try {
+      const configStr = localStorage.getItem('webDavConfig');
+      const webdavConfig = JSON.parse(configStr);
+      const baseUrl = (webdavConfig.url || '').replace(/\/+$/, '');
+      const url = baseUrl + '/app_data/my-quant/mqtt-config.json'
+
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...this.getAuthHeaders()
+        },
+        body: JSON.stringify(config, null, 2)
+      })
+
+      if (response.ok) {
+        console.log('MQTT 配置已保存到 WebDAV')
+        return true
+      } else {
+        console.warn('保存 MQTT 配置到 WebDAV 失败:', response.status)
+        return false
+      }
+    } catch (error) {
+      console.warn('保存 MQTT 配置到 WebDAV 失败:', error)
+      return false
+    }
+  }
+
+  // 从 WebDAV 获取 MQTT 配置
+  async fetchMQTTConfig() {
+    if (!this.isConfigured()) {
+      return null
+    }
+
+    try {
+      const configStr = localStorage.getItem('webDavConfig');
+      const webdavConfig = JSON.parse(configStr);
+      const baseUrl = (webdavConfig.url || '').replace(/\/+$/, '');
+      const url = baseUrl + '/app_data/my-quant/mqtt-config.json'
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          ...this.getAuthHeaders()
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        console.log('成功从 WebDAV 获取 MQTT 配置')
+        return data
+      } else if (response.status === 404) {
+        console.log('WebDAV 上不存在 MQTT 配置文件')
+        return null
+      } else {
+        console.warn('获取 MQTT 配置失败:', response.status)
+        return null
+      }
+    } catch (error) {
+      console.warn('获取 MQTT 配置失败:', error)
+      return null
     }
   }
 
