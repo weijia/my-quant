@@ -140,27 +140,112 @@
         <div v-if="showApiHelp" class="api-help">
           <h4>输入对象 (ctx) 包含以下字段：</h4>
           <table class="api-table">
-            <thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+            <thead><tr><th>字段</th><th>类型</th><th>说明</th><th>示例</th></tr></thead>
             <tbody>
-              <tr><td>ctx.stockCode</td><td>string</td><td>股票代码，如 "600519"</td></tr>
-              <tr><td>ctx.stockName</td><td>string</td><td>股票名称，如 "贵州茅台"</td></tr>
-              <tr><td>ctx.currentPrice</td><td>number</td><td>当前价格</td></tr>
-              <tr><td>ctx.netPosition</td><td>number</td><td>净持仓量</td></tr>
-              <tr><td>ctx.marketValue</td><td>number</td><td>市值</td></tr>
-              <tr><td>ctx.trendJudgment</td><td>string</td><td>趋势判断，如 "trend_up"</td></tr>
-              <tr><td>ctx.volatility15d</td><td>number</td><td>15日平均波动率（小数，如 0.0165）</td></tr>
-              <tr><td>ctx.priceDropRatio</td><td>number</td><td>最高价到当前价的下跌比率（小数）</td></tr>
-              <tr><td>ctx.isMarginAccount</td><td>boolean</td><td>是否融资融券账户</td></tr>
-              <tr><td>ctx.defaultBuyVolume</td><td>number</td><td>缺省买入数量</td></tr>
-              <tr><td>ctx.defaultSellVolume</td><td>number</td><td>缺省卖出数量</td></tr>
-              <tr><td>ctx.defaultAmount</td><td>number</td><td>缺省交易金额</td></tr>
-              <tr><td>ctx.provider</td><td>string</td><td>券商，如 "pingan"</td></tr>
-              <tr><td>ctx.accountType</td><td>string</td><td>账户类型 "default" / "credit"</td></tr>
+              <tr><td>ctx.stockCode</td><td>string</td><td>股票代码，6位数字</td><td>"600519"</td></tr>
+              <tr><td>ctx.stockName</td><td>string</td><td>股票名称</td><td>"贵州茅台"</td></tr>
+              <tr><td>ctx.currentPrice</td><td>number</td><td>当前收盘价</td><td>1680.00</td></tr>
+              <tr><td>ctx.netPosition</td><td>number</td><td>当前持仓数量（股）</td><td>100</td></tr>
+              <tr><td>ctx.marketValue</td><td>number</td><td>持仓市值 = 持仓 × 价格</td><td>168000</td></tr>
+              <tr><td>ctx.trendJudgment</td><td>string</td><td>趋势判断类型</td><td>"trend_up"</td></tr>
+              <tr><td>ctx.volatility15d</td><td>number</td><td>15日平均波动率（小数，如1.65%存为0.0165）</td><td>0.0165</td></tr>
+              <tr><td>ctx.priceDropRatio</td><td>number</td><td>最高价到当前价的下跌比率</td><td>0.05（表示5%）</td></tr>
+              <tr><td>ctx.isMarginAccount</td><td>boolean</td><td>是否为融资融券账户</td><td>false</td></tr>
+              <tr><td>ctx.defaultBuyVolume</td><td>number</td><td>用户设置的缺省买入数量</td><td>100</td></tr>
+              <tr><td>ctx.defaultSellVolume</td><td>number</td><td>用户设置的缺省卖出数量</td><td>25</td></tr>
+              <tr><td>ctx.defaultAmount</td><td>number</td><td>用户设置的缺省交易金额</td><td>20000</td></tr>
+              <tr><td>ctx.provider</td><td>string</td><td>券商代码</td><td>"pingan"</td></tr>
+              <tr><td>ctx.accountType</td><td>string</td><td>账户类型</td><td>"default"或"credit"</td></tr>
             </tbody>
           </table>
+
+          <h4>趋势判断值 (ctx.trendJudgment)：</h4>
+          <table class="api-table">
+            <thead><tr><th>值</th><th>含义</th></tr></thead>
+            <tbody>
+              <tr><td>"unset"</td><td>未设置</td></tr>
+              <tr><td>"trend_unknown"</td><td>未知趋势</td></tr>
+              <tr><td>"trend_up"</td><td>上涨趋势</td></tr>
+              <tr><td>"trend_down"</td><td>下跌趋势</td></tr>
+              <tr><td>"trend_breakdown"</td><td>下跌破位</td></tr>
+              <tr><td>"trend_oscillation"</td><td>震荡趋势</td></tr>
+              <tr><td>"trend_pullback"</td><td>回踩趋势</td></tr>
+              <tr><td>"high_volatility"</td><td>高波动率</td></tr>
+              <tr><td>"medium_volatility"</td><td>中等波动率</td></tr>
+              <tr><td>"low_volatility"</td><td>低波动率</td></tr>
+            </tbody>
+          </table>
+
+          <h4>辅助函数：</h4>
+          <table class="api-table">
+            <thead><tr><th>函数</th><th>参数</th><th>返回值</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>buy(data)</td>
+                <td>data: 对象</td>
+                <td>{ action: "buy", data }</td>
+                <td>创建买入消息</td>
+              </tr>
+              <tr>
+                <td>sell(data)</td>
+                <td>data: 对象</td>
+                <td>{ action: "sell", data }</td>
+                <td>创建卖出消息</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h4>消息 data 字段说明：</h4>
+          <table class="api-table">
+            <thead><tr><th>字段</th><th>必填</th><th>类型</th><th>说明</th><th>示例</th></tr></thead>
+            <tbody>
+              <tr><td>stockCode</td><td>是</td><td>string</td><td>股票代码</td><td>"600519"</td></tr>
+              <tr><td>stockName</td><td>是</td><td>string</td><td>股票名称</td><td>"贵州茅台"</td></tr>
+              <tr><td>tradeVolume</td><td>否</td><td>number</td><td>交易数量（股）</td><td>100</td></tr>
+              <tr><td>tradeAmount</td><td>否</td><td>number</td><td>交易金额（元）</td><td>20000</td></tr>
+              <tr><td>percentage</td><td>否</td><td>number</td><td>触发百分比（如0.5表示0.5%）</td><td>0.5</td></tr>
+              <tr><td>endDate</td><td>否</td><td>string</td><td>条件单结束日期</td><td>"2026-05-30"</td></tr>
+              <tr><td>provider</td><td>否</td><td>string</td><td>券商</td><td>"pingan"</td></tr>
+              <tr><td>accountType</td><td>否</td><td>string</td><td>账户类型</td><td>"default"</td></tr>
+              <tr><td>side</td><td>否</td><td>string</td><td>交易方向，非融资时需要</td><td>"COLLABUY"/"COLLASELL"</td></tr>
+            </tbody>
+          </table>
+
           <h4>输出格式：</h4>
-          <p>返回一个数组，每项为 <code>{ action: "buy"|"sell", data: { stockCode, stockName, tradeVolume, percentage, ... } }</code></p>
-          <p>可用辅助函数：<code>buy(data)</code>、<code>sell(data)</code> 快速创建消息。</p>
+          <pre class="code-example">// 脚本必须返回一个数组
+return [
+  buy({
+    stockCode: ctx.stockCode,
+    stockName: ctx.stockName,
+    tradeVolume: 100,
+    percentage: 0.5,
+    provider: ctx.provider,
+    accountType: ctx.accountType
+  }),
+  sell({
+    stockCode: ctx.stockCode,
+    stockName: ctx.stockName,
+    tradeVolume: 25,
+    percentage: ctx.volatility15d * 100,
+    provider: ctx.provider,
+    accountType: ctx.accountType
+  })
+]</pre>
+
+          <h4>常用计算示例：</h4>
+          <pre class="code-example">// 将15日波动率转为百分比（如 0.0165 -> 1.65）
+const volPercent = ctx.volatility15d * 100
+
+// 计算1/4持仓并取整到100的倍数
+const sellVolume = Math.floor(ctx.netPosition / 4 / 100) * 100
+
+// 根据金额计算数量
+const buyVolume = Math.floor(ctx.defaultAmount / ctx.currentPrice / 100) * 100
+
+// 条件判断
+if (ctx.trendJudgment === 'trend_up') {
+  // 上涨趋势逻辑
+}</pre>
         </div>
 
         <button @click="addTemplate" class="btn btn-primary add-template-btn">
@@ -1052,6 +1137,21 @@ onMounted(() => {
 
 .preview-error strong {
   color: #ff6b6b;
+}
+
+/* 代码示例 */
+.code-example {
+  background-color: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 12px;
+  margin: 8px 0;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #4ecdc4;
+  white-space: pre-wrap;
+  overflow-x: auto;
 }
 
 @media (max-width: 768px) {
