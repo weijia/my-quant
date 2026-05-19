@@ -371,6 +371,8 @@ const closeDialog = () => {
 };
 const saveStrategy = async (strategyData) => {
   try {
+    // 标记为手动编辑过
+    strategyData.isManuallyEdited = true
     if (isEditing.value && editingStrategy.value.id) {
       await strategyService.updateStrategy(editingStrategy.value.id, strategyData);
     }
@@ -417,7 +419,8 @@ const handleBatchConditionSubmit = async (data) => {
     const { decreaseStrategies, increaseStrategies } = data;
     await strategyService.updateStrategy(selectedStrategy.value.id, {
       decreaseStrategies,
-      increaseStrategies
+      increaseStrategies,
+      isManuallyEdited: true
     });
     await loadStrategies();
   }

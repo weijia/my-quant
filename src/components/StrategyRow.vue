@@ -425,11 +425,9 @@ const getAccountType = () => {
 }
 
 // 判断是否为手动设置的策略
+// 只有当用户在策略编辑器中明确修改过策略时才标记为手动
 const isManualStrategy = (strategy) => {
-  // 如果有 decreaseStrategies 或 increaseStrategies 且不为空，且不是缺省策略，则为手动设置
-  const hasDecrease = strategy.decreaseStrategies && strategy.decreaseStrategies.length > 0
-  const hasIncrease = strategy.increaseStrategies && strategy.increaseStrategies.length > 0
-  return (hasDecrease || hasIncrease) && !strategy.isDefaultStrategy
+  return !!strategy.isManuallyEdited
 }
 
 // 获取策略类型标签
