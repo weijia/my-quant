@@ -945,8 +945,8 @@ const getTrendClass = (trend) => {
 }
 
 .setting-input {
-  width: 50px;
-  padding: 2px 4px;
+  width: 70px;
+  padding: 2px 6px;
   font-size: 11px;
   background-color: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -1067,7 +1067,7 @@ const getTrendClass = (trend) => {
   }
   
   .setting-input {
-    width: 36px;
+    width: 50px;
     font-size: 10px;
     padding: 2px;
   }
