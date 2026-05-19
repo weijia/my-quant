@@ -137,6 +137,7 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 | data.stockCode | string | 是 | 股票代码 |
 | data.tradeVolume | number | 否 | 交易数量 |
 | data.percentage | number | 否 | 上涨触发百分比 |
+| data.endDate | string | 否 | 条件单结束日期（格式 "YYYY-MM-DD"），不传则使用默认过期逻辑 |
 
 **请求示例**:
 
@@ -146,7 +147,8 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
   "data": {
     "stockCode": "002475",
     "tradeVolume": 300,
-    "percentage": 0.5
+    "percentage": 0.5,
+    "endDate": "2026-05-30"
   }
 }
 ```
@@ -165,6 +167,7 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 | data.stockCode | string | 是 | 股票代码 |
 | data.tradeVolume | number | 否 | 交易数量 |
 | data.percentage | number | 否 | 下跌触发百分比 |
+| data.endDate | string | 否 | 条件单结束日期（格式 "YYYY-MM-DD"），不传则使用默认过期逻辑 |
 
 **请求示例**:
 
@@ -174,7 +177,8 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
   "data": {
     "stockCode": "002475",
     "tradeVolume": 300,
-    "percentage": 0.5
+    "percentage": 0.5,
+    "endDate": "2026-05-30"
   }
 }
 ```
@@ -298,11 +302,11 @@ const data = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 
 ```javascript
 // 1. 创建买入条件单
-service.sendBuyOrder({ stockCode: '002475', stockName: '立讯精密', tradeVolume: 300, percentage: 0.5 });
+service.sendBuyOrder({ stockCode: '002475', stockName: '立讯精密', tradeVolume: 300, percentage: 0.5, endDate: '2026-05-30' });
 
 // 2. 创建卖出条件单
-service.sendSellOrder({ stockCode: '002475', stockName: '立讯精密', tradeVolume: 300, percentage: 0.5 });
+service.sendSellOrder({ stockCode: '002475', stockName: '立讯精密', tradeVolume: 300, percentage: 0.5, endDate: '2026-05-30' });
 
 // 3. 创建双向条件单
-service.sendBothOrders({ stockCode: '002475', stockName: '立讯精密', tradeVolume: 300, percentage: 0.5 });
+service.sendBothOrders({ stockCode: '002475', stockName: '立讯精密', tradeVolume: 300, percentage: 0.5, endDate: '2026-05-30' });
 ```
