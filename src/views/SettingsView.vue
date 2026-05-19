@@ -541,12 +541,15 @@ const runPreview = (index) => {
   } else {
     delete previewErrors[index]
     // 格式化输出为完整的 MQTT 消息
-    const messages = result.map((msg, i) => ({
-      [`消息${i + 1}`: {
+    const messages = result.map((msg, i) => {
+      const key = '消息' + (i + 1)
+      const obj = {}
+      obj[key] = {
         action: msg.action,
         data: msg.data
       }
-    }))
+      return obj
+    })
     previewResults[index] = JSON.stringify(messages, null, 2)
   }
 }
