@@ -472,9 +472,9 @@ const handleExecuteStrategy = async (strategy) => {
 
   // 3. 构建上下文数据
   const trend = strategy.trendJudgment || 'unset'
-  console.log('[调试] strategy.increaseAmount:', strategy.increaseAmount, '类型:', typeof strategy.increaseAmount)
-  const defaultBuyVolume = parseInt(strategy.increaseAmount) || 100  // 从策略的加仓数量获取
-  console.log('[调试] defaultBuyVolume:', defaultBuyVolume)
+  // 缺省买入量：优先使用策略的加仓数量，否则按高级设置缺省算法（1/4持仓）
+  const quarterPosition = Math.floor((strategy.netPosition || 0) / 4 / 100) * 100
+  const defaultBuyVolume = parseInt(strategy.increaseAmount) || quarterPosition || 100
   const sellVolume = Math.floor((strategy.netPosition || 0) / 4 / 100) * 100
   const currentPrice = strategy.currentPrice || 0
 
