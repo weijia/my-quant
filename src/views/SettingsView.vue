@@ -141,9 +141,10 @@
           添加策略模板
         </button>
 
-        <div v-for="(template, index) in templates" :key="index" class="template-card">
+        <div v-for="(template, index) in templates" :key="index" class="template-card" :class="{ 'default-template': template.isDefault }">
           <div class="template-header">
             <span class="template-index">#{{ index + 1 }}</span>
+            <span v-if="template.isDefault" class="default-badge">缺省策略</span>
             <button @click="removeTemplate(index)" class="btn btn-danger btn-sm remove-btn" title="删除此模板">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 6h18"/>
@@ -152,6 +153,10 @@
               </svg>
               删除
             </button>
+          </div>
+
+          <div v-if="template.description" class="template-description">
+            {{ template.description }}
           </div>
 
           <div class="template-form">
@@ -171,26 +176,30 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label>触发条件 - 上涨百分比</label>
-                <input v-model="template.percentage" type="text" placeholder="如: 0.1 或 0.5" class="form-input" />
+                <label>
+                  触发条件 - 上涨百分比
+                  <span v-if="template.percentageSource" class="percentage-source">(动态: {{ getPercentageSourceLabel(template.percentageSource) }})</span>
+                </label>
+                <input v-model="template.percentage" type="text" :placeholder="template.percentageSource ? '自动计算' : '如: 0.1 或 0.5'" class="form-input" :disabled="!!template.percentageSource" />
               </div>
               <div class="form-group">
                 <label>下单方式</label>
-                <select v-model="template.orderMode" class="form-input">
+                <select v-model="template.orderMode" class="form-input" :disabled="template.sellPercentage">
                   <option value="amount">按金额</option>
                   <option value="volume">按数量</option>
                 </select>
+                <span v-if="template.sellPercentage" class="order-mode-hint">卖出 {{ template.sellPercentage }}% 持仓</span>
               </div>
             </div>
 
             <div class="form-row">
-              <div class="form-group" v-if="template.orderMode === 'amount'">
+              <div class="form-group" v-if="template.orderMode === 'amount' && !template.sellPercentage">
                 <label>金额</label>
                 <input v-model="template.amount" type="text" placeholder="如: 10000" class="form-input" />
               </div>
-              <div class="form-group" v-if="template.orderMode === 'volume'">
-                <label>数量</label>
-                <input v-model="template.volume" type="text" placeholder="如: 200" class="form-input" />
+              <div class="form-group" v-if="template.orderMode === 'volume' || template.sellPercentage">
+                <label>{{ template.sellPercentage ? '持仓比例(%)' : '数量' }}</label>
+                <input v-model="template.volume" type="text" :placeholder="template.sellPercentage ? '如: 25 表示卖出1/4' : '如: 200'" class="form-input" />
               </div>
               <div class="form-group">
                 <label>券商</label>
@@ -345,6 +354,82 @@ const defaultTemplate = () => ({
   accountType: 'default'
 })
 
+// 缺省策略模板（基于15日波动率的动态策略）
+const defaultStrategies = [
+  {
+    name: '通用上涨趋势策略',
+    description: '上涨趋势：下跌15日波动率卖出，上涨0.5%买入',
+    isDefault: true,
+    trendCondition: 'trend_up',
+    buy: {
+      action: 'buy',
+      percentage: '0.5',
+      orderMode: 'volume',
+      volume: 'dynamic', // 使用设定的数量
+      useMargin: false,
+      provider: 'pingan',
+      accountType: 'default'
+    },
+    sell: {
+      action: 'sell',
+      percentageSource: 'volatility_15d_ma', // 使用15日波动率
+      orderMode: 'percentage_position', // 按比例卖出持仓
+      sellPercentage: '25', // 卖出25%即1/4
+      useMargin: false,
+      provider: 'pingan',
+      accountType: 'default'
+    }
+  },
+  {
+    name: '通用下跌趋势策略',
+    description: '下跌趋势：下跌15日波动率1/2卖出1/4持仓，上涨15日波动率买入设定数量',
+    isDefault: true,
+    trendCondition: 'trend_down',
+    buy: {
+      action: 'buy',
+      percentageSource: 'volatility_15d_ma',
+      orderMode: 'volume',
+      volume: 'dynamic',
+      useMargin: false,
+      provider: 'pingan',
+      accountType: 'default'
+    },
+    sell: {
+      action: 'sell',
+      percentageSource: 'volatility_15d_ma_half', // 15日波动率的一半
+      orderMode: 'percentage_position',
+      sellPercentage: '25',
+      useMargin: false,
+      provider: 'pingan',
+      accountType: 'default'
+    }
+  },
+  {
+    name: '通用普通策略',
+    description: '普通趋势：上涨或下跌达15日波动率时，买入设定数量或卖出1/4持仓',
+    isDefault: true,
+    trendCondition: 'general',
+    buy: {
+      action: 'buy',
+      percentageSource: 'volatility_15d_ma',
+      orderMode: 'volume',
+      volume: 'dynamic',
+      useMargin: false,
+      provider: 'pingan',
+      accountType: 'default'
+    },
+    sell: {
+      action: 'sell',
+      percentageSource: 'volatility_15d_ma',
+      orderMode: 'percentage_position',
+      sellPercentage: '25',
+      useMargin: false,
+      provider: 'pingan',
+      accountType: 'default'
+    }
+  }
+]
+
 const loadTemplates = () => {
   const saved = localStorage.getItem('orderStrategyTemplates')
   if (saved) {
@@ -355,6 +440,58 @@ const loadTemplates = () => {
       templates.value = []
     }
   }
+  // 如果没有模板，自动添加缺省策略
+  if (templates.value.length === 0) {
+    addDefaultStrategies()
+  }
+}
+
+const addDefaultStrategies = () => {
+  // 将缺省策略转换为模板格式
+  defaultStrategies.forEach(strategy => {
+    // 买入模板
+    templates.value.push({
+      name: `${strategy.name}-买入`,
+      description: strategy.description,
+      isDefault: true,
+      trendCondition: strategy.trendCondition,
+      action: strategy.buy.action,
+      percentage: strategy.buy.percentage || strategy.buy.percentageSource,
+      percentageSource: strategy.buy.percentageSource,
+      orderMode: strategy.buy.orderMode === 'percentage_position' ? 'volume' : strategy.buy.orderMode,
+      amount: '',
+      volume: strategy.buy.volume === 'dynamic' ? '100' : strategy.buy.volume,
+      useMargin: strategy.buy.useMargin,
+      provider: strategy.buy.provider,
+      accountType: strategy.buy.accountType
+    })
+    // 卖出模板
+    templates.value.push({
+      name: `${strategy.name}-卖出`,
+      description: strategy.description,
+      isDefault: true,
+      trendCondition: strategy.trendCondition,
+      action: strategy.sell.action,
+      percentage: strategy.sell.percentage || strategy.sell.percentageSource,
+      percentageSource: strategy.sell.percentageSource,
+      orderMode: strategy.sell.orderMode === 'percentage_position' ? 'volume' : strategy.sell.orderMode,
+      amount: '',
+      volume: strategy.sell.sellPercentage || '100',
+      sellPercentage: strategy.sell.sellPercentage,
+      useMargin: strategy.sell.useMargin,
+      provider: strategy.sell.provider,
+      accountType: strategy.sell.accountType
+    })
+  })
+  saveTemplates()
+}
+
+const getPercentageSourceLabel = (source) => {
+  const labels = {
+    'volatility_15d_ma': '15日平均波动率',
+    'volatility_15d_ma_half': '15日波动率1/2'
+  }
+  return labels[source] || source
 }
 
 const saveTemplates = () => {
@@ -772,6 +909,49 @@ onMounted(() => {
   line-height: 1.5;
   max-height: 300px;
   overflow-y: auto;
+}
+
+/* 缺省策略样式 */
+.default-template {
+  border-color: rgba(78, 205, 196, 0.4) !important;
+  background-color: rgba(78, 205, 196, 0.05) !important;
+}
+
+.default-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  background-color: rgba(78, 205, 196, 0.3);
+  color: #4ecdc4;
+  border-radius: 12px;
+  margin-left: 8px;
+}
+
+.template-description {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  border-left: 3px solid #4ecdc4;
+}
+
+.percentage-source {
+  font-size: 11px;
+  color: #4ecdc4;
+  margin-left: 4px;
+}
+
+.order-mode-hint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 4px;
+  display: block;
+}
+
+.form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
