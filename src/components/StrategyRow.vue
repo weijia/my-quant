@@ -144,7 +144,8 @@
         <div class="setting-item">
           <span class="setting-label">量</span>
           <input 
-            v-model.number="defaultTradeVolume" 
+            :value="defaultTradeVolume ?? getQuarterPosition()"
+            @input="defaultTradeVolume = Number($event.target.value) || null"
             type="number" 
             class="setting-input"
             :placeholder="getQuarterPosition().toString()"
@@ -271,7 +272,7 @@ const showTrendTip = ref(false)
 
 // 高级快捷下单设置
 const defaultTradeAmount = ref(20000)  // 缺省下单金额
-const defaultTradeVolume = ref(0)      // 缺省下单数量（0表示未设置）
+const defaultTradeVolume = ref(null)   // 缺省下单数量（null表示使用1/4持仓）
 const sendingAmountBuy = ref(false)    // 定金额买入状态
 const sendingAmountSell = ref(false)   // 定金额卖出状态
 const sendingVolumeBuy = ref(false)    // 定数量买入状态
@@ -305,7 +306,7 @@ const setDefaultVolumeHalf = () => {
 
 // 获取当前有效的下单数量
 const getEffectiveTradeVolume = () => {
-  return defaultTradeVolume.value || getQuarterPosition()
+  return defaultTradeVolume.value ?? getQuarterPosition()
 }
 
 // 获取趋势图标
