@@ -1229,36 +1229,97 @@ onMounted(async () => {
 }
 
 @media (max-width: 768px) {
+  .app-header {
+    padding: 8px 12px;
+  }
+  
   .header-content {
-    flex-direction: column;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .logo-section h1 {
+    font-size: 16px;
+  }
+  
+  .logo-section svg {
+    width: 20px;
+    height: 20px;
   }
   
   .search-section {
+    order: 3;
     width: 100%;
     max-width: 100%;
     margin: 0;
   }
   
+  .search-input {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+  
   .action-buttons {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 6px;
+    gap: 4px;
   }
   
   .action-buttons .btn {
-    padding: 6px 10px;
-    font-size: 12px;
+    padding: 4px 8px;
+    font-size: 11px;
   }
   
   .action-buttons .btn svg {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .tools-panel {
+    padding: 6px 12px;
+  }
+  
+  .tools-panel-content {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  
+  .tools-panel-content .btn,
+  .tools-panel-content .import-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  
+  .tools-panel-content .btn svg,
+  .tools-panel-content .import-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .filter-bar {
+    padding: 6px 12px;
+  }
+  
+  .filter-toggle {
+    font-size: 12px;
+    padding: 2px 0;
+  }
+  
+  .filter-toggle svg {
     width: 14px;
     height: 14px;
   }
   
-  .filter-bar {
-    flex-wrap: wrap;
-    gap: 10px;
+  .filter-options {
+    gap: 6px;
+  }
+  
+  .filter-options label {
+    font-size: 11px;
+    padding: 2px 6px;
+  }
+  
+  .filter-options input[type="checkbox"] {
+    width: 12px;
+    height: 12px;
   }
 }
 
