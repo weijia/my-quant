@@ -297,7 +297,8 @@
 ## 6. 趋势判断
 
 **文件路径**: `app_data/stocks/trend_judgments/trend_judgment_{name}_{YYYY-MM-DD_HH-MM-SS}.json`  
-**源代码**: `src/services/TrendJudgmentWebDAVSync.js` — `saveTrendJudgmentToWebDAV()`
+**源代码**: `src/services/TrendJudgmentWebDAVSync.js` — `saveTrendJudgmentToWebDAV()`  
+**数据来源**: home-cloud 仓库 `stock/trend/auto_trend.py` / `trend_calculator.py`
 
 文件名中的 `{name}` 为股票名称，日期为人类可读格式。每只股票每次保存会创建一个新文件。
 
@@ -307,17 +308,28 @@
 {
   "name": "星湖科技",
   "stockCode": "600866",
-  "trendJudgment": "up",
+  "createTime": "2025-01-01T12:00:00.000Z",
+  "trendJudgment": "unset",
   "trendJudgmentUpdatedAt": "2025-01-01T12:00:00.000Z",
   "autoTrendJudgment": "up",
   "autoTrendJudgmentUpdatedAt": "2025-01-01T12:00:00.000Z",
   "volatilityMetrics": {
-    "price_drop_ratio": 15.2,
-    "updated_at": "2025-01-01T12:00:00.000Z"
+    "daily_price_volatility": 0.0152,
+    "price_range_volatility": 0.0205,
+    "close_position_volatility": 0.0180,
+    "volatility_5d_ma": 0.0160,
+    "volatility_10d_ma": 0.0170,
+    "volatility_15d_ma": 0.0165,
+    "max_high_price": 10.85,
+    "current_price": 10.50,
+    "price_drop_value": 0.35,
+    "price_drop_ratio": 3.23
   },
   "volatilityMetricsUpdatedAt": "2025-01-01T12:00:00.000Z",
   "fiveYearAverageDividendYield": 3.2,
-  "fiveYearAverageDividendYieldUpdatedAt": "2025-01-01T12:00:00.000Z"
+  "fiveYearAverageDividendYieldUpdatedAt": "2025-01-01T12:00:00.000Z",
+  "previousDayChangePercent": 1.25,
+  "previousDayChangeDate": "2025-01-01T00:00:00.000Z"
 }
 ```
 
@@ -325,18 +337,59 @@
 |------|------|------|------|
 | `name` | `string` | 是 | 股票名称 |
 | `stockCode` | `string` | 是 | 股票代码 |
-| `trendJudgment` | `string` | 否 | 手动趋势判断：`"unset"` / `"unknown"` / `"up"` / `"down"` / `"oscillation"` / `"pullback"` |
+| `createTime` | `string` | 是 | 创建时间，ISO 8601 格式 |
+| `trendJudgment` | `string` | 否 | 手动趋势判断，取值见下方趋势类型表 |
 | `trendJudgmentUpdatedAt` | `string` | 否 | 手动趋势判断更新时间，ISO 8601 格式 |
-| `autoTrendJudgment` | `string` | 否 | 自动趋势判断，取值同上 |
+| `autoTrendJudgment` | `string` | 否 | 自动趋势判断，取值见下方趋势类型表 |
 | `autoTrendJudgmentUpdatedAt` | `string` | 否 | 自动趋势判断更新时间，ISO 8601 格式 |
-| `volatilityMetrics` | `object` | 否 | 波动率指标（可选，有数据时才包含） |
-| `volatilityMetrics.price_drop_ratio` | `number` | 否 | 90天内最高点到当前价格下跌比率（%） |
-| `volatilityMetrics.updated_at` | `string` | 否 | 波动率数据更新时间 |
+| `volatilityMetrics` | `object` | 否 | 波动率指标集合 |
+| `volatilityMetrics.daily_price_volatility` | `number` | 否 | 当日价格波动率：\|ln(最高价/收盘价)\| + \|ln(最低价/收盘价)\| |
+| `volatilityMetrics.price_range_volatility` | `number` | 否 | 价格区间波动率：ln(最高价/最低价) |
+| `volatilityMetrics.close_position_volatility` | `number` | 否 | 收盘价相对位置波动率：(收盘价-最低价)/(最高价-最低价) * ln(最高价/最低价) |
+| `volatilityMetrics.volatility_5d_ma` | `number` | 否 | 5天滚动平均波动率 |
+| `volatilityMetrics.volatility_10d_ma` | `number` | 否 | 10天滚动平均波动率 |
+| `volatilityMetrics.volatility_15d_ma` | `number` | 否 | 15天滚动平均波动率 |
+| `volatilityMetrics.max_high_price` | `number` | 否 | 计算周期内（90天）的最高价 |
+| `volatilityMetrics.current_price` | `number` | 否 | 当前收盘价 |
+| `volatilityMetrics.price_drop_value` | `number` | 否 | 最高价到当前价格的下跌值 |
+| `volatilityMetrics.price_drop_ratio` | `number` | 否 | 最高价到当前价格的下跌比率（%） |
 | `volatilityMetricsUpdatedAt` | `string` | 否 | 波动率指标整体更新时间 |
-| `fiveYearAverageDividendYield` | `number` | 否 | 5年平均股息率（可选，有数据时才包含） |
+| `fiveYearAverageDividendYield` | `number` | 否 | 5年平均股息率（%） |
 | `fiveYearAverageDividendYieldUpdatedAt` | `string` | 否 | 5年平均股息率更新时间 |
+| `previousDayChangePercent` | `number` | 否 | 前一交易日涨跌百分比（%） |
+| `previousDayChangeDate` | `string` | 否 | 前一交易日日期 |
 
----
+### 趋势类型
+
+| 趋势值 | 说明 | 来源 |
+|--------|------|------|
+| `unset` | 未设置 | 初始默认值 |
+| `unknown` | 未知 | 无法判断趋势时 |
+| `up` | 上涨 | MA5向上且价格高于MA5 |
+| `down` | 下跌 | MA5向下 |
+| `breakdown` | 下跌破位 | 特殊下跌状态 |
+| `oscillation` | 震荡 | MA5方向变化≥2次 |
+| `pullback` | 回踩 | MA5向上但价格低于MA5 |
+
+### 自动趋势判定规则
+
+自动趋势判定由 home-cloud 仓库中的 `AutoTrendCalculator` 类计算，规则如下（按优先级）：
+
+1. **震荡判定**: 若 MA5 在最近取样区间内发生了两次或以上的趋势方向变化（上涨↔下跌），则判定为"震荡"(oscillation)
+2. **回踩判定**: 否则，若 MA5 最后方向为上升：当前价格低于最新 MA5，标记为"回踩"(pullback)
+3. **上涨判定**: 否则，若 MA5 最后方向为上升且价格≥MA5，标记为"上涨"(up)
+4. **下跌判定**: 否则，若 MA5 最后方向为下降，标记为"下跌"(down)
+5. **未知**: 其他情况标记为"unknown"
+
+### 波动率计算公式
+
+波动率计算基于当日最高价、最低价与收盘价的比率：
+
+- **daily_price_volatility** = \|ln(最高价/收盘价)\| + \|ln(最低价/收盘价)\|
+- **price_range_volatility** = ln(最高价/最低价)
+- **close_position_volatility** = (收盘价-最低价)/(最高价-最低价) × ln(最高价/最低价)
+
+滚动平均波动率（5d/10d/15d）是对 daily_price_volatility 的简单移动平均。
 
 ## 7. 持仓历史记录
 
