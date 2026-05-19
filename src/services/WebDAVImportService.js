@@ -229,6 +229,8 @@ class DataConverter {
     const trendValue = trendData.autoTrendJudgment || trendData.trendJudgment || advanced.trendJudgment || 'unset'
     // 获取当前价格（从趋势数据，优先于策略中保存的价格）
     const currentPrice = trendData.currentPrice || advanced.currentPrice || advanced.price || null
+    // 获取15日平均波动率（从趋势数据）
+    const volatility15d = trendData.volatility15d || advanced.volatility15d || null
 
     const decreaseStrategies = (advanced.decreaseStrategies || [])
       .map(c => ({
@@ -270,7 +272,8 @@ class DataConverter {
       increaseStrategies: increaseStrategies,
       notes: advanced.notes || '',
       manualNotes: advanced.manualNotes || advanced.notes || '',
-      currentPrice: currentPrice
+      currentPrice: currentPrice,
+      volatility15d: volatility15d
     }
   }
 
@@ -570,7 +573,9 @@ class WebDAVImportService {
                 // price_drop_ratio 从 volatilityMetrics 获取，已经是百分比格式
                 price_drop_ratio: actualPriceDropRatio,
                 // 从波动率指标中获取当前价格
-                currentPrice: volatilityMetrics?.current_price || null
+                currentPrice: volatilityMetrics?.current_price || null,
+                // 从波动率指标中获取15日平均波动率
+                volatility15d: volatilityMetrics?.volatility_15d_ma || null
               }
               validCount++
             }

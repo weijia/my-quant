@@ -426,10 +426,10 @@ const getAccountType = () => {
 
 // 判断是否为手动设置的策略
 const isManualStrategy = (strategy) => {
-  // 如果有 decreaseStrategies 或 increaseStrategies 且不为空，则为手动设置
+  // 如果有 decreaseStrategies 或 increaseStrategies 且不为空，且不是缺省策略，则为手动设置
   const hasDecrease = strategy.decreaseStrategies && strategy.decreaseStrategies.length > 0
   const hasIncrease = strategy.increaseStrategies && strategy.increaseStrategies.length > 0
-  return hasDecrease || hasIncrease
+  return (hasDecrease || hasIncrease) && !strategy.isDefaultStrategy
 }
 
 // 获取策略类型标签
@@ -437,6 +437,11 @@ const getStrategyTypeLabel = (strategy) => {
   // 如果是手动设置，显示"手动策略"
   if (isManualStrategy(strategy)) {
     return '手动策略'
+  }
+
+  // 如果是缺省策略，显示缺省策略名称
+  if (strategy.isDefaultStrategy && strategy.defaultStrategyName) {
+    return strategy.defaultStrategyName
   }
 
   // 否则根据趋势自动生成策略名称

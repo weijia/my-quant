@@ -184,6 +184,7 @@ import { trendService } from '../services/TrendService'
 import { database } from '../utils/Database'
 import { webdavImportService } from '../services/WebDAVImportService'
 import mqttConditionService from '../services/MQTTConditionService'
+import { defaultStrategyService } from '../services/DefaultStrategyService'
 import StrategyList from '../components/StrategyList.vue'
 import StrategyDialog from '../components/StrategyDialog.vue'
 import BatchConditionDialog from '../components/BatchConditionDialog.vue'
@@ -303,6 +304,12 @@ const loadStrategies = async () => {
               decreaseMissingCount++;
               console.warn(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), trend 匹配成功但 price_drop_ratio 和 decreasePercentage 均为空! trend 对象:`, JSON.stringify(trend));
             }
+
+            // 注入15日平均波动率
+            if (trend.volatility15d != null) {
+              strategy.volatility15d = trend.volatility15d;
+            }
+
             matchedCount++;
           } else {
             // 【调试】trend 匹配失败
@@ -322,6 +329,19 @@ const loadStrategies = async () => {
       if (!trendData) {
         console.warn('loadStrategies: 趋势数据为空，WebDAV 可能未配置或请求失败。策略将使用本地存储的下跌百分比。');
       }
+    }
+
+    // 应用缺省策略（为没有手动设置策略的股票自动生成）
+    let defaultStrategyAppliedCount = 0;
+    for (const strategy of result) {
+      const strategyWithDefault = defaultStrategyService.applyDefaultStrategy(strategy);
+      if (strategyWithDefault.isDefaultStrategy) {
+        defaultStrategyAppliedCount++;
+        console.log(`[缺省策略] 为 ${strategy.name}(${strategy.stockCode}) 应用了${strategyWithDefault.defaultStrategyName}: ${strategyWithDefault.defaultStrategyDescription}`);
+      }
+    }
+    if (defaultStrategyAppliedCount > 0) {
+      console.log(`[缺省策略] 共为 ${defaultStrategyAppliedCount} 个策略应用了缺省策略`);
     }
 
     strategies.value = result;
