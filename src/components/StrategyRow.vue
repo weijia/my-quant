@@ -790,24 +790,24 @@ const getTrendClass = (trend) => {
 }
 
 .quick-order-btn.buy-btn {
-  background-color: rgba(40, 167, 69, 0.3);
-  color: #28a745;
-  border: 1px solid rgba(40, 167, 69, 0.5);
-}
-
-.quick-order-btn.buy-btn:hover:not(:disabled) {
-  background-color: rgba(40, 167, 69, 0.5);
-  color: white;
-}
-
-.quick-order-btn.sell-btn {
   background-color: rgba(220, 53, 69, 0.3);
   color: #dc3545;
   border: 1px solid rgba(220, 53, 69, 0.5);
 }
 
-.quick-order-btn.sell-btn:hover:not(:disabled) {
+.quick-order-btn.buy-btn:hover:not(:disabled) {
   background-color: rgba(220, 53, 69, 0.5);
+  color: white;
+}
+
+.quick-order-btn.sell-btn {
+  background-color: rgba(40, 167, 69, 0.3);
+  color: #28a745;
+  border: 1px solid rgba(40, 167, 69, 0.5);
+}
+
+.quick-order-btn.sell-btn:hover:not(:disabled) {
+  background-color: rgba(40, 167, 69, 0.5);
   color: white;
 }
 
