@@ -252,6 +252,10 @@ const props = defineProps({
   visibleColumns: {
     type: Array,
     default: () => []
+  },
+  useMarginTrade: {
+    type: Boolean,
+    default: true
   }
 })
 
@@ -370,6 +374,15 @@ const calculateTradeVolume = (netPosition) => {
   return Math.floor(quarter / 100) * 100  // 向下取整到100的倍数
 }
 
+// 获取下单 side 参数（不使用融资时传入）
+const getBuySide = () => {
+  return props.useMarginTrade ? undefined : 'COLLABUY'
+}
+
+const getSellSide = () => {
+  return props.useMarginTrade ? undefined : 'COLLASELL'
+}
+
 // 上涨买入
 const handleQuickBuy = async () => {
   if (!props.strategy.stockCode) return
@@ -383,7 +396,8 @@ const handleQuickBuy = async () => {
       tradeVolume,
       percentage: 0.5,
       provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
-      accountType: getAccountType()
+      accountType: getAccountType(),
+      side: getBuySide()
     })
     console.log(`[快速下单] 上涨0.5%买入已发送: ${props.strategy.stockCode}, 数量: ${tradeVolume}`)
   } catch (error) {
@@ -407,7 +421,8 @@ const handleQuickSell = async () => {
       tradeVolume,
       percentage: 0.5,
       provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
-      accountType: getAccountType()
+      accountType: getAccountType(),
+      side: getSellSide()
     })
     console.log(`[快速下单] 下跌0.5%卖出已发送: ${props.strategy.stockCode}, 数量: ${tradeVolume}`)
   } catch (error) {

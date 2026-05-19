@@ -253,29 +253,37 @@ class MQTTConditionOrderService {
   /**
    * 发送买入条件单
    */
-  async sendBuyOrder({ stockCode, stockName, tradeVolume = 100, percentage = 0.5, provider = 'pingan', accountType = 'default' }) {
-    return this.sendCommand('buy', {
+  async sendBuyOrder({ stockCode, stockName, tradeVolume = 100, percentage = 0.5, provider = 'pingan', accountType = 'default', side }) {
+    const data = {
       stockCode,
       stockName,
       tradeVolume,
       percentage: Math.abs(percentage),
       provider,
       accountType
-    });
+    };
+    if (side) {
+      data.side = side;
+    }
+    return this.sendCommand('buy', data);
   }
 
   /**
    * 发送卖出条件单
    */
-  async sendSellOrder({ stockCode, stockName, tradeVolume = 100, percentage = 0.5, provider = 'pingan', accountType = 'default' }) {
-    return this.sendCommand('sell', {
+  async sendSellOrder({ stockCode, stockName, tradeVolume = 100, percentage = 0.5, provider = 'pingan', accountType = 'default', side }) {
+    const data = {
       stockCode,
       stockName,
       tradeVolume,
       percentage: Math.abs(percentage),
       provider,
       accountType
-    });
+    };
+    if (side) {
+      data.side = side;
+    }
+    return this.sendCommand('sell', data);
   }
 
   /**

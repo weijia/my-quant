@@ -83,7 +83,19 @@
             <th v-if="visibleColumns.includes('decreaseStrategy')">下跌减仓</th>
             <th v-if="visibleColumns.includes('increaseStrategy')">上涨加仓</th>
             <th v-if="visibleColumns.includes('manualNotes')">手工备注</th>
-            <th v-if="visibleColumns.includes('quickOrder')" style="width: 80px;">快捷</th>
+            <th v-if="visibleColumns.includes('quickOrder')" style="width: 80px;">
+              <div class="filter-header">
+                <span>快捷</span>
+                <label class="toggle-filter">
+                  <input 
+                    type="checkbox" 
+                    v-model="useMarginTrade"
+                    @change="saveUseMarginTrade"
+                  >
+                  <span class="toggle-label">融资</span>
+                </label>
+              </div>
+            </th>
             <th v-if="visibleColumns.includes('advancedOrderSettings')" style="width: 140px;">高级设置</th>
             <th v-if="visibleColumns.includes('advancedOrder')" style="width: 120px;">高级快捷</th>
             <th v-if="visibleColumns.includes('actions')" style="width: 80px;">操作</th>
@@ -98,6 +110,7 @@
             :key="strategy.id"
             :strategy="strategy"
             :visible-columns="visibleColumns"
+            :use-margin-trade="useMarginTrade"
             @edit="$emit('edit-strategy', strategy)"
             @delete="$emit('delete-strategy', strategy.id)"
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
@@ -112,6 +125,7 @@
             :key="strategy.id"
             :strategy="strategy"
             :visible-columns="visibleColumns"
+            :use-margin-trade="useMarginTrade"
             @edit="$emit('edit-strategy', strategy)"
             @delete="$emit('delete-strategy', strategy.id)"
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
@@ -126,6 +140,7 @@
             :key="strategy.id"
             :strategy="strategy"
             :visible-columns="visibleColumns"
+            :use-margin-trade="useMarginTrade"
             @edit="$emit('edit-strategy', strategy)"
             @delete="$emit('delete-strategy', strategy.id)"
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
@@ -228,9 +243,14 @@ const emit = defineEmits([
 
 const showColumnSelectDialog = ref(false)
 const hideZeroQuantity = ref(localStorage.getItem('hideZeroQuantity') === 'true')
+const useMarginTrade = ref(localStorage.getItem('useMarginTrade') !== 'false')
 
 const saveHideZeroQuantity = () => {
   localStorage.setItem('hideZeroQuantity', hideZeroQuantity.value)
+}
+
+const saveUseMarginTrade = () => {
+  localStorage.setItem('useMarginTrade', useMarginTrade.value)
 }
 
 const allColumns = [
