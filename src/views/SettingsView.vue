@@ -131,28 +131,62 @@
           </svg>
           策略管理器
         </h2>
-        <p class="config-hint">定义生成 MQTT 条件单消息的规则模板。可添加多个模板，每个模板对应一种下单策略。</p>
+        <p class="config-hint">
+          每条策略是一个 JavaScript 脚本，输入股票数据，输出 MQTT 条件单消息数组。
+          <button @click="showApiHelp = !showApiHelp" class="help-toggle-btn">{{ showApiHelp ? '隐藏' : '查看' }}输入数据说明</button>
+        </p>
+
+        <!-- API 帮助 -->
+        <div v-if="showApiHelp" class="api-help">
+          <h4>输入对象 (ctx) 包含以下字段：</h4>
+          <table class="api-table">
+            <thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td>ctx.stockCode</td><td>string</td><td>股票代码，如 "600519"</td></tr>
+              <tr><td>ctx.stockName</td><td>string</td><td>股票名称，如 "贵州茅台"</td></tr>
+              <tr><td>ctx.currentPrice</td><td>number</td><td>当前价格</td></tr>
+              <tr><td>ctx.netPosition</td><td>number</td><td>净持仓量</td></tr>
+              <tr><td>ctx.marketValue</td><td>number</td><td>市值</td></tr>
+              <tr><td>ctx.trendJudgment</td><td>string</td><td>趋势判断，如 "trend_up"</td></tr>
+              <tr><td>ctx.volatility15d</td><td>number</td><td>15日平均波动率（小数，如 0.0165）</td></tr>
+              <tr><td>ctx.priceDropRatio</td><td>number</td><td>最高价到当前价的下跌比率（小数）</td></tr>
+              <tr><td>ctx.isMarginAccount</td><td>boolean</td><td>是否融资融券账户</td></tr>
+              <tr><td>ctx.defaultBuyVolume</td><td>number</td><td>缺省买入数量</td></tr>
+              <tr><td>ctx.defaultSellVolume</td><td>number</td><td>缺省卖出数量</td></tr>
+              <tr><td>ctx.defaultAmount</td><td>number</td><td>缺省交易金额</td></tr>
+              <tr><td>ctx.provider</td><td>string</td><td>券商，如 "pingan"</td></tr>
+              <tr><td>ctx.accountType</td><td>string</td><td>账户类型 "default" / "credit"</td></tr>
+            </tbody>
+          </table>
+          <h4>输出格式：</h4>
+          <p>返回一个数组，每项为 <code>{ action: "buy"|"sell", data: { stockCode, stockName, tradeVolume, percentage, ... } }</code></p>
+          <p>可用辅助函数：<code>buy(data)</code>、<code>sell(data)</code> 快速创建消息。</p>
+        </div>
 
         <button @click="addTemplate" class="btn btn-primary add-template-btn">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 5v14"/>
             <path d="M5 12h14"/>
           </svg>
-          添加策略模板
+          添加策略
         </button>
 
         <div v-for="(template, index) in templates" :key="index" class="template-card" :class="{ 'default-template': template.isDefault }">
           <div class="template-header">
             <span class="template-index">#{{ index + 1 }}</span>
             <span v-if="template.isDefault" class="default-badge">缺省策略</span>
-            <button @click="removeTemplate(index)" class="btn btn-danger btn-sm remove-btn" title="删除此模板">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 6h18"/>
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-              </svg>
-              删除
-            </button>
+            <div class="template-header-actions">
+              <button @click="runPreview(index)" class="btn btn-secondary btn-sm" title="运行预览">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                运行
+              </button>
+              <button @click="removeTemplate(index)" class="btn btn-danger btn-sm remove-btn" title="删除此策略">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                </svg>
+                删除
+              </button>
+            </div>
           </div>
 
           <div v-if="template.description" class="template-description">
@@ -160,83 +194,37 @@
           </div>
 
           <div class="template-form">
-            <div class="form-row">
-              <div class="form-group">
-                <label>名称</label>
-                <input v-model="template.name" type="text" placeholder="如: 默认买入" class="form-input" />
-              </div>
-              <div class="form-group">
-                <label>操作类型</label>
-                <select v-model="template.action" class="form-input">
-                  <option value="buy">买入</option>
-                  <option value="sell">卖出</option>
-                </select>
-              </div>
+            <div class="form-group">
+              <label>策略名称</label>
+              <input v-model="template.name" type="text" placeholder="如: 通用上涨趋势策略" class="form-input" />
             </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label>
-                  触发条件 - 上涨百分比
-                  <span v-if="template.percentageSource" class="percentage-source">(动态: {{ getPercentageSourceLabel(template.percentageSource) }})</span>
-                </label>
-                <input v-model="template.percentage" type="text" :placeholder="template.percentageSource ? '自动计算' : '如: 0.1 或 0.5'" class="form-input" :disabled="!!template.percentageSource" />
-              </div>
-              <div class="form-group">
-                <label>下单方式</label>
-                <select v-model="template.orderMode" class="form-input" :disabled="template.sellPercentage">
-                  <option value="amount">按金额</option>
-                  <option value="volume">按数量</option>
-                </select>
-                <span v-if="template.sellPercentage" class="order-mode-hint">卖出 {{ template.sellPercentage }}% 持仓</span>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group" v-if="template.orderMode === 'amount' && !template.sellPercentage">
-                <label>金额</label>
-                <input v-model="template.amount" type="text" placeholder="如: 10000" class="form-input" />
-              </div>
-              <div class="form-group" v-if="template.orderMode === 'volume' || template.sellPercentage">
-                <label>{{ template.sellPercentage ? '持仓比例(%)' : '数量' }}</label>
-                <input v-model="template.volume" type="text" :placeholder="template.sellPercentage ? '如: 25 表示卖出1/4' : '如: 200'" class="form-input" />
-              </div>
-              <div class="form-group">
-                <label>券商</label>
-                <input v-model="template.provider" type="text" placeholder="pingan" class="form-input" />
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label>账户类型</label>
-                <select v-model="template.accountType" class="form-input">
-                  <option value="default">普通</option>
-                  <option value="credit">信用</option>
-                </select>
-              </div>
-              <div class="form-group checkbox-group">
-                <label class="checkbox-label">
-                  <input type="checkbox" v-model="template.useMargin" />
-                  <span>使用融资</span>
-                </label>
-              </div>
+            <div class="form-group">
+              <label>策略脚本</label>
+              <textarea
+                v-model="template.script"
+                class="script-editor"
+                placeholder="// 输入策略脚本&#10;// ctx: 股票数据&#10;// buy(data), sell(data): 辅助函数&#10;// 返回消息数组&#10;return []"
+                spellcheck="false"
+                @input="onScriptChange(index)"
+              ></textarea>
             </div>
           </div>
 
           <!-- 输出预览 -->
-          <div class="preview-section">
+          <div class="preview-section" v-if="previewResults[index]">
             <div class="preview-header">
-              <span class="preview-label">消息预览</span>
+              <span class="preview-label">运行结果 ({{ previewResults[index].length }} 条消息)</span>
               <button @click="copyPreview(index)" class="btn btn-secondary btn-sm copy-btn" title="复制消息">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
                 </svg>
-                {{ copiedIndex === index ? '已复制' : '复制消息' }}
+                {{ copiedIndex === index ? '已复制' : '复制全部' }}
               </button>
             </div>
-            <pre class="preview-content">{{ generatePreview(template) }}</pre>
+            <pre class="preview-content">{{ previewResults[index] }}</pre>
+          </div>
+          <div v-if="previewErrors[index]" class="preview-error">
+            <strong>脚本错误：</strong>{{ previewErrors[index] }}
           </div>
         </div>
       </section>
@@ -341,92 +329,119 @@ const testMqttConnection = async () => {
 // 策略管理器
 const templates = ref([])
 const copiedIndex = ref(-1)
+const showApiHelp = ref(false)
+const previewResults = reactive({})
+const previewErrors = reactive({})
+
+// 示例输入数据（用于预览）
+const sampleCtx = {
+  stockCode: '600519',
+  stockName: '贵州茅台',
+  currentPrice: 1680.00,
+  netPosition: 100,
+  marketValue: 168000,
+  trendJudgment: 'trend_up',
+  volatility15d: 0.0165,
+  priceDropRatio: 0.05,
+  isMarginAccount: false,
+  defaultBuyVolume: 100,
+  defaultSellVolume: 25,
+  defaultAmount: 20000,
+  provider: 'pingan',
+  accountType: 'default'
+}
 
 const defaultTemplate = () => ({
   name: '',
-  action: 'buy',
-  percentage: '0.5',
-  orderMode: 'volume',
-  amount: '',
-  volume: '200',
-  useMargin: false,
-  provider: 'pingan',
-  accountType: 'default'
+  script: `// 输入: ctx (股票数据)\n// 辅助: buy(data), sell(data)\n// 输出: 消息数组\nreturn [\n  // buy({ stockCode: ctx.stockCode, stockName: ctx.stockName, tradeVolume: 100, percentage: 0.5 })\n]`,
+  isDefault: false
 })
 
-// 缺省策略模板（基于15日波动率的动态策略）
-const defaultStrategies = [
+// 缺省策略脚本
+const defaultStrategyScripts = [
   {
     name: '通用上涨趋势策略',
-    description: '上涨趋势：下跌15日波动率卖出，上涨0.5%买入',
+    description: '上涨趋势：下跌15日波动率卖出1/4持仓，上涨0.5%买入设定数量',
     isDefault: true,
-    trendCondition: 'trend_up',
-    buy: {
-      action: 'buy',
-      percentage: '0.5',
-      orderMode: 'volume',
-      volume: 'dynamic', // 使用设定的数量
-      useMargin: false,
-      provider: 'pingan',
-      accountType: 'default'
-    },
-    sell: {
-      action: 'sell',
-      percentageSource: 'volatility_15d_ma', // 使用15日波动率
-      orderMode: 'percentage_position', // 按比例卖出持仓
-      sellPercentage: '25', // 卖出25%即1/4
-      useMargin: false,
-      provider: 'pingan',
-      accountType: 'default'
-    }
+    script: `// 通用上涨趋势策略
+// 下跌15日波动率卖出1/4持仓，上涨0.5%买入设定数量
+const vol = ctx.volatility15d * 100  // 转为百分比
+const sellVol = Math.floor(ctx.netPosition / 4 / 100) * 100  // 1/4持仓，取整到100
+
+return [
+  sell({
+    stockCode: ctx.stockCode,
+    stockName: ctx.stockName,
+    tradeVolume: sellVol,
+    percentage: parseFloat(vol.toFixed(2)),
+    provider: ctx.provider,
+    accountType: ctx.accountType
+  }),
+  buy({
+    stockCode: ctx.stockCode,
+    stockName: ctx.stockName,
+    tradeVolume: ctx.defaultBuyVolume,
+    percentage: 0.5,
+    provider: ctx.provider,
+    accountType: ctx.accountType
+  })
+]`
   },
   {
     name: '通用下跌趋势策略',
     description: '下跌趋势：下跌15日波动率1/2卖出1/4持仓，上涨15日波动率买入设定数量',
     isDefault: true,
-    trendCondition: 'trend_down',
-    buy: {
-      action: 'buy',
-      percentageSource: 'volatility_15d_ma',
-      orderMode: 'volume',
-      volume: 'dynamic',
-      useMargin: false,
-      provider: 'pingan',
-      accountType: 'default'
-    },
-    sell: {
-      action: 'sell',
-      percentageSource: 'volatility_15d_ma_half', // 15日波动率的一半
-      orderMode: 'percentage_position',
-      sellPercentage: '25',
-      useMargin: false,
-      provider: 'pingan',
-      accountType: 'default'
-    }
+    script: `// 通用下跌趋势策略
+// 下跌15日波动率1/2卖出1/4持仓，上涨15日波动率买入设定数量
+const vol = ctx.volatility15d * 100  // 转为百分比
+const sellVol = Math.floor(ctx.netPosition / 4 / 100) * 100  // 1/4持仓，取整到100
+
+return [
+  sell({
+    stockCode: ctx.stockCode,
+    stockName: ctx.stockName,
+    tradeVolume: sellVol,
+    percentage: parseFloat((vol / 2).toFixed(2)),
+    provider: ctx.provider,
+    accountType: ctx.accountType
+  }),
+  buy({
+    stockCode: ctx.stockCode,
+    stockName: ctx.stockName,
+    tradeVolume: ctx.defaultBuyVolume,
+    percentage: parseFloat(vol.toFixed(2)),
+    provider: ctx.provider,
+    accountType: ctx.accountType
+  })
+]`
   },
   {
     name: '通用普通策略',
     description: '普通趋势：上涨或下跌达15日波动率时，买入设定数量或卖出1/4持仓',
     isDefault: true,
-    trendCondition: 'general',
-    buy: {
-      action: 'buy',
-      percentageSource: 'volatility_15d_ma',
-      orderMode: 'volume',
-      volume: 'dynamic',
-      useMargin: false,
-      provider: 'pingan',
-      accountType: 'default'
-    },
-    sell: {
-      action: 'sell',
-      percentageSource: 'volatility_15d_ma',
-      orderMode: 'percentage_position',
-      sellPercentage: '25',
-      useMargin: false,
-      provider: 'pingan',
-      accountType: 'default'
-    }
+    script: `// 通用普通策略
+// 上涨或下跌达15日波动率时，买入设定数量或卖出1/4持仓
+const vol = ctx.volatility15d * 100  // 转为百分比
+const sellVol = Math.floor(ctx.netPosition / 4 / 100) * 100  // 1/4持仓，取整到100
+
+return [
+  sell({
+    stockCode: ctx.stockCode,
+    stockName: ctx.stockName,
+    tradeVolume: sellVol,
+    percentage: parseFloat(vol.toFixed(2)),
+    provider: ctx.provider,
+    accountType: ctx.accountType
+  }),
+  buy({
+    stockCode: ctx.stockCode,
+    stockName: ctx.stockName,
+    tradeVolume: ctx.defaultBuyVolume,
+    percentage: parseFloat(vol.toFixed(2)),
+    provider: ctx.provider,
+    accountType: ctx.accountType
+  })
+]`
   }
 ]
 
@@ -434,7 +449,19 @@ const loadTemplates = () => {
   const saved = localStorage.getItem('orderStrategyTemplates')
   if (saved) {
     try {
-      templates.value = JSON.parse(saved)
+      const parsed = JSON.parse(saved)
+      // 兼容旧格式：如果旧模板没有 script 字段，迁移为新格式
+      if (parsed.length > 0 && !parsed[0].script) {
+        templates.value = defaultStrategyScripts.map(s => ({
+          name: s.name,
+          description: s.description,
+          isDefault: s.isDefault,
+          script: s.script
+        }))
+        saveTemplates()
+      } else {
+        templates.value = parsed
+      }
     } catch (e) {
       console.error('加载策略模板失败:', e)
       templates.value = []
@@ -447,51 +474,15 @@ const loadTemplates = () => {
 }
 
 const addDefaultStrategies = () => {
-  // 将缺省策略转换为模板格式
-  defaultStrategies.forEach(strategy => {
-    // 买入模板
+  defaultStrategyScripts.forEach(strategy => {
     templates.value.push({
-      name: `${strategy.name}-买入`,
+      name: strategy.name,
       description: strategy.description,
-      isDefault: true,
-      trendCondition: strategy.trendCondition,
-      action: strategy.buy.action,
-      percentage: strategy.buy.percentage || strategy.buy.percentageSource,
-      percentageSource: strategy.buy.percentageSource,
-      orderMode: strategy.buy.orderMode === 'percentage_position' ? 'volume' : strategy.buy.orderMode,
-      amount: '',
-      volume: strategy.buy.volume === 'dynamic' ? '100' : strategy.buy.volume,
-      useMargin: strategy.buy.useMargin,
-      provider: strategy.buy.provider,
-      accountType: strategy.buy.accountType
-    })
-    // 卖出模板
-    templates.value.push({
-      name: `${strategy.name}-卖出`,
-      description: strategy.description,
-      isDefault: true,
-      trendCondition: strategy.trendCondition,
-      action: strategy.sell.action,
-      percentage: strategy.sell.percentage || strategy.sell.percentageSource,
-      percentageSource: strategy.sell.percentageSource,
-      orderMode: strategy.sell.orderMode === 'percentage_position' ? 'volume' : strategy.sell.orderMode,
-      amount: '',
-      volume: strategy.sell.sellPercentage || '100',
-      sellPercentage: strategy.sell.sellPercentage,
-      useMargin: strategy.sell.useMargin,
-      provider: strategy.sell.provider,
-      accountType: strategy.sell.accountType
+      isDefault: strategy.isDefault,
+      script: strategy.script
     })
   })
   saveTemplates()
-}
-
-const getPercentageSourceLabel = (source) => {
-  const labels = {
-    'volatility_15d_ma': '15日平均波动率',
-    'volatility_15d_ma_half': '15日波动率1/2'
-  }
-  return labels[source] || source
 }
 
 const saveTemplates = () => {
@@ -504,63 +495,70 @@ const addTemplate = () => {
 }
 
 const removeTemplate = (index) => {
-  if (!confirm('确定要删除此策略模板吗？')) return
+  if (!confirm('确定要删除此策略吗？')) return
   templates.value.splice(index, 1)
+  delete previewResults[index]
+  delete previewErrors[index]
   saveTemplates()
 }
 
-const generatePreview = (template) => {
-  const action = template.action || 'buy'
-  const percentage = parseFloat(template.percentage) || 0
-  const orderMode = template.orderMode || 'volume'
-  const amount = template.amount || ''
-  const volume = template.volume || ''
-  const useMargin = template.useMargin || false
-  const provider = template.provider || 'pingan'
-  const accountType = template.accountType || 'default'
+const onScriptChange = (index) => {
+  saveTemplates()
+}
 
-  // 构建内部 msg 数据
-  const data = {
-    stockCode: '600519',
-    stockName: '贵州茅台',
-    percentage: percentage,
-    provider: provider,
-    accountType: accountType
+// 执行策略脚本
+const executeStrategyScript = (script, ctx) => {
+  // 辅助函数
+  const buy = (data) => ({ action: 'buy', data })
+  const sell = (data) => ({ action: 'sell', data })
+
+  try {
+    const fn = new Function('ctx', 'buy', 'sell', script)
+    const result = fn(ctx, buy, sell)
+    if (!Array.isArray(result)) {
+      return { error: '脚本必须返回一个数组', result: null }
+    }
+    return { error: null, result }
+  } catch (e) {
+    return { error: e.message, result: null }
+  }
+}
+
+// 运行预览
+const runPreview = (index) => {
+  const template = templates.value[index]
+  if (!template || !template.script) {
+    previewErrors[index] = '请输入策略脚本'
+    delete previewResults[index]
+    return
   }
 
-  if (orderMode === 'amount') {
-    data.tradeAmount = parseFloat(amount) || 0
+  const { error, result } = executeStrategyScript(template.script, sampleCtx)
+
+  if (error) {
+    previewErrors[index] = error
+    delete previewResults[index]
   } else {
-    data.tradeVolume = parseInt(volume) || 0
+    delete previewErrors[index]
+    // 格式化输出为完整的 MQTT 消息
+    const messages = result.map((msg, i) => ({
+      [`消息${i + 1}`: {
+        action: msg.action,
+        data: msg.data
+      }
+    }))
+    previewResults[index] = JSON.stringify(messages, null, 2)
   }
-
-  if (!useMargin) {
-    data.side = action === 'buy' ? 'COLLABUY' : 'COLLASELL'
-  }
-
-  const msgStr = JSON.stringify(data, null, 2)
-  const preview = {
-    id: 'myquant_xxxx',
-    msgId: '1234567890_abcd',
-    user: 'myquant',
-    msg: msgStr,
-    time: Date.now()
-  }
-
-  return JSON.stringify(preview, null, 2)
 }
 
 const copyPreview = async (index) => {
-  const template = templates.value[index]
-  const text = generatePreview(template)
+  const text = previewResults[index]
+  if (!text) return
   try {
     await navigator.clipboard.writeText(text)
     copiedIndex.value = index
-    setTimeout(() => {
-      copiedIndex.value = -1
-    }, 2000)
+    setTimeout(() => { copiedIndex.value = -1 }, 2000)
   } catch (e) {
-    // fallback
     const textarea = document.createElement('textarea')
     textarea.value = text
     document.body.appendChild(textarea)
@@ -568,9 +566,7 @@ const copyPreview = async (index) => {
     document.execCommand('copy')
     document.body.removeChild(textarea)
     copiedIndex.value = index
-    setTimeout(() => {
-      copiedIndex.value = -1
-    }, 2000)
+    setTimeout(() => { copiedIndex.value = -1 }, 2000)
   }
 }
 
@@ -936,22 +932,123 @@ onMounted(() => {
   border-left: 3px solid #4ecdc4;
 }
 
-.percentage-source {
-  font-size: 11px;
+.template-header-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* 脚本编辑器 */
+.script-editor {
+  width: 100%;
+  min-height: 200px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.4);
   color: #4ecdc4;
-  margin-left: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  resize: vertical;
+  box-sizing: border-box;
+  tab-size: 2;
 }
 
-.order-mode-hint {
-  font-size: 11px;
+.script-editor::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.script-editor:focus {
+  outline: none;
+  border-color: rgba(78, 205, 196, 0.5);
+}
+
+/* API 帮助 */
+.help-toggle-btn {
+  background: none;
+  border: 1px solid rgba(78, 205, 196, 0.4);
+  color: #4ecdc4;
+  padding: 2px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+.help-toggle-btn:hover {
+  background-color: rgba(78, 205, 196, 0.15);
+}
+
+.api-help {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.api-help h4 {
+  margin: 0 0 8px 0;
+  color: #4ecdc4;
+  font-size: 14px;
+}
+
+.api-help p {
+  margin: 4px 0;
+}
+
+.api-help code {
+  background-color: rgba(78, 205, 196, 0.15);
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: #4ecdc4;
+  font-size: 12px;
+}
+
+.api-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+}
+
+.api-table th,
+.api-table td {
+  padding: 4px 8px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+}
+
+.api-table th {
+  color: #4ecdc4;
+  font-weight: 600;
+}
+
+.api-table td:first-child {
+  color: #ffc107;
+  font-family: 'Courier New', monospace;
+  white-space: nowrap;
+}
+
+.api-table td:nth-child(2) {
   color: rgba(255, 255, 255, 0.5);
-  margin-top: 4px;
-  display: block;
+  width: 60px;
 }
 
-.form-input:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+/* 预览错误 */
+.preview-error {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: rgba(220, 53, 69, 0.15);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  border-radius: 4px;
+  color: #dc3545;
+  font-size: 12px;
+}
+
+.preview-error strong {
+  color: #ff6b6b;
 }
 
 @media (max-width: 768px) {
