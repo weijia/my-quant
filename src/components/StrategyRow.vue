@@ -56,7 +56,16 @@
         <option value="low_volatility">低波动率</option>
       </select>
     </td>
-    
+
+    <td v-if="visibleColumns.includes('strategyType')" class="strategy-type-cell">
+      <div class="strategy-type-wrapper">
+        <span :class="['strategy-type-badge', getStrategyTypeClass(strategy)]">
+          {{ getStrategyTypeLabel(strategy) }}
+        </span>
+        <span v-if="isManualStrategy(strategy)" class="manual-indicator" title="手动设置">👤</span>
+      </div>
+    </td>
+
     <td v-if="visibleColumns.includes('oscillationGrid')">
       <div v-if="strategy.oscillationGridSize" class="grid-info">
         <span>网格: {{ strategy.oscillationGridSize }}元</span>
@@ -413,6 +422,60 @@ const getAccountType = () => {
     return 'default'
   }
   return props.strategy.accountType === 'credit' ? 'credit' : 'default'
+}
+
+// 判断是否为手动设置的策略
+const isManualStrategy = (strategy) => {
+  // 如果有 decreaseStrategies 或 increaseStrategies 且不为空，则为手动设置
+  const hasDecrease = strategy.decreaseStrategies && strategy.decreaseStrategies.length > 0
+  const hasIncrease = strategy.increaseStrategies && strategy.increaseStrategies.length > 0
+  return hasDecrease || hasIncrease
+}
+
+// 获取策略类型标签
+const getStrategyTypeLabel = (strategy) => {
+  // 如果是手动设置，显示"手动策略"
+  if (isManualStrategy(strategy)) {
+    return '手动策略'
+  }
+
+  // 否则根据趋势自动生成策略名称
+  const trend = strategy.trendJudgment || 'unset'
+  const trendMap = {
+    'unset': '默认策略',
+    'trend_unknown': '默认策略',
+    'trend_up': '趋势跟随',
+    'trend_down': '趋势跟随',
+    'trend_breakdown': '破位止损',
+    'trend_oscillation': '网格策略',
+    'trend_pullback': '回踩买入',
+    'high_volatility': '高波策略',
+    'medium_volatility': '中波策略',
+    'low_volatility': '低波策略'
+  }
+  return trendMap[trend] || '默认策略'
+}
+
+// 获取策略类型样式类
+const getStrategyTypeClass = (strategy) => {
+  if (isManualStrategy(strategy)) {
+    return 'manual'
+  }
+
+  const trend = strategy.trendJudgment || 'unset'
+  const classMap = {
+    'unset': 'default',
+    'trend_unknown': 'default',
+    'trend_up': 'trend-up',
+    'trend_down': 'trend-down',
+    'trend_breakdown': 'breakdown',
+    'trend_oscillation': 'oscillation',
+    'trend_pullback': 'pullback',
+    'high_volatility': 'high-vol',
+    'medium_volatility': 'medium-vol',
+    'low_volatility': 'low-vol'
+  }
+  return classMap[trend] || 'default'
 }
 
 // 计算下单数量：持仓的1/4，向下取整到100的倍数
@@ -1225,6 +1288,83 @@ const getTrendClass = (trend) => {
 
 .advanced-order-btn.volume-sell-btn-05:hover:not(:disabled) {
   background-color: rgba(235, 173, 7, 0.6);
+}
+
+/* 策略类型列 */
+.strategy-type-cell {
+  width: 80px;
+  min-width: 80px;
+}
+
+.strategy-type-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.strategy-type-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.strategy-type-badge.default {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.strategy-type-badge.manual {
+  background-color: rgba(78, 205, 196, 0.3);
+  color: #4ecdc4;
+  border: 1px solid rgba(78, 205, 196, 0.5);
+}
+
+.strategy-type-badge.trend-up {
+  background-color: rgba(220, 53, 69, 0.3);
+  color: #dc3545;
+}
+
+.strategy-type-badge.trend-down {
+  background-color: rgba(40, 167, 69, 0.3);
+  color: #28a745;
+}
+
+.strategy-type-badge.breakdown {
+  background-color: rgba(108, 117, 125, 0.3);
+  color: #6c757d;
+}
+
+.strategy-type-badge.oscillation {
+  background-color: rgba(255, 193, 7, 0.3);
+  color: #ffc107;
+}
+
+.strategy-type-badge.pullback {
+  background-color: rgba(111, 66, 193, 0.3);
+  color: #6f42c1;
+}
+
+.strategy-type-badge.high-vol {
+  background-color: rgba(253, 126, 20, 0.3);
+  color: #fd7e14;
+}
+
+.strategy-type-badge.medium-vol {
+  background-color: rgba(32, 201, 151, 0.3);
+  color: #20c997;
+}
+
+.strategy-type-badge.low-vol {
+  background-color: rgba(13, 202, 240, 0.3);
+  color: #0dcaf0;
+}
+
+.manual-indicator {
+  font-size: 12px;
+  cursor: help;
 }
 
 @media (max-width: 768px) {

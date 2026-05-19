@@ -79,6 +79,7 @@
                 </select>
               </div>
             </th>
+            <th v-if="visibleColumns.includes('strategyType')">策略</th>
             <th v-if="visibleColumns.includes('oscillationGrid')">震荡时网格</th>
             <th v-if="visibleColumns.includes('decreaseStrategy')">下跌减仓</th>
             <th v-if="visibleColumns.includes('increaseStrategy')">上涨加仓</th>
@@ -275,6 +276,7 @@ const allColumns = [
   { key: 'decreasePercentage', label: '下跌百分比' },
   { key: 'trendIcon', label: '趋势' },
   { key: 'autoTrend', label: '自动生成趋势' },
+  { key: 'strategyType', label: '策略' },
   { key: 'oscillationGrid', label: '震荡时网格' },
   { key: 'decreaseStrategy', label: '下跌减仓' },
   { key: 'increaseStrategy', label: '上涨加仓' },
@@ -295,6 +297,7 @@ const defaultVisibleColumns = [
   'decreasePercentage',
   'trendIcon',
   'autoTrend',
+  'strategyType',
   'oscillationGrid',
   'decreaseStrategy',
   'increaseStrategy',
