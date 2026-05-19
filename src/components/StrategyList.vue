@@ -147,7 +147,6 @@
             @batch-condition="$emit('batch-condition', strategy)"
             @execute-strategy="(s) => $emit('execute-strategy', s)"
             @update-strategy-selection="(s, name) => $emit('update-strategy-selection', s, name)"
-            @execute-strategy="(s) => $emit('execute-strategy', s)"
           />
           
           <tr v-if="pinganStrategies.length > 0" class="account-section-header pingan-section">
