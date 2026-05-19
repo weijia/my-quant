@@ -310,6 +310,11 @@ const loadStrategies = async () => {
               strategy.volatility15d = trend.volatility15d;
             }
 
+            // 注入当前价格
+            if (trend.currentPrice != null) {
+              strategy.currentPrice = trend.currentPrice;
+            }
+
             matchedCount++;
           } else {
             // 【调试】trend 匹配失败
@@ -760,7 +765,10 @@ const getTrendByStockCode = (stockCode, trendData) => {
       trendValue: trendInfo.autoTrendJudgment || trendInfo.trendJudgment,
       // 修复：使用 != null 判断，避免 0 被当作 falsy 值处理
       decreasePercentage: trendInfo.decreasePercentage != null ? trendInfo.decreasePercentage : null,
-      price_drop_ratio: trendInfo.price_drop_ratio != null ? trendInfo.price_drop_ratio : null
+      price_drop_ratio: trendInfo.price_drop_ratio != null ? trendInfo.price_drop_ratio : null,
+      // 添加当前价格和15日波动率
+      currentPrice: trendInfo.currentPrice != null ? trendInfo.currentPrice : null,
+      volatility15d: trendInfo.volatility15d != null ? trendInfo.volatility15d : null
     };
     console.log(`[调试-getTrendByStockCode] 匹配成功: stockCode=${stockCode}, 方法=${matchMethod}, result=`, JSON.stringify(result));
     return result;
