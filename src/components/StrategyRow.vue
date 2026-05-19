@@ -63,6 +63,9 @@
           {{ getStrategyTypeLabel(strategy) }}
         </span>
         <span v-if="isManualStrategy(strategy)" class="manual-indicator" title="手动设置">👤</span>
+        <button @click="executeStrategyScript" class="execute-strategy-btn" title="执行策略脚本生成条件单">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </button>
       </div>
     </td>
 
@@ -299,7 +302,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['edit', 'delete', 'update-trend', 'batch-condition'])
+const emit = defineEmits(['edit', 'delete', 'update-trend', 'batch-condition', 'execute-strategy'])
 
 // 手动输入的价格（当 currentPrice 为空时使用）
 const manualPrice = ref(null)
@@ -428,6 +431,11 @@ const getAccountType = () => {
 // 只有当用户在策略编辑器中明确修改过策略时才标记为手动
 const isManualStrategy = (strategy) => {
   return !!strategy.isManuallyEdited
+}
+
+// 执行策略脚本
+const executeStrategyScript = () => {
+  emit('execute-strategy', props.strategy)
 }
 
 // 获取策略类型标签
@@ -1368,6 +1376,32 @@ const getTrendClass = (trend) => {
 .manual-indicator {
   font-size: 12px;
   cursor: help;
+}
+
+.execute-strategy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid rgba(78, 205, 196, 0.4);
+  border-radius: 3px;
+  background-color: rgba(78, 205, 196, 0.1);
+  color: #4ecdc4;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.execute-strategy-btn:hover {
+  background-color: rgba(78, 205, 196, 0.3);
+  border-color: #4ecdc4;
+}
+
+.execute-strategy-btn svg {
+  width: 10px;
+  height: 10px;
 }
 
 @media (max-width: 768px) {

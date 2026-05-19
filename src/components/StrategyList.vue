@@ -128,6 +128,7 @@
             @delete="$emit('delete-strategy', strategy.id)"
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
             @batch-condition="$emit('batch-condition', strategy)"
+            @execute-strategy="(s) => $emit('execute-strategy', s)"
           />
           
           <tr v-if="marginStrategies.length > 0" class="account-section-header margin-section">
@@ -143,6 +144,7 @@
             @delete="$emit('delete-strategy', strategy.id)"
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
             @batch-condition="$emit('batch-condition', strategy)"
+            @execute-strategy="(s) => $emit('execute-strategy', s)"
           />
           
           <tr v-if="pinganStrategies.length > 0" class="account-section-header pingan-section">
@@ -158,6 +160,7 @@
             @delete="$emit('delete-strategy', strategy.id)"
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
             @batch-condition="$emit('batch-condition', strategy)"
+            @execute-strategy="(s) => $emit('execute-strategy', s)"
           />
           
           <tr v-if="strategies.length === 0">
@@ -250,6 +253,7 @@ const emit = defineEmits([
   'delete-strategy',
   'update-trend-judgment',
   'batch-condition',
+  'execute-strategy',
   'update-trend-filter',
   'update-sort'
 ])

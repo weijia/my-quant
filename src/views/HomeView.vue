@@ -147,6 +147,7 @@
         @delete-strategy="deleteStrategy"
         @update-trend-judgment="updateTrendJudgment"
         @batch-condition="openBatchConditionDialog"
+        @execute-strategy="handleExecuteStrategy"
         @update-trend-filter="(trend) => { filter.trend = trend; loadStrategies() }"
         @update-sort="(sortInfo) => { filter.sortBy = sortInfo.sortBy; filter.sortOrder = sortInfo.sortOrder; loadStrategies() }"
       />
@@ -429,6 +430,137 @@ const handleBatchConditionSubmit = async (data) => {
     alert('更新条件单失败');
   }
 };
+
+// 执行策略脚本生成条件单
+const handleExecuteStrategy = async (strategy) => {
+  // 1. 从 localStorage 加载策略模板
+  let templates = []
+  try {
+    const saved = localStorage.getItem('orderStrategyTemplates')
+    if (saved) templates = JSON.parse(saved)
+  } catch (e) {
+    console.error('加载策略模板失败:', e)
+  }
+
+  // 2. 根据股票趋势匹配策略模板
+  const trend = strategy.trendJudgment || 'unset'
+  const matchedTemplates = templates.filter(t =>
+    Array.isArray(t.trendMatches) && t.trendMatches.length > 0 && t.trendMatches.includes(trend)
+  )
+
+  if (matchedTemplates.length === 0) {
+    alert('未找到匹配的策略脚本。当前趋势: ' + trend + '\n请在设置页面配置策略的趋势匹配关系。')
+    return
+  }
+
+  // 3. 构建上下文数据
+  const oscillationTradeAmount = parseInt(strategy.oscillationTradeAmount) || 100
+  const sellVolume = Math.floor((strategy.netPosition || 0) / 4 / 100) * 100
+  const currentPrice = strategy.currentPrice || 0
+
+  const ctx = {
+    stockCode: strategy.stockCode,
+    stockName: strategy.name,
+    currentPrice: currentPrice,
+    netPosition: strategy.netPosition || 0,
+    marketValue: parseFloat(String(strategy.marketValue).replace(/,/g, '')) || 0,
+    trendJudgment: trend,
+    volatility15d: strategy.volatility15d || 0,
+    priceDropRatio: strategy.price_drop_ratio || 0,
+    isMarginAccount: strategy.isMarginAccount || false,
+    defaultBuyVolume: oscillationTradeAmount,
+    defaultSellVolume: sellVolume,
+    defaultAmount: 20000,
+    provider: strategy.provider || 'pingan',
+    accountType: strategy.accountType || 'default'
+  }
+
+  // 4. 执行所有匹配的策略脚本
+  let totalMessages = []
+  let errors = []
+
+  for (const template of matchedTemplates) {
+    if (!template.script) continue
+    try {
+      const buy = (data) => ({ action: 'buy', data })
+      const sell = (data) => ({ action: 'sell', data })
+      const fn = new Function('ctx', 'buy', 'sell', template.script)
+      const result = fn(ctx, buy, sell)
+      if (Array.isArray(result)) {
+        totalMessages.push(...result)
+      }
+    } catch (e) {
+      errors.push(template.name + ': ' + e.message)
+    }
+  }
+
+  if (errors.length > 0) {
+    alert('部分策略脚本执行失败:\n' + errors.join('\n'))
+    return
+  }
+
+  if (totalMessages.length === 0) {
+    alert('策略脚本未生成任何条件单消息')
+    return
+  }
+
+  // 5. 确认并发送
+  const preview = totalMessages.map((msg, i) => {
+    const action = msg.action === 'buy' ? '买入' : '卖出'
+    const vol = msg.data.tradeVolume || msg.data.tradeAmount || '-'
+    const pct = msg.data.percentage || '-'
+    return '消息' + (i + 1) + ': ' + action + ' ' + vol + (msg.data.tradeVolume ? '股' : '元') + ' @' + pct + '%'
+  }).join('\n')
+
+  if (!confirm('将发送 ' + totalMessages.length + ' 条条件单:\n\n' + preview)) {
+    return
+  }
+
+  // 6. 逐条发送
+  let successCount = 0
+  let sendErrors = []
+
+  for (const msg of totalMessages) {
+    try {
+      const data = msg.data
+      if (msg.action === 'buy') {
+        await mqttConditionService.sendBuyOrder({
+          stockCode: data.stockCode,
+          stockName: data.stockName,
+          tradeVolume: data.tradeVolume,
+          tradeAmount: data.tradeAmount,
+          percentage: data.percentage,
+          provider: data.provider,
+          accountType: data.accountType,
+          side: data.side,
+          endDate: data.endDate
+        })
+      } else if (msg.action === 'sell') {
+        await mqttConditionService.sendSellOrder({
+          stockCode: data.stockCode,
+          stockName: data.stockName,
+          tradeVolume: data.tradeVolume,
+          tradeAmount: data.tradeAmount,
+          percentage: data.percentage,
+          provider: data.provider,
+          accountType: data.accountType,
+          side: data.side,
+          endDate: data.endDate
+        })
+      }
+      successCount++
+    } catch (e) {
+      sendErrors.push(e.message)
+    }
+  }
+
+  if (sendErrors.length > 0) {
+    alert('发送完成: 成功 ' + successCount + ' 条, 失败 ' + sendErrors.length + ' 条\n' + sendErrors.join('\n'))
+  } else {
+    alert('成功发送 ' + successCount + ' 条条件单')
+  }
+}
+
 const exportData = async () => {
   try {
     const data = await database.exportData();
