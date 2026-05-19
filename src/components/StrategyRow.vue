@@ -136,9 +136,9 @@
             v-model.number="defaultTradeAmount" 
             type="number" 
             class="setting-input"
-            placeholder="1000"
+            placeholder="20000"
             min="0"
-            step="100"
+            step="1000"
           />
         </div>
         <div class="setting-item">
@@ -147,10 +147,14 @@
             v-model.number="defaultTradeVolume" 
             type="number" 
             class="setting-input"
-            placeholder="100"
+            :placeholder="getQuarterPosition().toString()"
             min="0"
             step="100"
           />
+        </div>
+        <div class="quick-set-btns">
+          <button @click="setDefaultVolumeQuarter" class="quick-set-btn" title="设置为1/4持仓">1/4</button>
+          <button @click="setDefaultVolumeHalf" class="quick-set-btn" title="设置为1/2持仓">1/2</button>
         </div>
       </div>
     </td>
@@ -244,12 +248,41 @@ const sendingBoth = ref(false)
 const showTrendTip = ref(false)
 
 // 高级快捷下单设置
-const defaultTradeAmount = ref(1000)  // 缺省下单金额
-const defaultTradeVolume = ref(100)   // 缺省下单数量
-const sendingAmountBuy = ref(false)   // 定金额买入状态
-const sendingAmountSell = ref(false) // 定金额卖出状态
-const sendingVolumeBuy = ref(false)   // 定数量买入状态
-const sendingVolumeSell = ref(false) // 定数量卖出状态
+const defaultTradeAmount = ref(20000)  // 缺省下单金额
+const defaultTradeVolume = ref(0)      // 缺省下单数量（0表示未设置）
+const sendingAmountBuy = ref(false)    // 定金额买入状态
+const sendingAmountSell = ref(false)   // 定金额卖出状态
+const sendingVolumeBuy = ref(false)    // 定数量买入状态
+const sendingVolumeSell = ref(false)   // 定数量卖出状态
+
+// 计算持仓的1/4，向下取整到100的倍数
+const getQuarterPosition = () => {
+  const netPosition = props.strategy.netPosition || 0
+  const quarter = Math.floor(netPosition / 4)
+  return Math.floor(quarter / 100) * 100
+}
+
+// 计算持仓的1/2，向下取整到100的倍数
+const getHalfPosition = () => {
+  const netPosition = props.strategy.netPosition || 0
+  const half = Math.floor(netPosition / 2)
+  return Math.floor(half / 100) * 100
+}
+
+// 快速设置缺省数量为1/4持仓
+const setDefaultVolumeQuarter = () => {
+  defaultTradeVolume.value = getQuarterPosition()
+}
+
+// 快速设置缺省数量为1/2持仓
+const setDefaultVolumeHalf = () => {
+  defaultTradeVolume.value = getHalfPosition()
+}
+
+// 获取当前有效的下单数量
+const getEffectiveTradeVolume = () => {
+  return defaultTradeVolume.value || getQuarterPosition()
+}
 
 // 获取趋势图标
 const getTrendIcon = (trend) => {
@@ -441,7 +474,7 @@ const handleAmountSell = async () => {
 const handleVolumeBuy = async () => {
   if (!props.strategy.stockCode) return
   sendingVolumeBuy.value = true
-  const tradeVolume = defaultTradeVolume.value || 100
+  const tradeVolume = getEffectiveTradeVolume()
   
   try {
     await mqttConditionService.sendBuyOrder({
@@ -465,7 +498,7 @@ const handleVolumeBuy = async () => {
 const handleVolumeSell = async () => {
   if (!props.strategy.stockCode) return
   sendingVolumeSell.value = true
-  const tradeVolume = defaultTradeVolume.value || 100
+  const tradeVolume = getEffectiveTradeVolume()
   
   try {
     await mqttConditionService.sendSellOrder({
@@ -857,6 +890,29 @@ const getTrendClass = (trend) => {
 
 .setting-input::placeholder {
   color: rgba(255, 255, 255, 0.3);
+}
+
+.quick-set-btns {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.quick-set-btn {
+  flex: 1;
+  padding: 2px 4px;
+  font-size: 10px;
+  background-color: rgba(78, 205, 196, 0.3);
+  border: 1px solid rgba(78, 205, 196, 0.5);
+  border-radius: 3px;
+  color: #4ecdc4;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quick-set-btn:hover {
+  background-color: rgba(78, 205, 196, 0.5);
+  color: white;
 }
 
 /* 高级快捷下单 */
