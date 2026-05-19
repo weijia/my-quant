@@ -130,6 +130,7 @@
             @batch-condition="$emit('batch-condition', strategy)"
             @execute-strategy="(s) => $emit('execute-strategy', s)"
             @update-strategy-selection="(s, name) => $emit('update-strategy-selection', s, name)"
+            @update-trade-settings="(s, data) => $emit('update-trade-settings', s, data)"
           />
 
           <tr v-if="marginStrategies.length > 0" class="account-section-header margin-section">
@@ -147,6 +148,7 @@
             @batch-condition="$emit('batch-condition', strategy)"
             @execute-strategy="(s) => $emit('execute-strategy', s)"
             @update-strategy-selection="(s, name) => $emit('update-strategy-selection', s, name)"
+            @update-trade-settings="(s, data) => $emit('update-trade-settings', s, data)"
           />
           
           <tr v-if="pinganStrategies.length > 0" class="account-section-header pingan-section">
@@ -163,6 +165,7 @@
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
             @batch-condition="$emit('batch-condition', strategy)"
             @execute-strategy="(s) => $emit('execute-strategy', s)"
+            @update-trade-settings="(s, data) => $emit('update-trade-settings', s, data)"
           />
           
           <tr v-if="strategies.length === 0">
@@ -257,6 +260,7 @@ const emit = defineEmits([
   'batch-condition',
   'execute-strategy',
   'update-strategy-selection',
+  'update-trade-settings',
   'update-trend-filter',
   'update-sort'
 ])

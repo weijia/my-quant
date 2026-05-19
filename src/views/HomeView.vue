@@ -149,6 +149,7 @@
         @batch-condition="openBatchConditionDialog"
         @execute-strategy="handleExecuteStrategy"
         @update-strategy-selection="handleStrategySelection"
+        @update-trade-settings="handleTradeSettings"
         @update-trend-filter="(trend) => { filter.trend = trend; loadStrategies() }"
         @update-sort="(sortInfo) => { filter.sortBy = sortInfo.sortBy; filter.sortOrder = sortInfo.sortOrder; loadStrategies() }"
       />
@@ -583,7 +584,6 @@ const handleExecuteStrategy = async (strategy) => {
 // 处理策略选择更新
 const handleStrategySelection = async (strategy, strategyName) => {
   try {
-    // 保存用户选择的策略名称到策略数据中
     await strategyService.updateStrategy(strategy.id, {
       selectedStrategyName: strategyName === 'auto' ? null : strategyName
     })
@@ -591,6 +591,16 @@ const handleStrategySelection = async (strategy, strategyName) => {
   } catch (error) {
     console.error('更新策略选择失败:', error)
     alert('更新策略选择失败')
+  }
+}
+
+// 处理高级设置更新（量/额保存到策略数据）
+const handleTradeSettings = async (strategy, data) => {
+  try {
+    await strategyService.updateStrategy(strategy.id, data)
+    // 静默更新，不重新加载整个列表
+  } catch (error) {
+    console.error('更新交易设置失败:', error)
   }
 }
 

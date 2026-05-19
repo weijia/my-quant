@@ -158,6 +158,7 @@
             placeholder="20000"
             min="0"
             step="1000"
+            @change="saveTradeSettings"
           />
         </div>
         <div class="setting-item">
@@ -170,6 +171,7 @@
             :placeholder="getQuarterPosition().toString()"
             min="0"
             step="100"
+            @change="saveTradeSettings"
           />
         </div>
         <div class="setting-item" :class="{ 'price-missing': !effectivePrice }">
@@ -309,7 +311,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['edit', 'delete', 'update-trend', 'batch-condition', 'execute-strategy', 'update-strategy-selection'])
+const emit = defineEmits(['edit', 'delete', 'update-trend', 'batch-condition', 'execute-strategy', 'update-strategy-selection', 'update-trade-settings'])
 
 // 手动输入的价格（当 currentPrice 为空时使用）
 const manualPrice = ref(null)
@@ -368,6 +370,11 @@ const showTrendTip = ref(false)
 // 高级快捷下单设置
 const defaultTradeAmount = ref(20000)  // 缺省下单金额
 const defaultTradeVolume = ref(null)   // 缺省下单数量（null表示使用1/4持仓）
+
+// 从策略数据初始化高级设置
+if (props.strategy.increaseAmount) {
+  defaultTradeVolume.value = parseInt(props.strategy.increaseAmount) || null
+}
 const sendingAmountBuy01 = ref(false)  // 0.1%定金额买入状态
 const sendingAmountBuy05 = ref(false)  // 0.5%定金额买入状态
 const sendingAmountSell01 = ref(false) // 0.1%定金额卖出状态
@@ -411,6 +418,14 @@ const setDefaultVolumeHalf = () => {
 // 获取当前有效的下单数量
 const getEffectiveTradeVolume = () => {
   return defaultTradeVolume.value ?? getQuarterPosition()
+}
+
+// 保存高级设置到策略数据
+const saveTradeSettings = () => {
+  emit('update-trade-settings', props.strategy, {
+    increaseAmount: String(defaultTradeVolume.value ?? getQuarterPosition()),
+    decreaseAmount: String(defaultTradeVolume.value ?? getQuarterPosition())
+  })
 }
 
 // 获取趋势图标
