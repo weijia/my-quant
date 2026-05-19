@@ -295,6 +295,7 @@ import mqttConditionService, { PRESET_SERVERS } from './services/MQTTConditionSe
 import StrategyList from './components/StrategyList.vue';
 import StrategyDialog from './components/StrategyDialog.vue';
 import BatchConditionDialog from './components/BatchConditionDialog.vue';
+import { pinyin } from 'pinyin-pro';
 const strategies = ref([]);
 const showDialog = ref(false);
 const isEditing = ref(false);
@@ -343,8 +344,16 @@ const filteredStrategies = computed(() => {
  let result = [...strategies.value];
  if (searchQuery.value) {
  const query = searchQuery.value.toLowerCase();
- result = result.filter(s => s.name.toLowerCase().includes(query) ||
- s.stockCode?.toLowerCase().includes(query));
+ const queryPinyin = pinyin(query, { toneType: 'none' }).replace(/\s/g, '');
+ result = result.filter(s => {
+   const nameLower = s.name.toLowerCase();
+   const codeLower = (s.stockCode || '').toLowerCase();
+   const namePinyin = pinyin(s.name, { toneType: 'none' }).replace(/\s/g, '').toLowerCase();
+   return nameLower.includes(query) ||
+          codeLower.includes(query) ||
+          namePinyin.includes(query) ||
+          namePinyin.includes(queryPinyin);
+ });
  }
  return result;
 });
