@@ -376,11 +376,15 @@ const calculateTradeVolume = (netPosition) => {
 
 // 获取下单 side 参数（不使用融资时传入）
 const getBuySide = () => {
-  return props.useMarginTrade ? undefined : 'COLLABUY'
+  const side = props.useMarginTrade ? undefined : 'COLLABUY'
+  console.log(`[调试] getBuySide: useMarginTrade=${props.useMarginTrade}, side=${side}`)
+  return side
 }
 
 const getSellSide = () => {
-  return props.useMarginTrade ? undefined : 'COLLASELL'
+  const side = props.useMarginTrade ? undefined : 'COLLASELL'
+  console.log(`[调试] getSellSide: useMarginTrade=${props.useMarginTrade}, side=${side}`)
+  return side
 }
 
 // 上涨买入

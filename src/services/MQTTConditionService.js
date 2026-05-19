@@ -265,6 +265,7 @@ class MQTTConditionOrderService {
     if (side) {
       data.side = side;
     }
+    console.log('[MQTT] 发送买入订单:', JSON.stringify(data));
     return this.sendCommand('buy', data);
   }
 
