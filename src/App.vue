@@ -345,14 +345,18 @@ const filteredStrategies = computed(() => {
  if (searchQuery.value) {
  const query = searchQuery.value.toLowerCase();
  const queryPinyin = pinyin(query, { toneType: 'none' }).replace(/\s/g, '');
+ const queryFirstLetter = pinyin(query, { toneType: 'none', pattern: 'first' }).replace(/\s/g, '').toLowerCase();
  result = result.filter(s => {
    const nameLower = s.name.toLowerCase();
    const codeLower = (s.stockCode || '').toLowerCase();
    const namePinyin = pinyin(s.name, { toneType: 'none' }).replace(/\s/g, '').toLowerCase();
+   const nameFirstLetter = pinyin(s.name, { toneType: 'none', pattern: 'first' }).replace(/\s/g, '').toLowerCase();
    return nameLower.includes(query) ||
           codeLower.includes(query) ||
           namePinyin.includes(query) ||
-          namePinyin.includes(queryPinyin);
+          namePinyin.includes(queryPinyin) ||
+          nameFirstLetter.includes(queryFirstLetter) ||
+          nameFirstLetter.startsWith(queryFirstLetter);
  });
  }
  return result;
