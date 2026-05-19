@@ -468,6 +468,7 @@ const handleExecuteStrategy = async (strategy) => {
   }
 
   // 3. 构建上下文数据
+  const trend = strategy.trendJudgment || 'unset'
   const oscillationTradeAmount = parseInt(strategy.oscillationTradeAmount) || 100
   const sellVolume = Math.floor((strategy.netPosition || 0) / 4 / 100) * 100
   const currentPrice = strategy.currentPrice || 0
