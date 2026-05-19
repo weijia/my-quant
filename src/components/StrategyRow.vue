@@ -196,6 +196,24 @@
           {{ sendingVolumeSell ? '...' : '量卖' }}
         </button>
       </div>
+      <div class="advanced-order-row">
+        <button 
+          class="advanced-order-btn pct01-buy-btn" 
+          @click="handlePct01Buy" 
+          :disabled="!strategy.stockCode || sendingPct01Buy"
+          title="上涨0.1%买入"
+        >
+          {{ sendingPct01Buy ? '...' : '0.1%买' }}
+        </button>
+        <button 
+          class="advanced-order-btn pct01-sell-btn" 
+          @click="handlePct01Sell" 
+          :disabled="!strategy.stockCode || sendingPct01Sell"
+          title="下跌0.1%卖出"
+        >
+          {{ sendingPct01Sell ? '...' : '0.1%卖' }}
+        </button>
+      </div>
     </td>
     
     <td v-if="visibleColumns.includes('actions')" class="actions-cell">
@@ -254,6 +272,8 @@ const sendingAmountBuy = ref(false)    // 定金额买入状态
 const sendingAmountSell = ref(false)   // 定金额卖出状态
 const sendingVolumeBuy = ref(false)    // 定数量买入状态
 const sendingVolumeSell = ref(false)   // 定数量卖出状态
+const sendingPct01Buy = ref(false)     // 0.1%买入状态
+const sendingPct01Sell = ref(false)    // 0.1%卖出状态
 
 // 计算持仓的1/4，向下取整到100的倍数
 const getQuarterPosition = () => {
@@ -515,6 +535,52 @@ const handleVolumeSell = async () => {
     alert('发送失败，请检查MQTT连接')
   } finally {
     sendingVolumeSell.value = false
+  }
+}
+
+// 高级快捷下单：上涨0.1%买入
+const handlePct01Buy = async () => {
+  if (!props.strategy.stockCode) return
+  sendingPct01Buy.value = true
+  
+  try {
+    await mqttConditionService.sendBuyOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume: getEffectiveTradeVolume(),
+      percentage: 0.1,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType()
+    })
+    console.log(`[高级快捷] 上涨0.1%买入已发送: ${props.strategy.stockCode}`)
+  } catch (error) {
+    console.error('[高级快捷] 上涨0.1%买入失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingPct01Buy.value = false
+  }
+}
+
+// 高级快捷下单：下跌0.1%卖出
+const handlePct01Sell = async () => {
+  if (!props.strategy.stockCode) return
+  sendingPct01Sell.value = true
+  
+  try {
+    await mqttConditionService.sendSellOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume: getEffectiveTradeVolume(),
+      percentage: 0.1,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType()
+    })
+    console.log(`[高级快捷] 下跌0.1%卖出已发送: ${props.strategy.stockCode}`)
+  } catch (error) {
+    console.error('[高级快捷] 下跌0.1%卖出失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingPct01Sell.value = false
   }
 }
 
@@ -977,6 +1043,22 @@ const getTrendClass = (trend) => {
 
 .advanced-order-btn.volume-sell-btn:hover:not(:disabled) {
   background-color: rgba(255, 193, 7, 0.5);
+}
+
+.advanced-order-btn.pct01-buy-btn {
+  background-color: rgba(111, 66, 193, 0.3);
+}
+
+.advanced-order-btn.pct01-buy-btn:hover:not(:disabled) {
+  background-color: rgba(111, 66, 193, 0.5);
+}
+
+.advanced-order-btn.pct01-sell-btn {
+  background-color: rgba(32, 201, 151, 0.3);
+}
+
+.advanced-order-btn.pct01-sell-btn:hover:not(:disabled) {
+  background-color: rgba(32, 201, 151, 0.5);
 }
 
 @media (max-width: 768px) {
