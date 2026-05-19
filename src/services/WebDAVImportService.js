@@ -153,6 +153,8 @@ class DataConverter {
     const trendData = trendJudgments[stockCode] || {}
     // 优先使用自动趋势判断，否则使用手动趋势判断
     const trendValue = trendData.autoTrendJudgment || trendData.trendJudgment || 'unset'
+    // 获取当前价格（从趋势数据）
+    const currentPrice = trendData.currentPrice || null
 
     const accountType = this.normalizeAccountType(stock.accountType)
     const provider = stock.provider || ''
@@ -207,10 +209,11 @@ class DataConverter {
       decreaseStrategies: decreaseStrategies,
       increaseStrategies: increaseStrategies,
       notes: '',
-      manualNotes: stock.notes || stock.manualNotes || ''
+      manualNotes: stock.notes || stock.manualNotes || '',
+      currentPrice: currentPrice
     }
   }
-  
+
   static convertAdvancedStrategy(advanced, trendJudgments = {}) {
     const name = advanced.stockName || advanced.name || ''
     const stockCode = advanced.stockCode || ''
@@ -224,6 +227,8 @@ class DataConverter {
     const trendData = trendJudgments[stockCode] || {}
     // 优先使用 WebDAV 趋势数据中的自动趋势判断，其次手动趋势判断，最后使用高级策略本身的趋势判断
     const trendValue = trendData.autoTrendJudgment || trendData.trendJudgment || advanced.trendJudgment || 'unset'
+    // 获取当前价格（从趋势数据，优先于策略中保存的价格）
+    const currentPrice = trendData.currentPrice || advanced.currentPrice || advanced.price || null
 
     const decreaseStrategies = (advanced.decreaseStrategies || [])
       .map(c => ({
@@ -264,10 +269,11 @@ class DataConverter {
       decreaseStrategies: decreaseStrategies,
       increaseStrategies: increaseStrategies,
       notes: advanced.notes || '',
-      manualNotes: advanced.manualNotes || advanced.notes || ''
+      manualNotes: advanced.manualNotes || advanced.notes || '',
+      currentPrice: currentPrice
     }
   }
-  
+
   static convertConditionStrategy(cond) {
     return {
       deltaPercentage: cond.deltaPercentage || cond.delta || cond.percentage || '',
@@ -562,7 +568,9 @@ class WebDAVImportService {
                 // decreasePercentage 已废弃，优先使用 volatilityMetrics.price_drop_ratio
                 decreasePercentage: decreasePercentage != null ? decreasePercentage : null,
                 // price_drop_ratio 从 volatilityMetrics 获取，已经是百分比格式
-                price_drop_ratio: actualPriceDropRatio
+                price_drop_ratio: actualPriceDropRatio,
+                // 从波动率指标中获取当前价格
+                currentPrice: volatilityMetrics?.current_price || null
               }
               validCount++
             }
