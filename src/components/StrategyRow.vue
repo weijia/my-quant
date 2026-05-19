@@ -474,7 +474,8 @@ const handleAmountBuy = async () => {
       tradeAmount,
       percentage: 0.5,
       provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
-      accountType: getAccountType()
+      accountType: getAccountType(),
+      side: getBuySide()
     })
     console.log(`[高级快捷] 定金额买入已发送: ${props.strategy.stockCode}, 金额: ${tradeAmount}`)
   } catch (error) {
@@ -498,7 +499,8 @@ const handleAmountSell = async () => {
       tradeAmount,
       percentage: 0.5,
       provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
-      accountType: getAccountType()
+      accountType: getAccountType(),
+      side: getSellSide()
     })
     console.log(`[高级快捷] 定金额卖出已发送: ${props.strategy.stockCode}, 金额: ${tradeAmount}`)
   } catch (error) {
@@ -522,7 +524,8 @@ const handleVolumeBuy = async () => {
       tradeVolume,
       percentage: 0.5,
       provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
-      accountType: getAccountType()
+      accountType: getAccountType(),
+      side: getBuySide()
     })
     console.log(`[高级快捷] 定数量买入已发送: ${props.strategy.stockCode}, 数量: ${tradeVolume}`)
   } catch (error) {
@@ -546,7 +549,8 @@ const handleVolumeSell = async () => {
       tradeVolume,
       percentage: 0.5,
       provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
-      accountType: getAccountType()
+      accountType: getAccountType(),
+      side: getSellSide()
     })
     console.log(`[高级快捷] 定数量卖出已发送: ${props.strategy.stockCode}, 数量: ${tradeVolume}`)
   } catch (error) {
@@ -569,7 +573,8 @@ const handlePct01Buy = async () => {
       tradeVolume: getEffectiveTradeVolume(),
       percentage: 0.1,
       provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
-      accountType: getAccountType()
+      accountType: getAccountType(),
+      side: getBuySide()
     })
     console.log(`[高级快捷] 上涨0.1%买入已发送: ${props.strategy.stockCode}`)
   } catch (error) {
@@ -592,7 +597,8 @@ const handlePct01Sell = async () => {
       tradeVolume: getEffectiveTradeVolume(),
       percentage: 0.1,
       provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
-      accountType: getAccountType()
+      accountType: getAccountType(),
+      side: getSellSide()
     })
     console.log(`[高级快捷] 下跌0.1%卖出已发送: ${props.strategy.stockCode}`)
   } catch (error) {
