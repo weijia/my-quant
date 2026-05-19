@@ -305,6 +305,24 @@ if (ctx.trendJudgment === 'trend_up') {
               <label>策略名称</label>
               <input v-model="template.name" type="text" placeholder="如: 通用上涨趋势策略" class="form-input" />
             </div>
+
+            <!-- 趋势匹配设置 -->
+            <div class="form-group trend-matches-group">
+              <label>匹配趋势（多选）</label>
+              <div class="trend-checkboxes">
+                <label v-for="trend in availableTrends" :key="trend.value" class="trend-checkbox-label" :class="{ 'selected': template.trendMatches?.includes(trend.value) }">
+                  <input
+                    type="checkbox"
+                    :value="trend.value"
+                    v-model="template.trendMatches"
+                    @change="saveTemplates"
+                  />
+                  <span class="trend-name">{{ trend.label }}</span>
+                </label>
+              </div>
+              <p class="trend-hint">当股票的趋势判断为选中的任一值时，此策略将被应用</p>
+            </div>
+
             <div class="form-group">
               <label>策略脚本</label>
               <textarea
@@ -440,6 +458,20 @@ const showApiHelp = ref(false)
 const previewResults = reactive({})
 const previewErrors = reactive({})
 
+// 可用的趋势选项
+const availableTrends = [
+  { value: 'unset', label: '未设置' },
+  { value: 'trend_unknown', label: '未知趋势' },
+  { value: 'trend_up', label: '上涨趋势' },
+  { value: 'trend_down', label: '下跌趋势' },
+  { value: 'trend_breakdown', label: '下跌破位' },
+  { value: 'trend_oscillation', label: '震荡趋势' },
+  { value: 'trend_pullback', label: '回踩趋势' },
+  { value: 'high_volatility', label: '高波动率' },
+  { value: 'medium_volatility', label: '中等波动率' },
+  { value: 'low_volatility', label: '低波动率' }
+]
+
 // 示例输入数据（用于预览）
 const sampleCtx = {
   stockCode: '600519',
@@ -461,6 +493,7 @@ const sampleCtx = {
 const defaultTemplate = () => ({
   name: '',
   script: `// 输入: ctx (股票数据)\n// 辅助: buy(data), sell(data)\n// 输出: 消息数组\nreturn [\n  // buy({ stockCode: ctx.stockCode, stockName: ctx.stockName, tradeVolume: 100, percentage: 0.5 })\n]`,
+  trendMatches: [], // 匹配的趋势列表，如 ['trend_up', 'trend_oscillation']
   isDefault: false
 })
 
@@ -470,6 +503,7 @@ const defaultStrategyScripts = [
     name: '通用上涨趋势策略',
     description: '上涨趋势：下跌15日波动率卖出1/4持仓，上涨0.5%买入设定数量',
     isDefault: true,
+    trendMatches: ['trend_up', 'trend_pullback'], // 匹配上涨趋势和回踩趋势
     script: `// 通用上涨趋势策略
 // 下跌15日波动率卖出1/4持仓，上涨0.5%买入设定数量
 const vol = ctx.volatility15d * 100  // 转为百分比
@@ -498,6 +532,7 @@ return [
     name: '通用下跌趋势策略',
     description: '下跌趋势：下跌15日波动率1/2卖出1/4持仓，上涨15日波动率买入设定数量',
     isDefault: true,
+    trendMatches: ['trend_down', 'trend_breakdown'], // 匹配下跌趋势和下跌破位
     script: `// 通用下跌趋势策略
 // 下跌15日波动率1/2卖出1/4持仓，上涨15日波动率买入设定数量
 const vol = ctx.volatility15d * 100  // 转为百分比
@@ -526,6 +561,7 @@ return [
     name: '通用普通策略',
     description: '普通趋势：上涨或下跌达15日波动率时，买入设定数量或卖出1/4持仓',
     isDefault: true,
+    trendMatches: ['trend_oscillation', 'unset', 'trend_unknown'], // 匹配震荡趋势、未设置、未知趋势
     script: `// 通用普通策略
 // 上涨或下跌达15日波动率时，买入设定数量或卖出1/4持仓
 const vol = ctx.volatility15d * 100  // 转为百分比
@@ -586,6 +622,7 @@ const addDefaultStrategies = () => {
       name: strategy.name,
       description: strategy.description,
       isDefault: strategy.isDefault,
+      trendMatches: strategy.trendMatches || [],
       script: strategy.script
     })
   })
@@ -1174,6 +1211,54 @@ onMounted(() => {
   color: #4ecdc4;
   white-space: pre-wrap;
   overflow-x: auto;
+}
+
+/* 趋势匹配选择器 */
+.trend-matches-group {
+  margin-bottom: 16px;
+}
+
+.trend-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.trend-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  cursor: pointer;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s;
+}
+
+.trend-checkbox-label:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.trend-checkbox-label.selected {
+  background-color: rgba(78, 205, 196, 0.2);
+  border-color: rgba(78, 205, 196, 0.5);
+  color: #4ecdc4;
+}
+
+.trend-checkbox-label input[type="checkbox"] {
+  display: none;
+}
+
+.trend-hint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 6px;
+  margin-bottom: 0;
 }
 
 @media (max-width: 768px) {
