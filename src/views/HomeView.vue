@@ -471,7 +471,9 @@ const handleExecuteStrategy = async (strategy) => {
 
   // 3. 构建上下文数据
   const trend = strategy.trendJudgment || 'unset'
+  console.log('[调试] strategy.increaseAmount:', strategy.increaseAmount, '类型:', typeof strategy.increaseAmount)
   const defaultBuyVolume = parseInt(strategy.increaseAmount) || 100  // 从策略的加仓数量获取
+  console.log('[调试] defaultBuyVolume:', defaultBuyVolume)
   const sellVolume = Math.floor((strategy.netPosition || 0) / 4 / 100) * 100
   const currentPrice = strategy.currentPrice || 0
 
