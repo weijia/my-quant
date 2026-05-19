@@ -250,7 +250,21 @@
         
         <div class="form-group">
           <label>加密密码 (AES)</label>
-          <input v-model="mqttConfigForm.password" type="password" placeholder="your-secret-password" class="form-input" />
+          <div class="password-input-wrapper">
+            <input v-model="mqttConfigForm.password" :type="showMQTTPassword ? 'text' : 'password'" placeholder="your-secret-password" class="form-input" />
+            <button type="button" @click="showMQTTPassword = !showMQTTPassword" class="toggle-password-btn" :title="showMQTTPassword ? '隐藏密码' : '显示密码'">
+              <svg v-if="!showMQTTPassword" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
         </div>
         
         <div class="mqtt-status">
@@ -294,6 +308,7 @@ const webdavConfigForm = reactive({
   password: ''
 });
 const showMQTTConfigDialog = ref(false);
+const showMQTTPassword = ref(false);
 const presetServers = PRESET_SERVERS;
 const mqttConfigForm = reactive({
   serverType: 'emqx',
@@ -1336,6 +1351,32 @@ onMounted(async () => {
 /* MQTT 配置弹窗样式 */
 .mqtt-config-modal {
   max-width: 500px;
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper .form-input {
+  padding-right: 36px;
+}
+
+.toggle-password-btn {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-password-btn:hover {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .mqtt-status {
