@@ -148,6 +148,7 @@
         @update-trend-judgment="updateTrendJudgment"
         @batch-condition="openBatchConditionDialog"
         @execute-strategy="handleExecuteStrategy"
+        @update-strategy-selection="handleStrategySelection"
         @update-trend-filter="(trend) => { filter.trend = trend; loadStrategies() }"
         @update-sort="(sortInfo) => { filter.sortBy = sortInfo.sortBy; filter.sortOrder = sortInfo.sortOrder; loadStrategies() }"
       />
@@ -442,14 +443,27 @@ const handleExecuteStrategy = async (strategy) => {
     console.error('加载策略模板失败:', e)
   }
 
-  // 2. 根据股票趋势匹配策略模板
-  const trend = strategy.trendJudgment || 'unset'
-  const matchedTemplates = templates.filter(t =>
-    Array.isArray(t.trendMatches) && t.trendMatches.length > 0 && t.trendMatches.includes(trend)
-  )
+  // 2. 确定要执行的策略
+  let templatesToExecute = []
+  
+  // 如果用户手动选择了策略（非自动），则执行选中的策略
+  if (strategy.selectedStrategyName) {
+    const selectedTemplate = templates.find(t => t.name === strategy.selectedStrategyName)
+    if (selectedTemplate) {
+      templatesToExecute = [selectedTemplate]
+    }
+  }
+  
+  // 如果没有手动选择或选中的策略不存在，则根据趋势自动匹配
+  if (templatesToExecute.length === 0) {
+    const trend = strategy.trendJudgment || 'unset'
+    templatesToExecute = templates.filter(t =>
+      Array.isArray(t.trendMatches) && t.trendMatches.length > 0 && t.trendMatches.includes(trend)
+    )
+  }
 
-  if (matchedTemplates.length === 0) {
-    alert('未找到匹配的策略脚本。当前趋势: ' + trend + '\n请在设置页面配置策略的趋势匹配关系。')
+  if (templatesToExecute.length === 0) {
+    alert('未找到匹配的策略脚本。当前趋势: ' + (strategy.trendJudgment || 'unset') + '\n请在设置页面配置策略的趋势匹配关系。')
     return
   }
 
@@ -479,7 +493,7 @@ const handleExecuteStrategy = async (strategy) => {
   let totalMessages = []
   let errors = []
 
-  for (const template of matchedTemplates) {
+  for (const template of templatesToExecute) {
     if (!template.script) continue
     try {
       const buy = (data) => ({ action: 'buy', data })
@@ -558,6 +572,20 @@ const handleExecuteStrategy = async (strategy) => {
     alert('发送完成: 成功 ' + successCount + ' 条, 失败 ' + sendErrors.length + ' 条\n' + sendErrors.join('\n'))
   } else {
     alert('成功发送 ' + successCount + ' 条条件单')
+  }
+}
+
+// 处理策略选择更新
+const handleStrategySelection = async (strategy, strategyName) => {
+  try {
+    // 保存用户选择的策略名称到策略数据中
+    await strategyService.updateStrategy(strategy.id, {
+      selectedStrategyName: strategyName === 'auto' ? null : strategyName
+    })
+    await loadStrategies()
+  } catch (error) {
+    console.error('更新策略选择失败:', error)
+    alert('更新策略选择失败')
   }
 }
 

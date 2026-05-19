@@ -59,10 +59,17 @@
 
     <td v-if="visibleColumns.includes('strategyType')" class="strategy-type-cell">
       <div class="strategy-type-wrapper">
-        <span :class="['strategy-type-badge', getStrategyTypeClass(strategy)]">
-          {{ getStrategyTypeLabel(strategy) }}
-        </span>
-        <span v-if="isManualStrategy(strategy)" class="manual-indicator" title="手动设置">👤</span>
+        <select
+          v-model="localStrategyName"
+          @change="updateStrategySelection"
+          class="strategy-select"
+          :class="{ 'manual-selected': localStrategyName && localStrategyName !== 'auto' }"
+        >
+          <option value="auto">自动 ({{ getAutoStrategyName() }})</option>
+          <option v-for="tpl in availableStrategyTemplates" :key="tpl.name" :value="tpl.name">
+            {{ tpl.name }}
+          </option>
+        </select>
         <button @click="executeStrategyScript" class="execute-strategy-btn" title="执行策略脚本生成条件单">
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         </button>
@@ -302,10 +309,48 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['edit', 'delete', 'update-trend', 'batch-condition', 'execute-strategy'])
+const emit = defineEmits(['edit', 'delete', 'update-trend', 'batch-condition', 'execute-strategy', 'update-strategy-selection'])
 
 // 手动输入的价格（当 currentPrice 为空时使用）
 const manualPrice = ref(null)
+
+// 策略选择
+const localStrategyName = ref(props.strategy.selectedStrategyName || 'auto')
+
+// 可用的策略模板（从 localStorage 加载）
+const availableStrategyTemplates = ref([])
+
+// 加载策略模板
+const loadStrategyTemplates = () => {
+  try {
+    const saved = localStorage.getItem('orderStrategyTemplates')
+    if (saved) {
+      availableStrategyTemplates.value = JSON.parse(saved)
+    }
+  } catch (e) {
+    console.error('加载策略模板失败:', e)
+  }
+}
+
+// 组件挂载时加载模板
+loadStrategyTemplates()
+
+// 根据趋势获取自动策略名称
+const getAutoStrategyName = () => {
+  const trend = props.strategy.trendJudgment || 'unset'
+  const matched = availableStrategyTemplates.value.filter(t =>
+    Array.isArray(t.trendMatches) && t.trendMatches.includes(trend)
+  )
+  if (matched.length > 0) {
+    return matched.map(m => m.name).join(', ')
+  }
+  return '无匹配'
+}
+
+// 更新策略选择
+const updateStrategySelection = () => {
+  emit('update-strategy-selection', props.strategy, localStrategyName.value)
+}
 
 // 获取有效价格：优先使用策略中的 currentPrice，其次使用手动输入
 const effectivePrice = computed(() => {
@@ -1402,6 +1447,34 @@ const getTrendClass = (trend) => {
 .execute-strategy-btn svg {
   width: 10px;
   height: 10px;
+}
+
+/* 策略选择器 */
+.strategy-select {
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  cursor: pointer;
+  min-width: 120px;
+  max-width: 160px;
+}
+
+.strategy-select:focus {
+  outline: none;
+  border-color: rgba(78, 205, 196, 0.5);
+}
+
+.strategy-select option {
+  background-color: #2c3e50;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.strategy-select.manual-selected {
+  border-color: rgba(78, 205, 196, 0.5);
+  background-color: rgba(78, 205, 196, 0.1);
 }
 
 @media (max-width: 768px) {

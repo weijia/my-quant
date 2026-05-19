@@ -129,8 +129,9 @@
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
             @batch-condition="$emit('batch-condition', strategy)"
             @execute-strategy="(s) => $emit('execute-strategy', s)"
+            @update-strategy-selection="(s, name) => $emit('update-strategy-selection', s, name)"
           />
-          
+
           <tr v-if="marginStrategies.length > 0" class="account-section-header margin-section">
             <td :colspan="visibleColumns.length">信用账户策略 ({{ marginStrategies.length }})</td>
           </tr>
@@ -144,6 +145,8 @@
             @delete="$emit('delete-strategy', strategy.id)"
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
             @batch-condition="$emit('batch-condition', strategy)"
+            @execute-strategy="(s) => $emit('execute-strategy', s)"
+            @update-strategy-selection="(s, name) => $emit('update-strategy-selection', s, name)"
             @execute-strategy="(s) => $emit('execute-strategy', s)"
           />
           
@@ -254,6 +257,7 @@ const emit = defineEmits([
   'update-trend-judgment',
   'batch-condition',
   'execute-strategy',
+  'update-strategy-selection',
   'update-trend-filter',
   'update-sort'
 ])
