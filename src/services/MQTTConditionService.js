@@ -253,15 +253,20 @@ class MQTTConditionOrderService {
   /**
    * 发送买入条件单
    */
-  async sendBuyOrder({ stockCode, stockName, tradeVolume = 100, percentage = 0.5, provider = 'pingan', accountType = 'default', side }) {
+  async sendBuyOrder({ stockCode, stockName, tradeVolume = 100, tradeAmount, percentage = 0.5, provider = 'pingan', accountType = 'default', side }) {
     const data = {
       stockCode,
       stockName,
-      tradeVolume,
       percentage: Math.abs(percentage),
       provider,
       accountType
     };
+    if (tradeAmount) {
+      data.tradeAmount = tradeAmount;
+    }
+    if (tradeVolume) {
+      data.tradeVolume = tradeVolume;
+    }
     if (side) {
       data.side = side;
     }
@@ -272,18 +277,24 @@ class MQTTConditionOrderService {
   /**
    * 发送卖出条件单
    */
-  async sendSellOrder({ stockCode, stockName, tradeVolume = 100, percentage = 0.5, provider = 'pingan', accountType = 'default', side }) {
+  async sendSellOrder({ stockCode, stockName, tradeVolume = 100, tradeAmount, percentage = 0.5, provider = 'pingan', accountType = 'default', side }) {
     const data = {
       stockCode,
       stockName,
-      tradeVolume,
       percentage: Math.abs(percentage),
       provider,
       accountType
     };
+    if (tradeAmount) {
+      data.tradeAmount = tradeAmount;
+    }
+    if (tradeVolume) {
+      data.tradeVolume = tradeVolume;
+    }
     if (side) {
       data.side = side;
     }
+    console.log('[MQTT] 发送卖出订单:', JSON.stringify(data));
     return this.sendCommand('sell', data);
   }
 

@@ -79,6 +79,7 @@
                 </select>
               </div>
             </th>
+            <th v-if="visibleColumns.includes('strategyType')">策略</th>
             <th v-if="visibleColumns.includes('oscillationGrid')">震荡时网格</th>
             <th v-if="visibleColumns.includes('decreaseStrategy')">下跌减仓</th>
             <th v-if="visibleColumns.includes('increaseStrategy')">上涨加仓</th>
@@ -275,6 +276,7 @@ const allColumns = [
   { key: 'decreasePercentage', label: '下跌百分比' },
   { key: 'trendIcon', label: '趋势' },
   { key: 'autoTrend', label: '自动生成趋势' },
+  { key: 'strategyType', label: '策略' },
   { key: 'oscillationGrid', label: '震荡时网格' },
   { key: 'decreaseStrategy', label: '下跌减仓' },
   { key: 'increaseStrategy', label: '上涨加仓' },
@@ -295,6 +297,7 @@ const defaultVisibleColumns = [
   'decreasePercentage',
   'trendIcon',
   'autoTrend',
+  'strategyType',
   'oscillationGrid',
   'decreaseStrategy',
   'increaseStrategy',
@@ -698,27 +701,27 @@ const resetColumns = () => {
   .strategy-table td {
     white-space: normal;
     word-break: break-word;
-    font-size: 10px;
-    padding: 4px 2px;
+    font-size: 9px;
+    padding: 3px 2px;
   }
   
   .strategy-table th:first-child,
   .strategy-table td:first-child {
-    width: 36px;
-    min-width: 36px;
-    font-size: 10px;
-    padding: 4px 1px;
+    width: 30px;
+    min-width: 30px;
+    font-size: 9px;
+    padding: 3px 1px;
   }
   
   .name-cell {
-    width: 36px;
-    max-width: 36px;
-    font-size: 10px;
+    width: 32px;
+    max-width: 32px;
+    font-size: 9px;
   }
   
   .name-cell span {
     display: inline-block;
-    max-width: 32px;
+    max-width: 28px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -726,14 +729,60 @@ const resetColumns = () => {
   
   .quantity-header,
   .quantity-cell {
-    width: 32px;
-    min-width: 32px;
+    width: 28px;
+    min-width: 28px;
   }
   
   .decrease-pct-header,
   .decrease-pct-cell {
-    width: 32px;
-    min-width: 32px;
+    width: 28px;
+    min-width: 28px;
+  }
+  
+  .quick-order-cell button {
+    padding: 3px 4px;
+    font-size: 9px;
+  }
+  
+  .quick-order-cell button svg {
+    width: 10px;
+    height: 10px;
+  }
+  
+  .advanced-order-btn {
+    padding: 2px 4px;
+    font-size: 8px;
+    min-width: 36px;
+  }
+  
+  .setting-input {
+    width: 36px;
+    font-size: 9px;
+    padding: 1px 2px;
+  }
+  
+  .quick-set-btn {
+    padding: 1px 3px;
+    font-size: 8px;
+  }
+  
+  .actions-cell .action-btn {
+    padding: 2px;
+  }
+  
+  .actions-cell .action-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .trend-select {
+    padding: 1px 2px;
+    font-size: 9px;
+  }
+  
+  .trend-btn {
+    padding: 2px 4px;
+    font-size: 9px;
   }
 }
 
