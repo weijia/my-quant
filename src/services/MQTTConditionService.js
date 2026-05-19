@@ -253,7 +253,7 @@ class MQTTConditionOrderService {
   /**
    * 发送买入条件单
    */
-  async sendBuyOrder({ stockCode, stockName, tradeVolume = 100, tradeAmount, percentage = 0.5, provider = 'pingan', accountType = 'default', side }) {
+  async sendBuyOrder({ stockCode, stockName, tradeVolume = 100, tradeAmount, percentage = 0.5, provider = 'pingan', accountType = 'default', side, endDate }) {
     const data = {
       stockCode,
       stockName,
@@ -269,6 +269,9 @@ class MQTTConditionOrderService {
     }
     if (side) {
       data.side = side;
+    }
+    if (endDate) {
+      data.endDate = endDate;
     }
     console.log('[MQTT] 发送买入订单:', JSON.stringify(data));
     return this.sendCommand('buy', data);
@@ -277,7 +280,7 @@ class MQTTConditionOrderService {
   /**
    * 发送卖出条件单
    */
-  async sendSellOrder({ stockCode, stockName, tradeVolume = 100, tradeAmount, percentage = 0.5, provider = 'pingan', accountType = 'default', side }) {
+  async sendSellOrder({ stockCode, stockName, tradeVolume = 100, tradeAmount, percentage = 0.5, provider = 'pingan', accountType = 'default', side, endDate }) {
     const data = {
       stockCode,
       stockName,
@@ -294,6 +297,9 @@ class MQTTConditionOrderService {
     if (side) {
       data.side = side;
     }
+    if (endDate) {
+      data.endDate = endDate;
+    }
     console.log('[MQTT] 发送卖出订单:', JSON.stringify(data));
     return this.sendCommand('sell', data);
   }
@@ -301,9 +307,9 @@ class MQTTConditionOrderService {
   /**
    * 发送双向条件单（同时创建买入和卖出）
    */
-  async sendBothOrders({ stockCode, stockName, tradeVolume = 100, percentage = 0.5, provider = 'pingan', accountType = 'default' }) {
-    const buyResult = await this.sendBuyOrder({ stockCode, stockName, tradeVolume, percentage, provider, accountType });
-    const sellResult = await this.sendSellOrder({ stockCode, stockName, tradeVolume, percentage, provider, accountType });
+  async sendBothOrders({ stockCode, stockName, tradeVolume = 100, percentage = 0.5, provider = 'pingan', accountType = 'default', endDate }) {
+    const buyResult = await this.sendBuyOrder({ stockCode, stockName, tradeVolume, percentage, provider, accountType, endDate });
+    const sellResult = await this.sendSellOrder({ stockCode, stockName, tradeVolume, percentage, provider, accountType, endDate });
     return { buyResult, sellResult };
   }
 
