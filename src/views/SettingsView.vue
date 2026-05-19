@@ -151,7 +151,7 @@
               <tr><td>ctx.volatility15d</td><td>number</td><td>15日平均波动率（小数，如1.65%存为0.0165）</td><td>0.0165</td></tr>
               <tr><td>ctx.priceDropRatio</td><td>number</td><td>最高价到当前价的下跌比率</td><td>0.05（表示5%）</td></tr>
               <tr><td>ctx.isMarginAccount</td><td>boolean</td><td>是否为融资融券账户</td><td>false</td></tr>
-              <tr><td>ctx.defaultBuyVolume</td><td>number</td><td>缺省买入数量，来自策略的震荡时网格交易数量</td><td>100</td></tr>
+              <tr><td>ctx.defaultBuyVolume</td><td>number</td><td>缺省买入数量，来自策略的加仓数量（increaseAmount）</td><td>100</td></tr>
               <tr><td>ctx.defaultSellVolume</td><td>number</td><td>缺省卖出数量，为持仓的1/4（向下取整到100的倍数）</td><td>25</td></tr>
               <tr><td>ctx.defaultAmount</td><td>number</td><td>缺省交易金额，固定值20000元</td><td>20000</td></tr>
               <tr><td>ctx.provider</td><td>string</td><td>券商代码</td><td>"pingan"</td></tr>
