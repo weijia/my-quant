@@ -68,4 +68,3 @@ jobs:
           webdav-password: ${{ secrets.WEBDAV_PASSWORD }}
           webdav-root: latest
           source-directory: ./dist
-          upload-directory: latest
