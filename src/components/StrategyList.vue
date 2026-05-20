@@ -129,6 +129,7 @@
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
             @batch-condition="$emit('batch-condition', strategy)"
             @execute-strategy="(s) => $emit('execute-strategy', s)"
+            @execute-strategy-by-amount="(s) => $emit('execute-strategy-by-amount', s)"
             @update-strategy-selection="(s, name) => $emit('update-strategy-selection', s, name)"
             @update-trade-settings="(s, data) => $emit('update-trade-settings', s, data)"
           />
@@ -147,6 +148,7 @@
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
             @batch-condition="$emit('batch-condition', strategy)"
             @execute-strategy="(s) => $emit('execute-strategy', s)"
+            @execute-strategy-by-amount="(s) => $emit('execute-strategy-by-amount', s)"
             @update-strategy-selection="(s, name) => $emit('update-strategy-selection', s, name)"
             @update-trade-settings="(s, data) => $emit('update-trade-settings', s, data)"
           />
@@ -165,6 +167,7 @@
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
             @batch-condition="$emit('batch-condition', strategy)"
             @execute-strategy="(s) => $emit('execute-strategy', s)"
+            @execute-strategy-by-amount="(s) => $emit('execute-strategy-by-amount', s)"
             @update-trade-settings="(s, data) => $emit('update-trade-settings', s, data)"
           />
           
@@ -259,6 +262,7 @@ const emit = defineEmits([
   'update-trend-judgment',
   'batch-condition',
   'execute-strategy',
+  'execute-strategy-by-amount',
   'update-strategy-selection',
   'update-trade-settings',
   'update-trend-filter',

@@ -148,6 +148,7 @@
         @update-trend-judgment="updateTrendJudgment"
         @batch-condition="openBatchConditionDialog"
         @execute-strategy="handleExecuteStrategy"
+        @execute-strategy-by-amount="handleExecuteStrategyByAmount"
         @update-strategy-selection="handleStrategySelection"
         @update-trade-settings="handleTradeSettings"
         @update-trend-filter="(trend) => { filter.trend = trend; loadStrategies() }"
@@ -435,8 +436,8 @@ const handleBatchConditionSubmit = async (data) => {
   }
 };
 
-// 执行策略脚本生成条件单
-const handleExecuteStrategy = async (strategy) => {
+// 执行策略脚本生成条件单（内部实现）
+const executeStrategyInternal = async (strategy, useAmount = false) => {
   // 1. 从 localStorage 加载策略模板
   let templates = []
   try {
@@ -477,6 +478,7 @@ const handleExecuteStrategy = async (strategy) => {
   const defaultBuyVolume = parseInt(strategy.increaseAmount) || quarterPosition || 100
   const sellVolume = Math.floor((strategy.netPosition || 0) / 4 / 100) * 100
   const currentPrice = strategy.currentPrice || 0
+  const defaultAmount = 20000
 
   const ctx = {
     stockCode: strategy.stockCode,
@@ -490,7 +492,7 @@ const handleExecuteStrategy = async (strategy) => {
     isMarginAccount: strategy.isMarginAccount || false,
     defaultBuyVolume: defaultBuyVolume,
     defaultSellVolume: sellVolume,
-    defaultAmount: 20000,
+    defaultAmount: defaultAmount,
     provider: strategy.provider || 'pingan',
     accountType: strategy.accountType || 'default'
   }
@@ -524,19 +526,33 @@ const handleExecuteStrategy = async (strategy) => {
     return
   }
 
-  // 5. 确认并发送
+  // 5. 按额模式：将 tradeVolume 转换为 tradeAmount
+  if (useAmount) {
+    totalMessages = totalMessages.map(msg => {
+      const data = { ...msg.data }
+      if (data.tradeVolume && !data.tradeAmount) {
+        data.tradeAmount = data.tradeVolume * currentPrice
+        delete data.tradeVolume
+      }
+      return { ...msg, data }
+    })
+  }
+
+  // 6. 确认并发送
+  const modeLabel = useAmount ? ' [按额模式]' : ' [按量模式]'
   const preview = totalMessages.map((msg, i) => {
     const action = msg.action === 'buy' ? '买入' : '卖出'
     const vol = msg.data.tradeVolume || msg.data.tradeAmount || '-'
+    const unit = msg.data.tradeVolume ? '股' : '元'
     const pct = msg.data.percentage || '-'
-    return '消息' + (i + 1) + ': ' + action + ' ' + vol + (msg.data.tradeVolume ? '股' : '元') + ' @' + pct + '%'
+    return '消息' + (i + 1) + ': ' + action + ' ' + vol + unit + ' @' + pct + '%'
   }).join('\n')
 
-  if (!confirm('将发送 ' + totalMessages.length + ' 条条件单:\n\n' + preview)) {
+  if (!confirm('将发送 ' + totalMessages.length + ' 条条件单' + modeLabel + ':\n\n' + preview)) {
     return
   }
 
-  // 6. 逐条发送
+  // 7. 逐条发送
   let successCount = 0
   let sendErrors = []
 
@@ -579,6 +595,16 @@ const handleExecuteStrategy = async (strategy) => {
   } else {
     alert('成功发送 ' + successCount + ' 条条件单')
   }
+}
+
+// 按量执行策略脚本
+const handleExecuteStrategy = async (strategy) => {
+  await executeStrategyInternal(strategy, false)
+}
+
+// 按额执行策略脚本
+const handleExecuteStrategyByAmount = async (strategy) => {
+  await executeStrategyInternal(strategy, true)
 }
 
 // 处理策略选择更新

@@ -70,8 +70,11 @@
             {{ tpl.name }}
           </option>
         </select>
-        <button @click="executeStrategyScript" class="execute-strategy-btn" title="执行策略脚本生成条件单">
+        <button @click="executeStrategyScript" class="execute-strategy-btn" title="按量执行策略脚本生成条件单">
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </button>
+        <button @click="executeStrategyByAmount" class="execute-strategy-btn amount-btn" title="按额执行策略脚本生成条件单">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         </button>
       </div>
     </td>
@@ -311,7 +314,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['edit', 'delete', 'update-trend', 'batch-condition', 'execute-strategy', 'update-strategy-selection', 'update-trade-settings'])
+const emit = defineEmits(['edit', 'delete', 'update-trend', 'batch-condition', 'execute-strategy', 'execute-strategy-by-amount', 'update-strategy-selection', 'update-trade-settings'])
 
 // 手动输入的价格（当 currentPrice 为空时使用）
 const manualPrice = ref(null)
@@ -493,9 +496,14 @@ const isManualStrategy = (strategy) => {
   return !!strategy.isManuallyEdited
 }
 
-// 执行策略脚本
+// 执行策略脚本（按量）
 const executeStrategyScript = () => {
   emit('execute-strategy', props.strategy)
+}
+
+// 执行策略脚本（按额）
+const executeStrategyByAmount = () => {
+  emit('execute-strategy-by-amount', props.strategy)
 }
 
 // 获取策略类型标签
@@ -1457,6 +1465,17 @@ const getTrendClass = (trend) => {
 .execute-strategy-btn:hover {
   background-color: rgba(78, 205, 196, 0.3);
   border-color: #4ecdc4;
+}
+
+.execute-strategy-btn.amount-btn {
+  border-color: rgba(255, 165, 0, 0.4);
+  background-color: rgba(255, 165, 0, 0.1);
+  color: #ffa500;
+}
+
+.execute-strategy-btn.amount-btn:hover {
+  background-color: rgba(255, 165, 0, 0.3);
+  border-color: #ffa500;
 }
 
 .execute-strategy-btn svg {
