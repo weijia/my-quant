@@ -1624,5 +1624,9 @@ const getTrendClass = (trend) => {
     overflow: hidden;
     text-overflow: ellipsis;
   }
+
+  .stock-code {
+    display: none;
+  }
 }
 </style>
