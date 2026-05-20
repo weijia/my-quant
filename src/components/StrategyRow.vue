@@ -494,18 +494,18 @@ const calculateVolumeFromAmount = (amount, price) => {
   return volume > 0 ? volume : 100
 }
 
-// 计算持仓的1/4，向下取整到100的倍数
+// 计算持仓的1/4，向下取整到100的倍数，最低100股
 const getQuarterPosition = () => {
   const netPosition = props.strategy.netPosition || 0
   const quarter = Math.floor(netPosition / 4)
-  return Math.floor(quarter / 100) * 100
+  return Math.max(100, Math.floor(quarter / 100) * 100)
 }
 
-// 计算持仓的1/2，向下取整到100的倍数
+// 计算持仓的1/2，向下取整到100的倍数，最低100股
 const getHalfPosition = () => {
   const netPosition = props.strategy.netPosition || 0
   const half = Math.floor(netPosition / 2)
-  return Math.floor(half / 100) * 100
+  return Math.max(100, Math.floor(half / 100) * 100)
 }
 
 // 快速设置缺省数量为1/4持仓

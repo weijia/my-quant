@@ -485,10 +485,10 @@ const executeStrategyInternal = async (strategy, useAmount = false) => {
 
   // 3. 构建上下文数据
   const trend = strategy.trendJudgment || 'unset'
-  // 缺省买入量：优先使用策略的加仓数量，否则按高级设置缺省算法（1/4持仓）
-  const quarterPosition = Math.floor((strategy.netPosition || 0) / 4 / 100) * 100
+  // 缺省买入量：优先使用策略的加仓数量，否则按高级设置缺省算法（1/4持仓，最低100股）
+  const quarterPosition = Math.max(100, Math.floor((strategy.netPosition || 0) / 4 / 100) * 100)
   const defaultBuyVolume = parseInt(strategy.increaseAmount) || quarterPosition || 100
-  const sellVolume = Math.floor((strategy.netPosition || 0) / 4 / 100) * 100
+  const sellVolume = Math.max(100, Math.floor((strategy.netPosition || 0) / 4 / 100) * 100)
   const currentPrice = strategy.currentPrice || 0
   const defaultAmount = 20000
 
