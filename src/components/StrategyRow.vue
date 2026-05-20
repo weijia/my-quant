@@ -189,6 +189,12 @@
             step="0.01"
           />
         </div>
+        <div class="setting-item total-display">
+          <span class="setting-label">总</span>
+          <span class="total-amount" :class="{ 'zero': !totalTradeAmount }">
+            {{ totalTradeAmount ? formatAmount(totalTradeAmount) : '-' }}
+          </span>
+        </div>
         <div class="quick-set-btns">
           <button @click="setDefaultVolumeQuarter" class="quick-set-btn" title="设置为1/4持仓">1/4</button>
           <button @click="setDefaultVolumeHalf" class="quick-set-btn" title="设置为1/2持仓">1/2</button>
@@ -361,6 +367,22 @@ const updateStrategySelection = () => {
 const effectivePrice = computed(() => {
   return props.strategy.currentPrice || manualPrice.value || null
 })
+
+// 交易总额 = 量 × 价
+const totalTradeAmount = computed(() => {
+  const vol = defaultTradeVolume.value ?? getQuarterPosition()
+  const price = effectivePrice.value
+  if (!vol || !price || price <= 0) return 0
+  return vol * price
+})
+
+// 格式化金额显示
+const formatAmount = (amount) => {
+  if (amount >= 10000) {
+    return (amount / 10000).toFixed(2) + '万'
+  }
+  return amount.toFixed(0)
+}
 
 const localTrend = ref(props.strategy.trendJudgment || 'unset')
 
@@ -1248,6 +1270,27 @@ const getTrendClass = (trend) => {
 
 .price-missing .setting-label {
   color: #ffc107;
+}
+
+.total-display {
+  min-width: 55px;
+}
+
+.total-amount {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 11px;
+  background-color: rgba(78, 205, 196, 0.1);
+  border: 1px solid rgba(78, 205, 196, 0.3);
+  border-radius: 3px;
+  color: #4ecdc4;
+  white-space: nowrap;
+}
+
+.total-amount.zero {
+  color: rgba(255, 255, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .quick-set-btns {
