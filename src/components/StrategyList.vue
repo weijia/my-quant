@@ -729,14 +729,14 @@ const resetColumns = () => {
   }
   
   .name-cell {
-    width: 32px;
-    max-width: 32px;
+    min-width: 80px;
+    max-width: 120px;
     font-size: 9px;
   }
-  
+
   .name-cell span {
     display: inline-block;
-    max-width: 28px;
+    max-width: 110px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

@@ -948,8 +948,8 @@ const getTrendClass = (trend) => {
 
 .name-cell {
   font-weight: bold;
-  width: 88px;
-  max-width: 88px;
+  min-width: 120px;
+  max-width: 200px;
 }
 
 .market-value-cell {
