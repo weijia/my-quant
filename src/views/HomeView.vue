@@ -20,6 +20,17 @@
             class="search-input"
             @input="handleSearch"
           />
+          <button
+            v-if="searchQuery"
+            @click="clearSearch"
+            class="clear-search-btn"
+            title="清空搜索"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 6 6 18"/>
+              <path d="m6 6 12 12"/>
+            </svg>
+          </button>
         </div>
 
         <div class="action-buttons">
@@ -728,6 +739,11 @@ const importFromWebDAV = async () => {
 };
 const handleSearch = () => {
 };
+
+const clearSearch = () => {
+  searchQuery.value = '';
+};
+
 const loadMockData = async () => {
   const mockStrategies = [
     {
@@ -1096,11 +1112,12 @@ onMounted(async () => {
   flex: 1;
   max-width: 400px;
   margin: 0 20px;
+  position: relative;
 }
 
 .search-input {
   width: 100%;
-  padding: 8px 12px;
+  padding: 8px 36px 8px 12px;
   border: 1px solid rgba(255,255,255,0.2);
   border-radius: 20px;
   background-color: rgba(255,255,255,0.1);
@@ -1110,6 +1127,29 @@ onMounted(async () => {
 
 .search-input::placeholder {
   color: rgba(255,255,255,0.5);
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.2);
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: rgba(255,255,255,0.7);
+  padding: 0;
+}
+
+.clear-search-btn:hover {
+  background: rgba(255,255,255,0.3);
+  color: white;
 }
 
 .action-buttons {
