@@ -736,16 +736,16 @@ const resetColumns = () => {
     font-size: 9px;
     padding: 3px 1px;
   }
-  
+
   .name-cell {
-    min-width: 80px;
-    max-width: 120px;
+    min-width: 80px !important;
+    max-width: 100px !important;
     font-size: 9px;
   }
 
   .name-cell span {
     display: inline-block;
-    max-width: 110px;
+    max-width: 90px !important;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
