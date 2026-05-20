@@ -151,6 +151,7 @@
         @execute-strategy-by-amount="handleExecuteStrategyByAmount"
         @update-strategy-selection="handleStrategySelection"
         @update-trade-settings="handleTradeSettings"
+        @update-condition-config="handleConditionConfig"
         @update-trend-filter="(trend) => { filter.trend = trend; loadStrategies() }"
         @update-sort="(sortInfo) => { filter.sortBy = sortInfo.sortBy; filter.sortOrder = sortInfo.sortOrder; loadStrategies() }"
       />
@@ -627,6 +628,16 @@ const handleTradeSettings = async (strategy, data) => {
     // 静默更新，不重新加载整个列表
   } catch (error) {
     console.error('更新交易设置失败:', error)
+  }
+}
+
+// 处理条件配置更新（保存到策略数据）
+const handleConditionConfig = async (strategy, data) => {
+  try {
+    await strategyService.updateStrategy(strategy.id, data)
+    // 静默更新，不重新加载整个列表
+  } catch (error) {
+    console.error('更新条件配置失败:', error)
   }
 }
 

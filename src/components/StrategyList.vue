@@ -111,6 +111,7 @@
                 </label>
               </div>
             </th>
+            <th v-if="visibleColumns.includes('conditionConfig')" style="width: 140px;">条件配置</th>
             <th v-if="visibleColumns.includes('actions')" style="width: 80px;">操作</th>
           </tr>
         </thead>
@@ -132,6 +133,7 @@
             @execute-strategy-by-amount="(s) => $emit('execute-strategy-by-amount', s)"
             @update-strategy-selection="(s, name) => $emit('update-strategy-selection', s, name)"
             @update-trade-settings="(s, data) => $emit('update-trade-settings', s, data)"
+            @update-condition-config="(s, data) => $emit('update-condition-config', s, data)"
           />
 
           <tr v-if="marginStrategies.length > 0" class="account-section-header margin-section">
@@ -151,8 +153,9 @@
             @execute-strategy-by-amount="(s) => $emit('execute-strategy-by-amount', s)"
             @update-strategy-selection="(s, name) => $emit('update-strategy-selection', s, name)"
             @update-trade-settings="(s, data) => $emit('update-trade-settings', s, data)"
+            @update-condition-config="(s, data) => $emit('update-condition-config', s, data)"
           />
-          
+
           <tr v-if="pinganStrategies.length > 0" class="account-section-header pingan-section">
             <td :colspan="visibleColumns.length">平安持仓 ({{ pinganStrategies.length }})</td>
           </tr>
@@ -169,6 +172,7 @@
             @execute-strategy="(s) => $emit('execute-strategy', s)"
             @execute-strategy-by-amount="(s) => $emit('execute-strategy-by-amount', s)"
             @update-trade-settings="(s, data) => $emit('update-trade-settings', s, data)"
+            @update-condition-config="(s, data) => $emit('update-condition-config', s, data)"
           />
           
           <tr v-if="strategies.length === 0">
@@ -265,6 +269,7 @@ const emit = defineEmits([
   'execute-strategy-by-amount',
   'update-strategy-selection',
   'update-trade-settings',
+  'update-condition-config',
   'update-trend-filter',
   'update-sort'
 ])
@@ -299,6 +304,7 @@ const allColumns = [
   { key: 'quickOrder', label: '快捷' },
   { key: 'advancedOrderSettings', label: '高级设置' },
   { key: 'advancedOrder', label: '高级快捷' },
+  { key: 'conditionConfig', label: '条件配置' },
   { key: 'actions', label: '操作' }
 ]
 

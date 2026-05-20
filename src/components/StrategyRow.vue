@@ -277,6 +277,53 @@
       </div>
     </td>
     
+    <td v-if="visibleColumns.includes('conditionConfig')" class="condition-config-cell">
+      <div class="config-rows">
+        <div class="config-row">
+          <span class="config-label up">↑</span>
+          <input 
+            v-model.number="upTrendBuyPct" 
+            type="number" 
+            class="config-input"
+            placeholder="买%"
+            min="0"
+            step="0.1"
+            @change="saveConditionConfig"
+          />
+          <input 
+            v-model.number="upTrendSellPct" 
+            type="number" 
+            class="config-input"
+            placeholder="卖%"
+            min="0"
+            step="0.1"
+            @change="saveConditionConfig"
+          />
+        </div>
+        <div class="config-row">
+          <span class="config-label down">↓</span>
+          <input 
+            v-model.number="downTrendSellPct" 
+            type="number" 
+            class="config-input"
+            placeholder="卖%"
+            min="0"
+            step="0.1"
+            @change="saveConditionConfig"
+          />
+          <input 
+            v-model.number="downTrendBuyPct" 
+            type="number" 
+            class="config-input"
+            placeholder="买%"
+            min="0"
+            step="0.1"
+            @change="saveConditionConfig"
+          />
+        </div>
+      </div>
+    </td>
+
     <td v-if="visibleColumns.includes('actions')" class="actions-cell">
       <button class="action-btn edit-btn" @click="$emit('edit', strategy)" title="编辑">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -320,13 +367,19 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['edit', 'delete', 'update-trend', 'batch-condition', 'execute-strategy', 'execute-strategy-by-amount', 'update-strategy-selection', 'update-trade-settings'])
+const emit = defineEmits(['edit', 'delete', 'update-trend', 'batch-condition', 'execute-strategy', 'execute-strategy-by-amount', 'update-strategy-selection', 'update-trade-settings', 'update-condition-config'])
 
 // 手动输入的价格（当 currentPrice 为空时使用）
 const manualPrice = ref(null)
 
 // 策略选择
 const localStrategyName = ref(props.strategy.selectedStrategyName || 'auto')
+
+// 条件配置（上涨趋势/下跌趋势的买卖百分比）
+const upTrendBuyPct = ref(props.strategy.upTrendBuyPct || '')
+const upTrendSellPct = ref(props.strategy.upTrendSellPct || '')
+const downTrendSellPct = ref(props.strategy.downTrendSellPct || '')
+const downTrendBuyPct = ref(props.strategy.downTrendBuyPct || '')
 
 // 可用的策略模板（从 localStorage 加载）
 const availableStrategyTemplates = ref([])
@@ -450,6 +503,16 @@ const saveTradeSettings = () => {
   emit('update-trade-settings', props.strategy, {
     increaseAmount: String(defaultTradeVolume.value ?? getQuarterPosition()),
     decreaseAmount: String(defaultTradeVolume.value ?? getQuarterPosition())
+  })
+}
+
+// 保存条件配置到策略数据
+const saveConditionConfig = () => {
+  emit('update-condition-config', props.strategy, {
+    upTrendBuyPct: upTrendBuyPct.value || null,
+    upTrendSellPct: upTrendSellPct.value || null,
+    downTrendSellPct: downTrendSellPct.value || null,
+    downTrendBuyPct: downTrendBuyPct.value || null
   })
 }
 
@@ -1291,6 +1354,53 @@ const getTrendClass = (trend) => {
   color: rgba(255, 255, 255, 0.3);
   background-color: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 条件配置 */
+.condition-config-cell {
+  padding: 4px;
+}
+
+.config-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.config-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.config-label {
+  font-size: 11px;
+  font-weight: bold;
+  min-width: 14px;
+  text-align: center;
+}
+
+.config-label.up {
+  color: #ff6b6b;
+}
+
+.config-label.down {
+  color: #4ecdc4;
+}
+
+.config-input {
+  width: 45px;
+  padding: 2px 4px;
+  font-size: 10px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  color: white;
+}
+
+.config-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 9px;
 }
 
 .quick-set-btns {
