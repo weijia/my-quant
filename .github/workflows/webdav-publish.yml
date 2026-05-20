@@ -51,7 +51,7 @@ jobs:
           VITE_APP_BUILD_TIME: ${{ steps.version.outputs.build_time }}
           VITE_APP_COMMIT_SHA: ${{ steps.version.outputs.sha }}
 
-      - name: Upload to WebDAV (online/my-quant)
+      - name: Upload to WebDAV
         uses: weijia/action-upload-webdav@master
         with:
           webdav-url: ${{ secrets.WEBDAV_URL }}
@@ -59,12 +59,4 @@ jobs:
           webdav-password: ${{ secrets.WEBDAV_PASSWORD }}
           webdav-root: online/my-quant
           source-directory: ./dist
-
-      - name: Upload to WebDAV (latest)
-        uses: weijia/action-upload-webdav@master
-        with:
-          webdav-url: ${{ secrets.WEBDAV_URL }}
-          webdav-username: ${{ secrets.WEBDAV_USERNAME }}
-          webdav-password: ${{ secrets.WEBDAV_PASSWORD }}
-          webdav-root: latest
-          source-directory: ./dist
+          copy-to-latest: true
