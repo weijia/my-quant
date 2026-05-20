@@ -97,7 +97,7 @@
                 </label>
               </div>
             </th>
-            <th v-if="visibleColumns.includes('advancedOrderSettings')" style="width: 140px;">高级设置</th>
+            <th v-if="visibleColumns.includes('advancedOrderSettings')" style="width: 160px;">高级设置</th>
             <th v-if="visibleColumns.includes('advancedOrder')" style="width: 120px;">
               <div class="filter-header">
                 <span>高级快捷</span>
