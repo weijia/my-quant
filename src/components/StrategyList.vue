@@ -567,7 +567,8 @@ const resetColumns = () => {
   background-color: rgba(0,0,0,0.8);
   color: white;
   cursor: pointer;
-  width: 80px;
+  width: auto;
+  min-width: 80px;
 }
 
 .toggle-filter {
