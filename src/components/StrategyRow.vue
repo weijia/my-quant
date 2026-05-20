@@ -376,10 +376,10 @@ const manualPrice = ref(null)
 const localStrategyName = ref(props.strategy.selectedStrategyName || 'auto')
 
 // 条件配置（上涨趋势/下跌趋势的买卖百分比）
-const upTrendBuyPct = ref(props.strategy.upTrendBuyPct || '')
-const upTrendSellPct = ref(props.strategy.upTrendSellPct || '')
-const downTrendSellPct = ref(props.strategy.downTrendSellPct || '')
-const downTrendBuyPct = ref(props.strategy.downTrendBuyPct || '')
+const upTrendBuyPct = ref(props.strategy.upTrendBuyPct ?? 0.1)
+const upTrendSellPct = ref(props.strategy.upTrendSellPct ?? 0.5)
+const downTrendSellPct = ref(props.strategy.downTrendSellPct ?? 0.1)
+const downTrendBuyPct = ref(props.strategy.downTrendBuyPct ?? 0.5)
 
 // 可用的策略模板（从 localStorage 加载）
 const availableStrategyTemplates = ref([])
@@ -509,10 +509,10 @@ const saveTradeSettings = () => {
 // 保存条件配置到策略数据
 const saveConditionConfig = () => {
   emit('update-condition-config', props.strategy, {
-    upTrendBuyPct: upTrendBuyPct.value || null,
-    upTrendSellPct: upTrendSellPct.value || null,
-    downTrendSellPct: downTrendSellPct.value || null,
-    downTrendBuyPct: downTrendBuyPct.value || null
+    upTrendBuyPct: upTrendBuyPct.value,
+    upTrendSellPct: upTrendSellPct.value,
+    downTrendSellPct: downTrendSellPct.value,
+    downTrendBuyPct: downTrendBuyPct.value
   })
 }
 
