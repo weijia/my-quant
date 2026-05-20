@@ -321,24 +321,27 @@
             @change="saveConditionConfig"
           />
         </div>
-        <div class="config-btns">
-          <button 
-            @click="handleUpTrendBuy" 
-            class="config-btn up-btn"
-            :disabled="sendingUpTrendBuy"
-            :title="`上涨${upTrendBuyPct}%买入 + 下跌${upTrendSellPct}%卖出`"
-          >
-            {{ sendingUpTrendBuy ? '...' : `↑买${upTrendBuyPct}%` }}
-          </button>
-          <button 
-            @click="handleDownTrendSell" 
-            class="config-btn down-btn"
-            :disabled="sendingDownTrendSell"
-            :title="`下跌${downTrendSellPct}%卖出 + 上涨${downTrendBuyPct}%买入`"
-          >
-            {{ sendingDownTrendSell ? '...' : `↓卖${downTrendSellPct}%` }}
-          </button>
-        </div>
+      </div>
+    </td>
+
+    <td v-if="visibleColumns.includes('conditionOrder')" class="condition-order-cell">
+      <div class="condition-order-btns">
+        <button 
+          @click="handleUpTrendBuy" 
+          class="condition-order-btn up-btn"
+          :disabled="sendingUpTrendBuy"
+          :title="`上涨${upTrendBuyPct}%买入 + 下跌${upTrendSellPct}%卖出`"
+        >
+          {{ sendingUpTrendBuy ? '...' : `↑买${upTrendBuyPct}%` }}
+        </button>
+        <button 
+          @click="handleDownTrendSell" 
+          class="condition-order-btn down-btn"
+          :disabled="sendingDownTrendSell"
+          :title="`下跌${downTrendSellPct}%卖出 + 上涨${downTrendBuyPct}%买入`"
+        >
+          {{ sendingDownTrendSell ? '...' : `↓卖${downTrendSellPct}%` }}
+        </button>
       </div>
     </td>
 
@@ -1507,16 +1510,20 @@ const getTrendClass = (trend) => {
   font-size: 9px;
 }
 
-.config-btns {
-  display: flex;
-  gap: 4px;
-  margin-top: 4px;
+/* 条件单列 */
+.condition-order-cell {
+  padding: 4px;
 }
 
-.config-btn {
-  flex: 1;
-  padding: 3px 4px;
-  font-size: 9px;
+.condition-order-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.condition-order-btn {
+  padding: 4px 6px;
+  font-size: 10px;
   background-color: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 3px;
@@ -1525,33 +1532,33 @@ const getTrendClass = (trend) => {
   white-space: nowrap;
 }
 
-.config-btn:hover {
+.condition-order-btn:hover {
   background-color: rgba(255, 255, 255, 0.2);
 }
 
-.config-btn:disabled {
+.condition-order-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.config-btn.up-btn {
+.condition-order-btn.up-btn {
   border-color: rgba(255, 107, 107, 0.4);
   background-color: rgba(255, 107, 107, 0.1);
   color: #ff6b6b;
 }
 
-.config-btn.up-btn:hover {
+.condition-order-btn.up-btn:hover {
   background-color: rgba(255, 107, 107, 0.2);
   border-color: #ff6b6b;
 }
 
-.config-btn.down-btn {
+.condition-order-btn.down-btn {
   border-color: rgba(78, 205, 196, 0.4);
   background-color: rgba(78, 205, 196, 0.1);
   color: #4ecdc4;
 }
 
-.config-btn.down-btn:hover {
+.condition-order-btn.down-btn:hover {
   background-color: rgba(78, 205, 196, 0.2);
   border-color: #4ecdc4;
 }

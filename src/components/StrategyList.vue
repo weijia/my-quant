@@ -85,6 +85,7 @@
             <th v-if="visibleColumns.includes('increaseStrategy')">上涨加仓</th>
             <th v-if="visibleColumns.includes('manualNotes')">手工备注</th>
             <th v-if="visibleColumns.includes('conditionConfig')" style="width: 140px;">条件配置</th>
+            <th v-if="visibleColumns.includes('conditionOrder')" style="width: 100px;">条件单</th>
             <th v-if="visibleColumns.includes('quickOrder')" style="width: 80px;">
               <div class="filter-header">
                 <span>快捷</span>
@@ -302,6 +303,7 @@ const allColumns = [
   { key: 'increaseStrategy', label: '上涨加仓' },
   { key: 'manualNotes', label: '手工备注' },
   { key: 'conditionConfig', label: '条件配置' },
+  { key: 'conditionOrder', label: '条件单' },
   { key: 'quickOrder', label: '快捷' },
   { key: 'advancedOrderSettings', label: '高级设置' },
   { key: 'advancedOrder', label: '高级快捷' },
