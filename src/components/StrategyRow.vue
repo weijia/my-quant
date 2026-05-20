@@ -321,6 +321,24 @@
             @change="saveConditionConfig"
           />
         </div>
+        <div class="config-btns">
+          <button 
+            @click="handleUpTrendBuy" 
+            class="config-btn up-btn"
+            :disabled="sendingUpTrendBuy"
+            :title="`上涨${upTrendBuyPct}%买入 + 下跌${upTrendSellPct}%卖出`"
+          >
+            {{ sendingUpTrendBuy ? '...' : `↑买${upTrendBuyPct}%` }}
+          </button>
+          <button 
+            @click="handleDownTrendSell" 
+            class="config-btn down-btn"
+            :disabled="sendingDownTrendSell"
+            :title="`下跌${downTrendSellPct}%卖出 + 上涨${downTrendBuyPct}%买入`"
+          >
+            {{ sendingDownTrendSell ? '...' : `↓卖${downTrendSellPct}%` }}
+          </button>
+        </div>
       </div>
     </td>
 
@@ -380,6 +398,10 @@ const upTrendBuyPct = ref(props.strategy.upTrendBuyPct ?? 0.1)
 const upTrendSellPct = ref(props.strategy.upTrendSellPct ?? 0.5)
 const downTrendSellPct = ref(props.strategy.downTrendSellPct ?? 0.1)
 const downTrendBuyPct = ref(props.strategy.downTrendBuyPct ?? 0.5)
+
+// 条件配置按钮发送状态
+const sendingUpTrendBuy = ref(false)
+const sendingDownTrendSell = ref(false)
 
 // 可用的策略模板（从 localStorage 加载）
 const availableStrategyTemplates = ref([])
@@ -514,6 +536,88 @@ const saveConditionConfig = () => {
     downTrendSellPct: downTrendSellPct.value,
     downTrendBuyPct: downTrendBuyPct.value
   })
+}
+
+// 条件配置：上涨买入（上涨X%买入 + 下跌Y%卖出）
+const handleUpTrendBuy = async () => {
+  if (!props.strategy.stockCode) {
+    alert('股票代码不存在')
+    return
+  }
+  sendingUpTrendBuy.value = true
+  const tradeVolume = getEffectiveTradeVolume()
+  const buyPct = upTrendBuyPct.value || 0.1
+  const sellPct = upTrendSellPct.value || 0.5
+
+  try {
+    // 发送上涨买入条件单
+    await mqttConditionService.sendBuyOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume,
+      percentage: buyPct,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getBuySide()
+    })
+    // 发送下跌卖出条件单
+    await mqttConditionService.sendSellOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume,
+      percentage: sellPct,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getSellSide()
+    })
+    console.log(`[条件配置] 上涨买入已发送: ${props.strategy.stockCode}, 上涨${buyPct}%买入 + 下跌${sellPct}%卖出, 数量: ${tradeVolume}`)
+  } catch (error) {
+    console.error('[条件配置] 上涨买入失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingUpTrendBuy.value = false
+  }
+}
+
+// 条件配置：下跌卖出（下跌X%卖出 + 上涨Y%买入）
+const handleDownTrendSell = async () => {
+  if (!props.strategy.stockCode) {
+    alert('股票代码不存在')
+    return
+  }
+  sendingDownTrendSell.value = true
+  const tradeVolume = getEffectiveTradeVolume()
+  const sellPct = downTrendSellPct.value || 0.1
+  const buyPct = downTrendBuyPct.value || 0.5
+
+  try {
+    // 发送下跌卖出条件单
+    await mqttConditionService.sendSellOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume,
+      percentage: sellPct,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getSellSide()
+    })
+    // 发送上涨买入条件单
+    await mqttConditionService.sendBuyOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume,
+      percentage: buyPct,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getBuySide()
+    })
+    console.log(`[条件配置] 下跌卖出已发送: ${props.strategy.stockCode}, 下跌${sellPct}%卖出 + 上涨${buyPct}%买入, 数量: ${tradeVolume}`)
+  } catch (error) {
+    console.error('[条件配置] 下跌卖出失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingDownTrendSell.value = false
+  }
 }
 
 // 获取趋势图标
@@ -1401,6 +1505,55 @@ const getTrendClass = (trend) => {
 .config-input::placeholder {
   color: rgba(255, 255, 255, 0.3);
   font-size: 9px;
+}
+
+.config-btns {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.config-btn {
+  flex: 1;
+  padding: 3px 4px;
+  font-size: 9px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  color: white;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.config-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.config-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.config-btn.up-btn {
+  border-color: rgba(255, 107, 107, 0.4);
+  background-color: rgba(255, 107, 107, 0.1);
+  color: #ff6b6b;
+}
+
+.config-btn.up-btn:hover {
+  background-color: rgba(255, 107, 107, 0.2);
+  border-color: #ff6b6b;
+}
+
+.config-btn.down-btn {
+  border-color: rgba(78, 205, 196, 0.4);
+  background-color: rgba(78, 205, 196, 0.1);
+  color: #4ecdc4;
+}
+
+.config-btn.down-btn:hover {
+  background-color: rgba(78, 205, 196, 0.2);
+  border-color: #4ecdc4;
 }
 
 .quick-set-btns {
