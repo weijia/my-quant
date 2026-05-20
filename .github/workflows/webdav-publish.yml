@@ -60,7 +60,7 @@ jobs:
           webdav-root: online/my-quant
           source-directory: ./dist
 
-      - name: Clear and Upload to WebDAV (latest)
+      - name: Upload to WebDAV (latest)
         uses: weijia/action-upload-webdav@master
         with:
           webdav-url: ${{ secrets.WEBDAV_URL }}
@@ -68,4 +68,4 @@ jobs:
           webdav-password: ${{ secrets.WEBDAV_PASSWORD }}
           webdav-root: latest
           source-directory: ./dist
-          clear-before-upload: true
+          upload-directory: latest
