@@ -123,88 +123,7 @@
       <span :title="strategy.manualNotes">{{ strategy.manualNotes || '-' }}</span>
     </td>
     
-    <td v-if="visibleColumns.includes('quickOrder')" class="quick-order-cell">
-      <button
-        class="quick-order-btn buy-btn"
-        @click="handleQuickBuy"
-        :disabled="!strategy.stockCode || sendingBuy"
-        :title="`上涨0.5%买入 数量:${getEffectiveTradeVolume()}`"
-      >
-        {{ sendingBuy ? '...' : `↑买${getEffectiveTradeVolume()}` }}
-      </button>
-      <button
-        class="quick-order-btn sell-btn"
-        @click="handleQuickSell"
-        :disabled="!strategy.stockCode || sendingSell"
-        :title="`下跌0.5%卖出 数量:${getEffectiveTradeVolume()}`"
-      >
-        {{ sendingSell ? '...' : `↓卖${getEffectiveTradeVolume()}` }}
-      </button>
-      <button
-        class="quick-order-btn both-btn"
-        @click="handleQuickBoth"
-        :disabled="!strategy.stockCode || sendingBoth"
-        :title="`上涨0.5%买入及下跌0.5%卖出 数量:${getEffectiveTradeVolume()}`"
-      >
-        {{ sendingBoth ? '...' : `双向${getEffectiveTradeVolume()}` }}
-      </button>
-    </td>
-    
-    <td v-if="visibleColumns.includes('advancedOrderSettings')" class="advanced-settings-cell">
-      <div class="settings-inputs">
-        <div class="setting-item">
-          <span class="setting-label">额</span>
-          <input 
-            v-model.number="defaultTradeAmount" 
-            type="number" 
-            class="setting-input"
-            placeholder="20000"
-            min="0"
-            step="1000"
-            @change="saveTradeSettings"
-          />
-        </div>
-        <div class="setting-item">
-          <span class="setting-label">量</span>
-          <input 
-            :value="defaultTradeVolume ?? getQuarterPosition()"
-            @input="defaultTradeVolume = Number($event.target.value) || null"
-            type="number" 
-            class="setting-input"
-            :placeholder="getQuarterPosition().toString()"
-            min="0"
-            step="100"
-            @change="saveTradeSettings"
-          />
-        </div>
-        <div class="quick-set-btns">
-          <button @click="setDefaultVolumeQuarter" class="quick-set-btn" title="设置为1/4持仓">1/4</button>
-          <button @click="setDefaultVolumeHalf" class="quick-set-btn" title="设置为1/2持仓">1/2</button>
-        </div>
-      </div>
-    </td>
-    
-    <td v-if="visibleColumns.includes('advancedOrder')" class="advanced-order-cell">
-      <div class="advanced-order-btns">
-        <button
-          class="advanced-order-btn amount-buy-btn"
-          @click="handleAdvancedUpTrendBuy"
-          :disabled="!strategy.stockCode || sendingAdvancedUpTrendBuy || !effectivePrice"
-          :title="effectivePrice ? `上涨买入 + 下跌止盈止损` : '请先输入价格'"
-        >
-          {{ sendingAdvancedUpTrendBuy ? '...' : `↑买${getAdvancedOrderVolume()}` }}
-        </button>
-        <button
-          class="advanced-order-btn amount-sell-btn"
-          @click="handleAdvancedDownTrendSell"
-          :disabled="!strategy.stockCode || sendingAdvancedDownTrendSell || !effectivePrice"
-          :title="effectivePrice ? `下跌卖出 + 上涨抄底` : '请先输入价格'"
-        >
-          {{ sendingAdvancedDownTrendSell ? '...' : `↓卖${getAdvancedOrderVolume()}` }}
-        </button>
-      </div>
-    </td>
-    
+    <!-- 条件配置：4个输入框（上涨/下跌趋势的买卖百分比） -->
     <td v-if="visibleColumns.includes('conditionConfig')" class="condition-config-cell">
       <div class="config-rows">
         <div class="config-row">
@@ -252,6 +171,7 @@
       </div>
     </td>
 
+    <!-- 条件单：2个按钮（使用条件配置的百分比，按数量下单） -->
     <td v-if="visibleColumns.includes('conditionOrder')" class="condition-order-cell">
       <div class="condition-order-btns">
         <button 
@@ -269,6 +189,91 @@
           :title="`下跌${downTrendSellPct}%卖出 + 上涨${downTrendBuyPct}%买入`"
         >
           {{ sendingDownTrendSell ? '...' : `↓卖${downTrendSellPct}%` }}
+        </button>
+      </div>
+    </td>
+    
+    <!-- 快捷：3个按钮（固定0.5%，按数量下单） -->
+    <td v-if="visibleColumns.includes('quickOrder')" class="quick-order-cell">
+      <button
+        class="quick-order-btn buy-btn"
+        @click="handleQuickBuy"
+        :disabled="!strategy.stockCode || sendingBuy"
+        :title="`上涨0.5%买入 数量:${getEffectiveTradeVolume()}`"
+      >
+        {{ sendingBuy ? '...' : `↑买${getEffectiveTradeVolume()}` }}
+      </button>
+      <button
+        class="quick-order-btn sell-btn"
+        @click="handleQuickSell"
+        :disabled="!strategy.stockCode || sendingSell"
+        :title="`下跌0.5%卖出 数量:${getEffectiveTradeVolume()}`"
+      >
+        {{ sendingSell ? '...' : `↓卖${getEffectiveTradeVolume()}` }}
+      </button>
+      <button
+        class="quick-order-btn both-btn"
+        @click="handleQuickBoth"
+        :disabled="!strategy.stockCode || sendingBoth"
+        :title="`上涨0.5%买入及下跌0.5%卖出 数量:${getEffectiveTradeVolume()}`"
+      >
+        {{ sendingBoth ? '...' : `双向${getEffectiveTradeVolume()}` }}
+      </button>
+    </td>
+    
+    <!-- 高级设置：交易金额和数量 -->
+    <td v-if="visibleColumns.includes('advancedOrderSettings')" class="advanced-settings-cell">
+      <div class="settings-inputs">
+        <div class="setting-item">
+          <span class="setting-label">额</span>
+          <input 
+            v-model.number="defaultTradeAmount" 
+            type="number" 
+            class="setting-input"
+            placeholder="20000"
+            min="0"
+            step="1000"
+            @change="saveTradeSettings"
+          />
+        </div>
+        <div class="setting-item">
+          <span class="setting-label">量</span>
+          <input 
+            :value="defaultTradeVolume ?? getQuarterPosition()"
+            @input="defaultTradeVolume = Number($event.target.value) || null"
+            type="number" 
+            class="setting-input"
+            :placeholder="getQuarterPosition().toString()"
+            min="0"
+            step="100"
+            @change="saveTradeSettings"
+          />
+        </div>
+        <div class="quick-set-btns">
+          <button @click="setDefaultVolumeQuarter" class="quick-set-btn" title="设置为1/4持仓">1/4</button>
+          <button @click="setDefaultVolumeHalf" class="quick-set-btn" title="设置为1/2持仓">1/2</button>
+        </div>
+      </div>
+    </td>
+    
+    <!-- 高级快捷：2个按钮（使用条件配置的百分比，按金额计算数量） -->
+    <td v-if="visibleColumns.includes('advancedOrder')" class="advanced-order-cell">
+      <div class="advanced-order-btns">
+        <button
+          class="advanced-order-btn amount-buy-btn"
+          @click="handleAdvancedUpTrendBuy"
+          :disabled="!strategy.stockCode || sendingAdvancedUpTrendBuy || !effectivePrice"
+          :title="effectivePrice ? `上涨买入 + 下跌止盈止损` : '请先输入价格'"
+        >
+          {{ sendingAdvancedUpTrendBuy ? '...' : `↑买${getAdvancedOrderVolume()}` }}
+        </button>
+        <button
+          class="advanced-order-btn amount-sell-btn"
+          @click="handleAdvancedDownTrendSell"
+          :disabled="!strategy.stockCode || sendingAdvancedDownTrendSell || !effectivePrice"
+          :title="effectivePrice ? `下跌卖出 + 上涨抄底` : '请先输入价格'"
+        >
+          {{ sendingAdvancedDownTrendSell ? '...' : `↓卖${getAdvancedOrderVolume()}` }}
         </button>
       </div>
     </td>
