@@ -328,7 +328,7 @@
           class="advanced-order-btn amount-buy-btn"
           @click="handleAdvancedUpTrendBuy"
           :disabled="!strategy.stockCode || sendingAdvancedUpTrendBuy || !effectivePrice"
-          :title="effectivePrice ? `上涨买入 + 下跌止盈止损` : '请先输入价格'"
+          :title="effectivePrice ? `上涨${upTrendBuyPct || 0.1}%买入 + 下跌${upTrendSellPct || 0.5}%卖出\n数量: ${getAdvancedOrderVolume()}股\n金额: ${defaultTradeAmount || 20000}元` : '请先输入价格'"
         >
           {{ sendingAdvancedUpTrendBuy ? '...' : `↑买${getAdvancedOrderVolume()}` }}
         </button>
@@ -336,7 +336,7 @@
           class="advanced-order-btn amount-sell-btn"
           @click="handleAdvancedDownTrendSell"
           :disabled="!strategy.stockCode || sendingAdvancedDownTrendSell || !effectivePrice"
-          :title="effectivePrice ? `下跌卖出 + 上涨抄底` : '请先输入价格'"
+          :title="effectivePrice ? `下跌${downTrendSellPct || 0.1}%卖出 + 上涨${downTrendBuyPct || 0.5}%买入\n数量: ${getAdvancedOrderVolume()}股\n金额: ${defaultTradeAmount || 20000}元` : '请先输入价格'"
         >
           {{ sendingAdvancedDownTrendSell ? '...' : `↓卖${getAdvancedOrderVolume()}` }}
         </button>
