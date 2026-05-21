@@ -1047,7 +1047,25 @@ onMounted(async () => {
   console.log('HomeView: 开始预加载趋势数据...');
   getTrendData();
 
-  // 同时加载策略
+  // 页面加载时自动从 WebDAV 同步策略数据
+  console.log('HomeView: 开始从 WebDAV 同步策略...');
+  try {
+    const result = await webdavImportService.importFromWebDAV(true);
+    if (result.success) {
+      console.log('HomeView: WebDAV 同步成功:', result.message);
+      // 如果 WebDAV 上有 MQTT 配置，加载并应用
+      if (result.mqttConfig) {
+        mqttConditionService.updateConfig(result.mqttConfig);
+        console.log('已从 WebDAV 加载 MQTT 配置');
+      }
+    } else {
+      console.warn('HomeView: WebDAV 同步失败:', result.message);
+    }
+  } catch (error) {
+    console.error('HomeView: WebDAV 同步出错:', error);
+  }
+
+  // 加载策略（从本地数据库）
   console.log('HomeView: 开始加载策略...');
   await loadStrategies();
 
