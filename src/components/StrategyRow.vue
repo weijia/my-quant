@@ -124,29 +124,29 @@
     </td>
     
     <td v-if="visibleColumns.includes('quickOrder')" class="quick-order-cell">
-      <button 
-        class="quick-order-btn buy-btn" 
-        @click="handleQuickBuy" 
+      <button
+        class="quick-order-btn buy-btn"
+        @click="handleQuickBuy"
         :disabled="!strategy.stockCode || sendingBuy"
-        title="上涨0.5%买入"
+        :title="`上涨0.5%买入 数量:${getEffectiveTradeVolume()}`"
       >
-        {{ sendingBuy ? '...' : '买' }}
+        {{ sendingBuy ? '...' : `买${getEffectiveTradeVolume()}` }}
       </button>
-      <button 
-        class="quick-order-btn sell-btn" 
-        @click="handleQuickSell" 
+      <button
+        class="quick-order-btn sell-btn"
+        @click="handleQuickSell"
         :disabled="!strategy.stockCode || sendingSell"
-        title="下跌0.5%卖出"
+        :title="`下跌0.5%卖出 数量:${getEffectiveTradeVolume()}`"
       >
-        {{ sendingSell ? '...' : '卖' }}
+        {{ sendingSell ? '...' : `卖${getEffectiveTradeVolume()}` }}
       </button>
-      <button 
-        class="quick-order-btn both-btn" 
-        @click="handleQuickBoth" 
+      <button
+        class="quick-order-btn both-btn"
+        @click="handleQuickBoth"
         :disabled="!strategy.stockCode || sendingBoth"
-        title="上涨0.5%买入及下跌0.5%卖出"
+        :title="`上涨0.5%买入及下跌0.5%卖出 数量:${getEffectiveTradeVolume()}`"
       >
-        {{ sendingBoth ? '...' : '双向' }}
+        {{ sendingBoth ? '...' : `双向${getEffectiveTradeVolume()}` }}
       </button>
     </td>
     
