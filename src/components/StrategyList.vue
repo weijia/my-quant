@@ -467,6 +467,8 @@ const resetColumns = () => {
   font-size: 12px;
   color: white;
   position: relative;
+  table-layout: fixed;
+  width: 100%;
 }
 
 .strategy-table th,
@@ -738,6 +740,7 @@ const resetColumns = () => {
   }
 
   .name-cell {
+    width: 80px !important;
     min-width: 60px !important;
     max-width: 80px !important;
     font-size: 9px;
