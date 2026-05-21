@@ -28,15 +28,15 @@
         <div class="config-paths">
           <div class="path-item">
             <span class="path-label">策略数据</span>
-            <code class="path-value">{{ webdavConfigForm.url || '...' }}/app_data/stocks/</code>
+            <code class="path-value">{{ webdavConfigForm.url || '...' }}{{ WEBDAV_PATHS.STOCKS }}</code>
           </div>
           <div class="path-item">
             <span class="path-label">持仓数据</span>
-            <code class="path-value">{{ webdavConfigForm.url || '...' }}/app_data/holdings/pingan/</code>
+            <code class="path-value">{{ webdavConfigForm.url || '...' }}{{ WEBDAV_PATHS.HOLDINGS }}</code>
           </div>
           <div class="path-item">
             <span class="path-label">趋势判断</span>
-            <code class="path-value">{{ webdavConfigForm.url || '...' }}/app_data/stocks/trend_judgments/</code>
+            <code class="path-value">{{ webdavConfigForm.url || '...' }}{{ WEBDAV_PATHS.TREND_JUDGMENTS }}</code>
           </div>
         </div>
         <div class="form-group">
@@ -361,6 +361,7 @@ if (ctx.trendJudgment === 'trend_up') {
 import { ref, reactive, onMounted } from 'vue'
 import mqttConditionService, { PRESET_SERVERS } from '../services/MQTTConditionService'
 import { webdavImportService } from '../services/WebDAVImportService'
+import WEBDAV_PATHS from '../config/WebDAVPaths'
 
 // WebDAV 配置
 const webdavConfigForm = reactive({

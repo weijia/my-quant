@@ -1,4 +1,5 @@
 import { database } from '../utils/Database'
+import WEBDAV_PATHS from '../config/WebDAVPaths'
 
 class DataConverter {
   static convertStockData(webdavData) {
@@ -335,9 +336,9 @@ class WebDAVImportService {
       try {
         const config = JSON.parse(configStr);
         const baseUrl = (config.url || '').replace(/\/+$/, '');
-        this.webdavBaseUrl = baseUrl + '/app_data/stocks/';
-        this.holdingsBaseUrl = baseUrl + '/app_data/holdings/pingan/';
-        this.trendBaseUrl = baseUrl + '/app_data/stocks/trend_judgments/';
+        this.webdavBaseUrl = baseUrl + WEBDAV_PATHS.STOCKS;
+        this.holdingsBaseUrl = baseUrl + WEBDAV_PATHS.HOLDINGS;
+        this.trendBaseUrl = baseUrl + WEBDAV_PATHS.TREND_JUDGMENTS;
         this.authHeader = 'Basic ' + btoa((config.username || '') + ':' + (config.password || ''));
       } catch (e) {
         console.error('解析 WebDAV 配置失败:', e);
@@ -639,7 +640,7 @@ class WebDAVImportService {
       const configStr = localStorage.getItem('webDavConfig');
       const webdavConfig = JSON.parse(configStr);
       const baseUrl = (webdavConfig.url || '').replace(/\/+$/, '');
-      const url = baseUrl + '/app_data/my-quant/mqtt-config.json'
+      const url = baseUrl + WEBDAV_PATHS.MQTT_CONFIG
 
       const response = await fetch(url, {
         method: 'PUT',
@@ -673,7 +674,7 @@ class WebDAVImportService {
       const configStr = localStorage.getItem('webDavConfig');
       const webdavConfig = JSON.parse(configStr);
       const baseUrl = (webdavConfig.url || '').replace(/\/+$/, '');
-      const url = baseUrl + '/app_data/my-quant/mqtt-config.json'
+      const url = baseUrl + WEBDAV_PATHS.MQTT_CONFIG
 
       const response = await fetch(url, {
         method: 'GET',
