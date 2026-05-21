@@ -123,7 +123,7 @@
       <span :title="strategy.manualNotes">{{ strategy.manualNotes || '-' }}</span>
     </td>
     
-    <!-- 条件配置：交易金额和数量 -->
+    <!-- 条件配置：交易金额、数量、价格和涨跌幅 -->
     <td v-if="visibleColumns.includes('conditionConfig')" class="condition-config-cell">
       <div class="settings-inputs">
         <div class="setting-item">
@@ -169,6 +169,18 @@
             {{ totalTradeAmount ? formatAmount(totalTradeAmount) : '-' }}
           </span>
         </div>
+        <div class="setting-item">
+          <span class="setting-label">涨%</span>
+          <input 
+            v-model.number="conditionPct" 
+            type="number" 
+            class="setting-input"
+            placeholder="0.1"
+            min="0.01"
+            step="0.1"
+            @change="saveConditionPct"
+          />
+        </div>
         <div class="quick-set-btns">
           <button @click="setDefaultVolumeQuarter" class="quick-set-btn" title="设置为1/4持仓">1/4</button>
           <button @click="setDefaultVolumeHalf" class="quick-set-btn" title="设置为1/2持仓">1/2</button>
@@ -176,21 +188,8 @@
       </div>
     </td>
 
-    <!-- 条件单：6个按钮（基于额和量，可配置涨跌幅度） -->
+    <!-- 条件单：6个按钮（基于额和量，使用条件配置中的涨跌幅） -->
     <td v-if="visibleColumns.includes('conditionOrder')" class="condition-order-cell">
-      <!-- 涨跌幅输入 -->
-      <div class="condition-pct-input">
-        <span>涨%</span>
-        <input 
-          v-model.number="conditionPct" 
-          type="number" 
-          class="condition-pct-field"
-          placeholder="0.1"
-          min="0.01"
-          step="0.1"
-          @change="saveConditionPct"
-        />
-      </div>
       <div class="condition-order-btns">
         <!-- 基于金额（额）的按钮 -->
         <button 
@@ -222,7 +221,7 @@
           @click="handleConditionVolumeBuy" 
           class="condition-order-btn volume-buy-btn"
           :disabled="sendingConditionVolumeBuy"
-          :title="`上涨1%买入 数量:${getEffectiveTradeVolume()}`"
+          :title="`上涨${conditionPct}%买入 数量:${getEffectiveTradeVolume()}`"
         >
           {{ sendingConditionVolumeBuy ? '...' : `量↑买${getEffectiveTradeVolume()}` }}
         </button>
@@ -230,7 +229,7 @@
           @click="handleConditionVolumeSell" 
           class="condition-order-btn volume-sell-btn"
           :disabled="sendingConditionVolumeSell"
-          :title="`下跌1%卖出 数量:${getEffectiveTradeVolume()}`"
+          :title="`下跌${conditionPct}%卖出 数量:${getEffectiveTradeVolume()}`"
         >
           {{ sendingConditionVolumeSell ? '...' : `量↓卖${getEffectiveTradeVolume()}` }}
         </button>
@@ -238,7 +237,7 @@
           @click="handleConditionVolumeBoth" 
           class="condition-order-btn volume-both-btn"
           :disabled="sendingConditionVolumeBoth"
-          :title="`上涨1%买入+下跌1%卖出 数量:${getEffectiveTradeVolume()}`"
+          :title="`上涨${conditionPct}%买入+下跌${conditionPct}%卖出 数量:${getEffectiveTradeVolume()}`"
         >
           {{ sendingConditionVolumeBoth ? '...' : `量双向${getEffectiveTradeVolume()}` }}
         </button>
