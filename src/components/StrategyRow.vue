@@ -1243,9 +1243,9 @@ const getTrendClass = (trend) => {
 
 .name-cell {
   font-weight: bold;
-  width: 120px;
-  min-width: 120px;
-  max-width: 120px;
+  width: 100px;
+  min-width: 100px;
+  max-width: 100px;
   padding: 8px 4px !important;
 }
 
@@ -1253,7 +1253,7 @@ const getTrendClass = (trend) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 112px;
+  max-width: 92px;
 }
 
 .market-value-cell {

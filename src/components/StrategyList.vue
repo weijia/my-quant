@@ -738,9 +738,9 @@ const resetColumns = () => {
   }
 
   .name-cell {
-    width: 90px !important;
-    min-width: 90px !important;
-    max-width: 90px !important;
+    width: 75px !important;
+    min-width: 75px !important;
+    max-width: 75px !important;
     font-size: 9px;
     padding: 3px 2px !important;
   }
@@ -749,7 +749,7 @@ const resetColumns = () => {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 86px !important;
+    max-width: 71px !important;
   }
 
   .name-cell span {
