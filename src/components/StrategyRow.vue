@@ -1,8 +1,10 @@
 <template>
   <tr class="strategy-row">
     <td v-if="visibleColumns.includes('name')" class="name-cell">
-      <span>{{ strategy.name }}</span>
-      <span v-if="strategy.stockCode" class="stock-code">[{{ strategy.stockCode }}]</span>
+      <div class="name-cell-inner">
+        <span>{{ strategy.name }}</span>
+        <span v-if="strategy.stockCode" class="stock-code">[{{ strategy.stockCode }}]</span>
+      </div>
     </td>
     
     <td v-if="visibleColumns.includes('quantity')" class="quantity-cell">
@@ -1244,9 +1246,14 @@ const getTrendClass = (trend) => {
   width: 120px;
   min-width: 120px;
   max-width: 120px;
+  padding: 8px 4px !important;
+}
+
+.name-cell-inner {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 112px;
 }
 
 .market-value-cell {

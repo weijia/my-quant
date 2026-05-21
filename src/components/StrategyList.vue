@@ -742,17 +742,18 @@ const resetColumns = () => {
     min-width: 90px !important;
     max-width: 90px !important;
     font-size: 9px;
+    padding: 3px 2px !important;
+  }
+
+  .name-cell-inner {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    max-width: 86px !important;
   }
 
   .name-cell span {
-    display: inline-block;
-    max-width: 80px !important;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    display: inline;
   }
   
   .quantity-header,
