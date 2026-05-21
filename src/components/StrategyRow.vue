@@ -247,9 +247,12 @@
       </div>
     </td>
     
-    <!-- 快捷：金额显示 + 3个按钮（固定0.5%，按数量下单） -->
+    <!-- 快捷：金额显示 + 百分比 + 3个按钮（固定0.5%，按数量下单） -->
     <td v-if="visibleColumns.includes('quickOrder')" class="quick-order-cell">
-      <div class="quick-amount">{{ formatAmount(totalTradeAmount) || '-' }}</div>
+      <div class="quick-info">
+        <span class="quick-amount">{{ formatAmount(totalTradeAmount) || '-' }}</span>
+        <span class="quick-pct">±0.5%</span>
+      </div>
       <button
         class="quick-order-btn buy-btn"
         @click="handleQuickBuy"
@@ -1479,11 +1482,22 @@ const getTrendClass = (trend) => {
   min-width: 160px;
 }
 
+.quick-info {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
 .quick-amount {
   font-size: 11px;
   color: #888;
-  text-align: center;
-  margin-bottom: 2px;
+}
+
+.quick-pct {
+  font-size: 10px;
+  color: #6a6;
 }
 
 .quick-order-cell .quick-order-btn {
