@@ -193,6 +193,10 @@
 
     <!-- 条件单：6个按钮（基于额和量，使用条件配置中的涨跌幅） -->
     <td v-if="visibleColumns.includes('conditionOrder')" class="condition-order-cell">
+      <div class="condition-info">
+        <span class="condition-amount">{{ formatAmount(totalTradeAmount) || '-' }}</span>
+        <span class="condition-pct">±{{ conditionPct }}%</span>
+      </div>
       <div class="condition-order-btns">
         <!-- 基于金额（额）的按钮 -->
         <button 
@@ -201,7 +205,7 @@
           :disabled="sendingConditionAmountBuy || !effectivePrice"
           :title="`上涨${conditionPct}%买入 金额:${defaultTradeAmount || 26000}`"
         >
-          {{ sendingConditionAmountBuy ? '...' : `额↑买${calculateVolumeFromAmount(defaultTradeAmount || 26000, effectivePrice || 10)}` }}
+          {{ sendingConditionAmountBuy ? '...' : '额↑买' }}
         </button>
         <button 
           @click="handleConditionAmountSell" 
@@ -209,7 +213,7 @@
           :disabled="sendingConditionAmountSell || !effectivePrice"
           :title="`下跌${conditionPct}%卖出 金额:${defaultTradeAmount || 26000}`"
         >
-          {{ sendingConditionAmountSell ? '...' : `额↓卖${calculateVolumeFromAmount(defaultTradeAmount || 26000, effectivePrice || 10)}` }}
+          {{ sendingConditionAmountSell ? '...' : '额↓卖' }}
         </button>
         <button 
           @click="handleConditionAmountBoth" 
@@ -217,7 +221,7 @@
           :disabled="sendingConditionAmountBoth || !effectivePrice"
           :title="`上涨${conditionPct}%买入+下跌${conditionPct}%卖出 金额:${defaultTradeAmount || 26000}`"
         >
-          {{ sendingConditionAmountBoth ? '...' : `额双向${calculateVolumeFromAmount(defaultTradeAmount || 26000, effectivePrice || 10)}` }}
+          {{ sendingConditionAmountBoth ? '...' : '额双向' }}
         </button>
         <!-- 基于数量（量）的按钮 -->
         <button 
@@ -226,7 +230,7 @@
           :disabled="sendingConditionVolumeBuy"
           :title="`上涨${conditionPct}%买入 数量:${getEffectiveTradeVolume()}`"
         >
-          {{ sendingConditionVolumeBuy ? '...' : `量↑买${getEffectiveTradeVolume()}` }}
+          {{ sendingConditionVolumeBuy ? '...' : '量↑买' }}
         </button>
         <button 
           @click="handleConditionVolumeSell" 
@@ -234,7 +238,7 @@
           :disabled="sendingConditionVolumeSell"
           :title="`下跌${conditionPct}%卖出 数量:${getEffectiveTradeVolume()}`"
         >
-          {{ sendingConditionVolumeSell ? '...' : `量↓卖${getEffectiveTradeVolume()}` }}
+          {{ sendingConditionVolumeSell ? '...' : '量↓卖' }}
         </button>
         <button 
           @click="handleConditionVolumeBoth" 
@@ -242,7 +246,17 @@
           :disabled="sendingConditionVolumeBoth"
           :title="`上涨${conditionPct}%买入+下跌${conditionPct}%卖出 数量:${getEffectiveTradeVolume()}`"
         >
-          {{ sendingConditionVolumeBoth ? '...' : `量双向${getEffectiveTradeVolume()}` }}
+          {{ sendingConditionVolumeBoth ? '...' : '量双向' }}
+        </button>
+        <!-- 收市买入按钮 -->
+        <button 
+          @click="handleMarketCloseBuy" 
+          class="condition-order-btn market-close-btn"
+          :class="{ 'active': hasMarketCloseBuyFlag }"
+          :disabled="sendingMarketCloseBuy || !strategy.stockCode"
+          :title="hasMarketCloseBuyFlag ? '已设置收市买入（2:45左右上涨0.1%买入）' : '点击设置收市买入（2:45左右上涨0.1%买入）'"
+        >
+          {{ sendingMarketCloseBuy ? '...' : (hasMarketCloseBuyFlag ? '收市✓' : '收市买') }}
         </button>
       </div>
     </td>
@@ -374,7 +388,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import mqttConditionService from '../services/MQTTConditionService.js'
 
 // 移动端检测
@@ -419,6 +433,31 @@ const sendingConditionAmountBoth = ref(false)
 const sendingConditionVolumeBuy = ref(false)
 const sendingConditionVolumeSell = ref(false)
 const sendingConditionVolumeBoth = ref(false)
+
+// 收市买入按钮状态
+const sendingMarketCloseBuy = ref(false)
+const hasMarketCloseBuyFlag = ref(false)
+
+// 加载收市买入标记
+const loadMarketCloseBuyFlag = () => {
+  if (props.strategy.id) {
+    const key = `marketCloseBuy_${props.strategy.id}`
+    const saved = localStorage.getItem(key)
+    hasMarketCloseBuyFlag.value = saved === 'true'
+  }
+}
+
+// 保存收市买入标记
+const saveMarketCloseBuyFlag = (value) => {
+  if (props.strategy.id) {
+    const key = `marketCloseBuy_${props.strategy.id}`
+    localStorage.setItem(key, value ? 'true' : 'false')
+    hasMarketCloseBuyFlag.value = value
+  }
+}
+
+// 初始化加载收市买入标记
+loadMarketCloseBuyFlag()
 
 // 条件单涨跌幅（缺省0.1%）
 const conditionPct = ref(0.1)
@@ -874,6 +913,84 @@ const handleConditionVolumeBoth = async () => {
   }
 }
 
+// 收市买入：切换标记状态，并设置定时任务
+const handleMarketCloseBuy = async () => {
+  if (!props.strategy.stockCode) {
+    alert('股票代码不存在')
+    return
+  }
+  
+  // 如果已经有标记，则取消
+  if (hasMarketCloseBuyFlag.value) {
+    saveMarketCloseBuyFlag(false)
+    console.log(`[收市买入] 已取消: ${props.strategy.stockCode}`)
+    return
+  }
+  
+  sendingMarketCloseBuy.value = true
+  
+  try {
+    // 保存标记
+    saveMarketCloseBuyFlag(true)
+    
+    // 计算交易数量（使用默认数量或1/4持仓）
+    const tradeVolume = getEffectiveTradeVolume()
+    
+    // 保存收市买入配置到 localStorage
+    const configKey = `marketCloseBuyConfig_${props.strategy.id}`
+    const config = {
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume: tradeVolume,
+      percentage: 0.1,  // 上涨0.1%
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getBuySide(),
+      createdAt: new Date().toISOString()
+    }
+    localStorage.setItem(configKey, JSON.stringify(config))
+    
+    console.log(`[收市买入] 已设置: ${props.strategy.stockCode}, 数量:${tradeVolume}, 上涨0.1%买入`)
+    
+    // 检查当前时间是否接近2:45，如果是则立即执行
+    const now = new Date()
+    const hours = now.getHours()
+    const minutes = now.getMinutes()
+    
+    // 如果在2:45-2:50之间，立即执行
+    if (hours === 14 && minutes >= 45 && minutes <= 50) {
+      await executeMarketCloseBuy(config)
+    }
+  } catch (error) {
+    console.error('[收市买入] 设置失败:', error)
+    alert('设置失败')
+  } finally {
+    sendingMarketCloseBuy.value = false
+  }
+}
+
+// 执行收市买入条件单
+const executeMarketCloseBuy = async (config) => {
+  try {
+    await mqttConditionService.sendBuyOrder({
+      stockCode: config.stockCode,
+      stockName: config.stockName,
+      tradeVolume: config.tradeVolume,
+      percentage: config.percentage,
+      provider: config.provider,
+      accountType: config.accountType,
+      side: config.side
+    })
+    console.log(`[收市买入] 条件单已发送: ${config.stockCode}, 上涨0.1%买入, 数量:${config.tradeVolume}`)
+    
+    // 执行后清除标记
+    saveMarketCloseBuyFlag(false)
+    localStorage.removeItem(`marketCloseBuyConfig_${props.strategy.id}`)
+  } catch (error) {
+    console.error('[收市买入] 发送失败:', error)
+  }
+}
+
 // 获取趋势图标
 const getTrendIcon = (trend) => {
   const icons = {
@@ -1197,6 +1314,22 @@ watch(() => props.strategy.trendJudgment, (newVal) => {
 const updateTrend = () => {
   emit('update-trend', localTrend.value)
 }
+
+// 监听收市买入执行事件
+const handleMarketCloseBuyExecuted = (event) => {
+  if (event.detail && event.detail.strategyId === props.strategy.id) {
+    // 重新加载标记状态
+    loadMarketCloseBuyFlag()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('marketCloseBuyExecuted', handleMarketCloseBuyExecuted)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('marketCloseBuyExecuted', handleMarketCloseBuyExecuted)
+})
 
 const getProfitLossClass = (value) => {
   if (!value) return ''
@@ -1671,6 +1804,24 @@ const getTrendClass = (trend) => {
   padding: 4px;
 }
 
+.condition-info {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.condition-amount {
+  font-size: 11px;
+  color: #888;
+}
+
+.condition-pct {
+  font-size: 10px;
+  color: #6a6;
+}
+
 .condition-order-btns {
   display: flex;
   flex-direction: column;
@@ -1717,6 +1868,25 @@ const getTrendClass = (trend) => {
 .condition-order-btn.down-btn:hover {
   background-color: rgba(78, 205, 196, 0.2);
   border-color: #4ecdc4;
+}
+
+/* 收市买入按钮 */
+.condition-order-btn.market-close-btn {
+  border-color: rgba(255, 165, 0, 0.4);
+  background-color: rgba(255, 165, 0, 0.1);
+  color: #ffa500;
+}
+
+.condition-order-btn.market-close-btn:hover:not(:disabled) {
+  background-color: rgba(255, 165, 0, 0.3);
+  border-color: #ffa500;
+}
+
+.condition-order-btn.market-close-btn.active {
+  background-color: rgba(255, 165, 0, 0.5);
+  border-color: #ffa500;
+  color: white;
+  font-weight: bold;
 }
 
 .quick-set-btns {
