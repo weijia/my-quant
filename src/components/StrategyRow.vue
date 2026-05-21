@@ -182,6 +182,7 @@
           />
         </div>
         <div class="quick-set-btns">
+          <button @click="setDefaultVolumeEighth" class="quick-set-btn" title="设置为1/8持仓">1/8</button>
           <button @click="setDefaultVolumeQuarter" class="quick-set-btn" title="设置为1/4持仓">1/4</button>
           <button @click="setDefaultVolumeHalf" class="quick-set-btn" title="设置为1/2持仓">1/2</button>
         </div>
@@ -532,6 +533,18 @@ const getHalfPosition = () => {
   const netPosition = props.strategy.netPosition || 0
   const half = Math.floor(netPosition / 2)
   return Math.max(100, Math.floor(half / 100) * 100)
+}
+
+// 计算持仓的1/8，向下取整到100的倍数，最低100股
+const getEighthPosition = () => {
+  const netPosition = props.strategy.netPosition || 0
+  const eighth = Math.floor(netPosition / 8)
+  return Math.max(100, Math.floor(eighth / 100) * 100)
+}
+
+// 快速设置缺省数量为1/8持仓
+const setDefaultVolumeEighth = () => {
+  defaultTradeVolume.value = getEighthPosition()
 }
 
 // 快速设置缺省数量为1/4持仓
