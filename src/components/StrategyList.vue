@@ -310,34 +310,42 @@ const allColumns = [
   { key: 'actions', label: '操作' }
 ]
 
-const defaultVisibleColumns = [
+// 手机端默认可见列
+const mobileDefaultVisibleColumns = [
   'name',
   'quantity',
-  'marketValue',
-  'profitLoss',
-  'dividendYield',
-  'changePercent',
-  'decreasePercentage',
   'trendIcon',
-  'autoTrend',
-  'strategyType',
-  'oscillationGrid',
-  'decreaseStrategy',
-  'increaseStrategy',
-  'manualNotes',
+  'advancedOrder'
+]
+
+// 电脑端默认可见列
+const desktopDefaultVisibleColumns = [
+  'name',
+  'quantity',
+  'trendIcon',
+  'conditionConfig',
+  'conditionOrder',
   'quickOrder',
   'advancedOrderSettings',
-  'advancedOrder',
-  'actions'
+  'advancedOrder'
 ]
+
+// 判断是否为移动端
+const isMobileDevice = () => window.innerWidth <= 768
+
+// 根据设备类型获取默认列
+const getDefaultVisibleColumns = () => {
+  return isMobileDevice() ? mobileDefaultVisibleColumns : desktopDefaultVisibleColumns
+}
 
 const getInitialVisibleColumns = () => {
   try {
-    const saved = localStorage.getItem('advancedStrategyVisibleColumns')
+    const storageKey = isMobileDevice() ? 'mobileVisibleColumns' : 'desktopVisibleColumns'
+    const saved = localStorage.getItem(storageKey)
     const parsed = saved ? JSON.parse(saved) : null
-    return Array.isArray(parsed) ? parsed : defaultVisibleColumns
+    return Array.isArray(parsed) ? parsed : getDefaultVisibleColumns()
   } catch (error) {
-    return defaultVisibleColumns
+    return getDefaultVisibleColumns()
   }
 }
 
@@ -384,12 +392,14 @@ const toggleColumn = (columnKey) => {
   } else {
     visibleColumns.value.push(columnKey)
   }
-  localStorage.setItem('advancedStrategyVisibleColumns', JSON.stringify(visibleColumns.value))
+  const storageKey = isMobileDevice() ? 'mobileVisibleColumns' : 'desktopVisibleColumns'
+  localStorage.setItem(storageKey, JSON.stringify(visibleColumns.value))
 }
 
 const resetColumns = () => {
-  visibleColumns.value = [...defaultVisibleColumns]
-  localStorage.setItem('advancedStrategyVisibleColumns', JSON.stringify(visibleColumns.value))
+  visibleColumns.value = [...getDefaultVisibleColumns()]
+  const storageKey = isMobileDevice() ? 'mobileVisibleColumns' : 'desktopVisibleColumns'
+  localStorage.setItem(storageKey, JSON.stringify(visibleColumns.value))
 }
 </script>
 
