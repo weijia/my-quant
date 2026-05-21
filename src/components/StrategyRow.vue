@@ -210,7 +210,7 @@
           :disabled="!strategy.stockCode || sendingAdvancedUpTrendBuy || !effectivePrice"
           :title="effectivePrice ? `上涨买入 + 下跌止盈止损` : '请先输入价格'"
         >
-          {{ sendingAdvancedUpTrendBuy ? '...' : (effectivePrice ? `↑买${calculateVolumeFromAmount(defaultTradeAmount || 20000, effectivePrice)}` : '↑买') }}
+          {{ sendingAdvancedUpTrendBuy ? '...' : `↑买${getAdvancedOrderVolume()}` }}
         </button>
         <button
           class="advanced-order-btn amount-sell-btn"
@@ -218,7 +218,7 @@
           :disabled="!strategy.stockCode || sendingAdvancedDownTrendSell || !effectivePrice"
           :title="effectivePrice ? `下跌卖出 + 上涨抄底` : '请先输入价格'"
         >
-          {{ sendingAdvancedDownTrendSell ? '...' : (effectivePrice ? `↓卖${calculateVolumeFromAmount(defaultTradeAmount || 20000, effectivePrice)}` : '↓卖') }}
+          {{ sendingAdvancedDownTrendSell ? '...' : `↓卖${getAdvancedOrderVolume()}` }}
         </button>
       </div>
     </td>
@@ -467,6 +467,15 @@ const setDefaultVolumeHalf = () => {
 // 获取当前有效的下单数量
 const getEffectiveTradeVolume = () => {
   return defaultTradeVolume.value ?? getQuarterPosition()
+}
+
+// 获取高级快捷按钮显示的数量（优先使用金额计算，否则使用数量）
+const getAdvancedOrderVolume = () => {
+  if (effectivePrice.value) {
+    const tradeAmount = defaultTradeAmount.value || 20000
+    return calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
+  }
+  return getEffectiveTradeVolume()
 }
 
 // 保存高级设置到策略数据
