@@ -132,7 +132,7 @@
             v-model.number="defaultTradeAmount" 
             type="number" 
             class="setting-input"
-            placeholder="20000"
+            placeholder="26000"
             min="0"
             step="1000"
             @change="saveTradeSettings"
@@ -197,25 +197,25 @@
           @click="handleConditionAmountBuy" 
           class="condition-order-btn amount-buy-btn"
           :disabled="sendingConditionAmountBuy || !effectivePrice"
-          :title="`上涨${conditionPct}%买入 金额:${defaultTradeAmount || 20000}`"
+          :title="`上涨${conditionPct}%买入 金额:${defaultTradeAmount || 26000}`"
         >
-          {{ sendingConditionAmountBuy ? '...' : `额↑买${calculateVolumeFromAmount(defaultTradeAmount || 20000, effectivePrice || 10)}` }}
+          {{ sendingConditionAmountBuy ? '...' : `额↑买${calculateVolumeFromAmount(defaultTradeAmount || 26000, effectivePrice || 10)}` }}
         </button>
         <button 
           @click="handleConditionAmountSell" 
           class="condition-order-btn amount-sell-btn"
           :disabled="sendingConditionAmountSell || !effectivePrice"
-          :title="`下跌${conditionPct}%卖出 金额:${defaultTradeAmount || 20000}`"
+          :title="`下跌${conditionPct}%卖出 金额:${defaultTradeAmount || 26000}`"
         >
-          {{ sendingConditionAmountSell ? '...' : `额↓卖${calculateVolumeFromAmount(defaultTradeAmount || 20000, effectivePrice || 10)}` }}
+          {{ sendingConditionAmountSell ? '...' : `额↓卖${calculateVolumeFromAmount(defaultTradeAmount || 26000, effectivePrice || 10)}` }}
         </button>
         <button 
           @click="handleConditionAmountBoth" 
           class="condition-order-btn amount-both-btn"
           :disabled="sendingConditionAmountBoth || !effectivePrice"
-          :title="`上涨${conditionPct}%买入+下跌${conditionPct}%卖出 金额:${defaultTradeAmount || 20000}`"
+          :title="`上涨${conditionPct}%买入+下跌${conditionPct}%卖出 金额:${defaultTradeAmount || 26000}`"
         >
-          {{ sendingConditionAmountBoth ? '...' : `额双向${calculateVolumeFromAmount(defaultTradeAmount || 20000, effectivePrice || 10)}` }}
+          {{ sendingConditionAmountBoth ? '...' : `额双向${calculateVolumeFromAmount(defaultTradeAmount || 26000, effectivePrice || 10)}` }}
         </button>
         <!-- 基于数量（量）的按钮 -->
         <button 
@@ -328,7 +328,7 @@
           class="advanced-order-btn amount-buy-btn"
           @click="handleAdvancedUpTrendBuy"
           :disabled="!strategy.stockCode || sendingAdvancedUpTrendBuy || !effectivePrice"
-          :title="effectivePrice ? `上涨${upTrendBuyPct || 0.1}%买入 + 下跌${upTrendSellPct || 0.5}%卖出\n数量: ${getAdvancedOrderVolume()}股\n金额: ${defaultTradeAmount || 20000}元` : '请先输入价格'"
+          :title="effectivePrice ? `上涨${upTrendBuyPct || 0.1}%买入 + 下跌${upTrendSellPct || 0.5}%卖出\n数量: ${getAdvancedOrderVolume()}股\n金额: ${defaultTradeAmount || 26000}元` : '请先输入价格'"
         >
           {{ sendingAdvancedUpTrendBuy ? '...' : `↑买${getAdvancedOrderVolume()}` }}
         </button>
@@ -336,7 +336,7 @@
           class="advanced-order-btn amount-sell-btn"
           @click="handleAdvancedDownTrendSell"
           :disabled="!strategy.stockCode || sendingAdvancedDownTrendSell || !effectivePrice"
-          :title="effectivePrice ? `下跌${downTrendSellPct || 0.1}%卖出 + 上涨${downTrendBuyPct || 0.5}%买入\n数量: ${getAdvancedOrderVolume()}股\n金额: ${defaultTradeAmount || 20000}元` : '请先输入价格'"
+          :title="effectivePrice ? `下跌${downTrendSellPct || 0.1}%卖出 + 上涨${downTrendBuyPct || 0.5}%买入\n数量: ${getAdvancedOrderVolume()}股\n金额: ${defaultTradeAmount || 26000}元` : '请先输入价格'"
         >
           {{ sendingAdvancedDownTrendSell ? '...' : `↓卖${getAdvancedOrderVolume()}` }}
         </button>
@@ -504,7 +504,7 @@ const sendingBoth = ref(false)
 const showTrendTip = ref(false)
 
 // 高级快捷下单设置
-const defaultTradeAmount = ref(20000)  // 缺省下单金额
+const defaultTradeAmount = ref(26000)  // 缺省下单金额
 const defaultTradeVolume = ref(null)   // 缺省下单数量（null表示使用1/4持仓）
 
 // 从策略数据初始化高级设置
@@ -565,7 +565,7 @@ const getEffectiveTradeVolume = () => {
 // 获取高级快捷按钮显示的数量（优先使用金额计算，否则使用数量）
 const getAdvancedOrderVolume = () => {
   if (effectivePrice.value) {
-    const tradeAmount = defaultTradeAmount.value || 20000
+    const tradeAmount = defaultTradeAmount.value || 26000
     return calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
   }
   return getEffectiveTradeVolume()
@@ -680,7 +680,7 @@ const handleConditionAmountBuy = async () => {
     return
   }
   sendingConditionAmountBuy.value = true
-  const tradeAmount = defaultTradeAmount.value || 20000
+  const tradeAmount = defaultTradeAmount.value || 26000
   const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
   const pct = conditionPct.value || 0.1
 
@@ -710,7 +710,7 @@ const handleConditionAmountSell = async () => {
     return
   }
   sendingConditionAmountSell.value = true
-  const tradeAmount = defaultTradeAmount.value || 20000
+  const tradeAmount = defaultTradeAmount.value || 26000
   const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
   const pct = conditionPct.value || 0.1
 
@@ -740,7 +740,7 @@ const handleConditionAmountBoth = async () => {
     return
   }
   sendingConditionAmountBoth.value = true
-  const tradeAmount = defaultTradeAmount.value || 20000
+  const tradeAmount = defaultTradeAmount.value || 26000
   const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
   const pct = conditionPct.value || 0.1
 
@@ -1104,7 +1104,7 @@ const handleAdvancedUpTrendBuy = async () => {
     return
   }
   sendingAdvancedUpTrendBuy.value = true
-  const tradeAmount = defaultTradeAmount.value || 20000
+  const tradeAmount = defaultTradeAmount.value || 26000
   const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
   const buyPct = upTrendBuyPct.value || 0.5  // 使用条件配置的上涨买入百分比
   const sellPct = upTrendSellPct.value || 0.5  // 使用条件配置的下跌卖出百分比
@@ -1146,7 +1146,7 @@ const handleAdvancedDownTrendSell = async () => {
     return
   }
   sendingAdvancedDownTrendSell.value = true
-  const tradeAmount = defaultTradeAmount.value || 20000
+  const tradeAmount = defaultTradeAmount.value || 26000
   const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
   const sellPct = downTrendSellPct.value || 0.5  // 使用条件配置的下跌卖出百分比
   const buyPct = downTrendBuyPct.value || 0.5  // 使用条件配置的上涨买入百分比
