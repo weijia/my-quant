@@ -249,6 +249,24 @@
             @change="saveTradeSettings"
           />
         </div>
+        <div class="setting-item" :class="{ 'price-missing': !effectivePrice }">
+          <span class="setting-label">价</span>
+          <input 
+            :value="manualPrice ?? (strategy.currentPrice || '')"
+            @input="manualPrice = Number($event.target.value) || null"
+            type="number" 
+            class="setting-input"
+            placeholder="输入价格"
+            min="0"
+            step="0.01"
+          />
+        </div>
+        <div class="setting-item total-display">
+          <span class="setting-label">总</span>
+          <span class="total-amount" :class="{ 'zero': !totalTradeAmount }">
+            {{ totalTradeAmount ? formatAmount(totalTradeAmount) : '-' }}
+          </span>
+        </div>
         <div class="quick-set-btns">
           <button @click="setDefaultVolumeQuarter" class="quick-set-btn" title="设置为1/4持仓">1/4</button>
           <button @click="setDefaultVolumeHalf" class="quick-set-btn" title="设置为1/2持仓">1/2</button>
