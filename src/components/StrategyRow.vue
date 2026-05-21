@@ -123,50 +123,55 @@
       <span :title="strategy.manualNotes">{{ strategy.manualNotes || '-' }}</span>
     </td>
     
-    <!-- 条件配置：4个输入框（上涨/下跌趋势的买卖百分比） -->
+    <!-- 条件配置：交易金额和数量 -->
     <td v-if="visibleColumns.includes('conditionConfig')" class="condition-config-cell">
-      <div class="config-rows">
-        <div class="config-row">
-          <span class="config-label up">↑</span>
+      <div class="settings-inputs">
+        <div class="setting-item">
+          <span class="setting-label">额</span>
           <input 
-            v-model.number="upTrendBuyPct" 
+            v-model.number="defaultTradeAmount" 
             type="number" 
-            class="config-input"
-            placeholder="买%"
+            class="setting-input"
+            placeholder="20000"
             min="0"
-            step="0.1"
-            @change="saveConditionConfig"
-          />
-          <input 
-            v-model.number="upTrendSellPct" 
-            type="number" 
-            class="config-input"
-            placeholder="卖%"
-            min="0"
-            step="0.1"
-            @change="saveConditionConfig"
+            step="1000"
+            @change="saveTradeSettings"
           />
         </div>
-        <div class="config-row">
-          <span class="config-label down">↓</span>
+        <div class="setting-item">
+          <span class="setting-label">量</span>
           <input 
-            v-model.number="downTrendSellPct" 
+            :value="defaultTradeVolume ?? getQuarterPosition()"
+            @input="defaultTradeVolume = Number($event.target.value) || null"
             type="number" 
-            class="config-input"
-            placeholder="卖%"
+            class="setting-input"
+            :placeholder="getQuarterPosition().toString()"
             min="0"
-            step="0.1"
-            @change="saveConditionConfig"
+            step="100"
+            @change="saveTradeSettings"
           />
+        </div>
+        <div class="setting-item" :class="{ 'price-missing': !effectivePrice }">
+          <span class="setting-label">价</span>
           <input 
-            v-model.number="downTrendBuyPct" 
+            :value="manualPrice ?? (strategy.currentPrice || '')"
+            @input="manualPrice = Number($event.target.value) || null"
             type="number" 
-            class="config-input"
-            placeholder="买%"
+            class="setting-input"
+            placeholder="输入价格"
             min="0"
-            step="0.1"
-            @change="saveConditionConfig"
+            step="0.01"
           />
+        </div>
+        <div class="setting-item total-display">
+          <span class="setting-label">总</span>
+          <span class="total-amount" :class="{ 'zero': !totalTradeAmount }">
+            {{ totalTradeAmount ? formatAmount(totalTradeAmount) : '-' }}
+          </span>
+        </div>
+        <div class="quick-set-btns">
+          <button @click="setDefaultVolumeQuarter" class="quick-set-btn" title="设置为1/4持仓">1/4</button>
+          <button @click="setDefaultVolumeHalf" class="quick-set-btn" title="设置为1/2持仓">1/2</button>
         </div>
       </div>
     </td>
@@ -221,55 +226,50 @@
       </button>
     </td>
     
-    <!-- 高级设置：交易金额和数量 -->
+    <!-- 高级设置：上涨/下跌趋势的买卖百分比 -->
     <td v-if="visibleColumns.includes('advancedOrderSettings')" class="advanced-settings-cell">
-      <div class="settings-inputs">
-        <div class="setting-item">
-          <span class="setting-label">额</span>
+      <div class="config-rows">
+        <div class="config-row">
+          <span class="config-label up">↑</span>
           <input 
-            v-model.number="defaultTradeAmount" 
+            v-model.number="upTrendBuyPct" 
             type="number" 
-            class="setting-input"
-            placeholder="20000"
+            class="config-input"
+            placeholder="买%"
             min="0"
-            step="1000"
-            @change="saveTradeSettings"
+            step="0.1"
+            @change="saveConditionConfig"
+          />
+          <input 
+            v-model.number="upTrendSellPct" 
+            type="number" 
+            class="config-input"
+            placeholder="卖%"
+            min="0"
+            step="0.1"
+            @change="saveConditionConfig"
           />
         </div>
-        <div class="setting-item">
-          <span class="setting-label">量</span>
+        <div class="config-row">
+          <span class="config-label down">↓</span>
           <input 
-            :value="defaultTradeVolume ?? getQuarterPosition()"
-            @input="defaultTradeVolume = Number($event.target.value) || null"
+            v-model.number="downTrendSellPct" 
             type="number" 
-            class="setting-input"
-            :placeholder="getQuarterPosition().toString()"
+            class="config-input"
+            placeholder="卖%"
             min="0"
-            step="100"
-            @change="saveTradeSettings"
+            step="0.1"
+            @change="saveConditionConfig"
           />
-        </div>
-        <div class="setting-item" :class="{ 'price-missing': !effectivePrice }">
-          <span class="setting-label">价</span>
           <input 
-            :value="manualPrice ?? (strategy.currentPrice || '')"
-            @input="manualPrice = Number($event.target.value) || null"
+            v-model.number="downTrendBuyPct" 
             type="number" 
-            class="setting-input"
-            placeholder="输入价格"
+            class="config-input"
+            placeholder="买%"
             min="0"
-            step="0.01"
+            step="0.1"
+            @change="saveConditionConfig"
           />
-        </div>
-        <div class="setting-item total-display">
-          <span class="setting-label">总</span>
-          <span class="total-amount" :class="{ 'zero': !totalTradeAmount }">
-            {{ totalTradeAmount ? formatAmount(totalTradeAmount) : '-' }}
-          </span>
-        </div>
-        <div class="quick-set-btns">
-          <button @click="setDefaultVolumeQuarter" class="quick-set-btn" title="设置为1/4持仓">1/4</button>
-          <button @click="setDefaultVolumeHalf" class="quick-set-btn" title="设置为1/2持仓">1/2</button>
         </div>
       </div>
     </td>
