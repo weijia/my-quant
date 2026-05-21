@@ -245,15 +245,16 @@
       </div>
     </td>
     
-    <!-- 快捷：3个按钮（固定0.5%，按数量下单） -->
+    <!-- 快捷：金额显示 + 3个按钮（固定0.5%，按数量下单） -->
     <td v-if="visibleColumns.includes('quickOrder')" class="quick-order-cell">
+      <div class="quick-amount">{{ formatAmount(totalTradeAmount) || '-' }}</div>
       <button
         class="quick-order-btn buy-btn"
         @click="handleQuickBuy"
         :disabled="!strategy.stockCode || sendingBuy"
         :title="`上涨0.5%买入 数量:${getEffectiveTradeVolume()}`"
       >
-        {{ sendingBuy ? '...' : `↑买${getEffectiveTradeVolume()}` }}
+        {{ sendingBuy ? '...' : '↑买' }}
       </button>
       <button
         class="quick-order-btn sell-btn"
@@ -261,7 +262,7 @@
         :disabled="!strategy.stockCode || sendingSell"
         :title="`下跌0.5%卖出 数量:${getEffectiveTradeVolume()}`"
       >
-        {{ sendingSell ? '...' : `↓卖${getEffectiveTradeVolume()}` }}
+        {{ sendingSell ? '...' : '↓卖' }}
       </button>
       <button
         class="quick-order-btn both-btn"
@@ -269,7 +270,7 @@
         :disabled="!strategy.stockCode || sendingBoth"
         :title="`上涨0.5%买入及下跌0.5%卖出 数量:${getEffectiveTradeVolume()}`"
       >
-        {{ sendingBoth ? '...' : `双向${getEffectiveTradeVolume()}` }}
+        {{ sendingBoth ? '...' : '双向' }}
       </button>
     </td>
     
@@ -1465,6 +1466,13 @@ const getTrendClass = (trend) => {
   vertical-align: middle;
   width: 160px;
   min-width: 160px;
+}
+
+.quick-amount {
+  font-size: 11px;
+  color: #888;
+  text-align: center;
+  margin-bottom: 2px;
 }
 
 .quick-order-cell .quick-order-btn {
