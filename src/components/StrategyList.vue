@@ -467,8 +467,6 @@ const resetColumns = () => {
   font-size: 12px;
   color: white;
   position: relative;
-  table-layout: fixed;
-  width: 100%;
 }
 
 .strategy-table th,
@@ -740,15 +738,18 @@ const resetColumns = () => {
   }
 
   .name-cell {
-    width: 80px !important;
-    min-width: 60px !important;
-    max-width: 80px !important;
+    width: 90px !important;
+    min-width: 90px !important;
+    max-width: 90px !important;
     font-size: 9px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .name-cell span {
     display: inline-block;
-    max-width: 70px !important;
+    max-width: 80px !important;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
