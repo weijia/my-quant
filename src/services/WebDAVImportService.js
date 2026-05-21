@@ -396,13 +396,17 @@ class WebDAVImportService {
   
   async fetchHoldings() {
     try {
-      // 先用 PROPFIND 获取目录下的文件列表
-      console.log('正在获取持仓目录文件列表:', this.holdingsBaseUrl)
-      const propfindResponse = await fetch(this.holdingsBaseUrl, {
+      // 先用 PROPFIND 获取目录下的文件列表（添加时间戳防止缓存）
+      const timestamp = new Date().getTime()
+      const propfindUrl = this.holdingsBaseUrl + '?_t=' + timestamp
+      console.log('正在获取持仓目录文件列表:', propfindUrl)
+      const propfindResponse = await fetch(propfindUrl, {
         method: 'PROPFIND',
         headers: {
           'Depth': '1',
           'Content-Type': 'application/xml',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
           ...this.getAuthHeaders()
         }
       })
@@ -445,13 +449,16 @@ class WebDAVImportService {
         return null
       }
       
-      const fileUrl = this.holdingsBaseUrl + jsonFileName
+      // 添加时间戳防止缓存
+      const fileUrl = this.holdingsBaseUrl + jsonFileName + '?_t=' + timestamp
       console.log('最终 URL:', fileUrl)
       
       const response = await fetch(fileUrl, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
           ...this.getAuthHeaders()
         }
       })
@@ -464,7 +471,7 @@ class WebDAVImportService {
       }
       
       const data = await response.json()
-      console.log('成功获取持仓数据')
+      console.log('成功获取持仓数据，持仓数量:', data.holdings ? data.holdings.length : 0)
       return data
     } catch (error) {
       console.warn('获取持仓数据失败:', error)
