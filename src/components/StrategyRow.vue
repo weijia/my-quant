@@ -130,7 +130,7 @@
         :disabled="!strategy.stockCode || sendingBuy"
         :title="`上涨0.5%买入 数量:${getEffectiveTradeVolume()}`"
       >
-        {{ sendingBuy ? '...' : `买${getEffectiveTradeVolume()}` }}
+        {{ sendingBuy ? '...' : `↑买${getEffectiveTradeVolume()}` }}
       </button>
       <button
         class="quick-order-btn sell-btn"
@@ -138,7 +138,7 @@
         :disabled="!strategy.stockCode || sendingSell"
         :title="`下跌0.5%卖出 数量:${getEffectiveTradeVolume()}`"
       >
-        {{ sendingSell ? '...' : `卖${getEffectiveTradeVolume()}` }}
+        {{ sendingSell ? '...' : `↓卖${getEffectiveTradeVolume()}` }}
       </button>
       <button
         class="quick-order-btn both-btn"
@@ -176,24 +176,6 @@
             step="100"
             @change="saveTradeSettings"
           />
-        </div>
-        <div class="setting-item" :class="{ 'price-missing': !effectivePrice }">
-          <span class="setting-label">价</span>
-          <input 
-            :value="manualPrice ?? (strategy.currentPrice || '')"
-            @input="manualPrice = Number($event.target.value) || null"
-            type="number" 
-            class="setting-input"
-            placeholder="输入价格"
-            min="0"
-            step="0.01"
-          />
-        </div>
-        <div class="setting-item total-display">
-          <span class="setting-label">总</span>
-          <span class="total-amount" :class="{ 'zero': !totalTradeAmount }">
-            {{ totalTradeAmount ? formatAmount(totalTradeAmount) : '-' }}
-          </span>
         </div>
         <div class="quick-set-btns">
           <button @click="setDefaultVolumeQuarter" class="quick-set-btn" title="设置为1/4持仓">1/4</button>
