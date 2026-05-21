@@ -176,24 +176,58 @@
       </div>
     </td>
 
-    <!-- 条件单：2个按钮（使用条件配置的百分比，按数量下单） -->
+    <!-- 条件单：8个按钮（基于额和量，1%涨跌幅度） -->
     <td v-if="visibleColumns.includes('conditionOrder')" class="condition-order-cell">
       <div class="condition-order-btns">
+        <!-- 基于金额（额）的按钮 -->
         <button 
-          @click="handleUpTrendBuy" 
-          class="condition-order-btn up-btn"
-          :disabled="sendingUpTrendBuy"
-          :title="`上涨${upTrendBuyPct}%买入 + 下跌${upTrendSellPct}%卖出`"
+          @click="handleConditionAmountBuy" 
+          class="condition-order-btn amount-buy-btn"
+          :disabled="sendingConditionAmountBuy || !effectivePrice"
+          :title="`上涨1%买入 金额:${defaultTradeAmount || 20000}`"
         >
-          {{ sendingUpTrendBuy ? '...' : `↑买${upTrendBuyPct}%` }}
+          {{ sendingConditionAmountBuy ? '...' : `额↑买${calculateVolumeFromAmount(defaultTradeAmount || 20000, effectivePrice || 10)}` }}
         </button>
         <button 
-          @click="handleDownTrendSell" 
-          class="condition-order-btn down-btn"
-          :disabled="sendingDownTrendSell"
-          :title="`下跌${downTrendSellPct}%卖出 + 上涨${downTrendBuyPct}%买入`"
+          @click="handleConditionAmountSell" 
+          class="condition-order-btn amount-sell-btn"
+          :disabled="sendingConditionAmountSell || !effectivePrice"
+          :title="`下跌1%卖出 金额:${defaultTradeAmount || 20000}`"
         >
-          {{ sendingDownTrendSell ? '...' : `↓卖${downTrendSellPct}%` }}
+          {{ sendingConditionAmountSell ? '...' : `额↓卖${calculateVolumeFromAmount(defaultTradeAmount || 20000, effectivePrice || 10)}` }}
+        </button>
+        <button 
+          @click="handleConditionAmountBoth" 
+          class="condition-order-btn amount-both-btn"
+          :disabled="sendingConditionAmountBoth || !effectivePrice"
+          :title="`上涨1%买入+下跌1%卖出 金额:${defaultTradeAmount || 20000}`"
+        >
+          {{ sendingConditionAmountBoth ? '...' : `额双向${calculateVolumeFromAmount(defaultTradeAmount || 20000, effectivePrice || 10)}` }}
+        </button>
+        <!-- 基于数量（量）的按钮 -->
+        <button 
+          @click="handleConditionVolumeBuy" 
+          class="condition-order-btn volume-buy-btn"
+          :disabled="sendingConditionVolumeBuy"
+          :title="`上涨1%买入 数量:${getEffectiveTradeVolume()}`"
+        >
+          {{ sendingConditionVolumeBuy ? '...' : `量↑买${getEffectiveTradeVolume()}` }}
+        </button>
+        <button 
+          @click="handleConditionVolumeSell" 
+          class="condition-order-btn volume-sell-btn"
+          :disabled="sendingConditionVolumeSell"
+          :title="`下跌1%卖出 数量:${getEffectiveTradeVolume()}`"
+        >
+          {{ sendingConditionVolumeSell ? '...' : `量↓卖${getEffectiveTradeVolume()}` }}
+        </button>
+        <button 
+          @click="handleConditionVolumeBoth" 
+          class="condition-order-btn volume-both-btn"
+          :disabled="sendingConditionVolumeBoth"
+          :title="`上涨1%买入+下跌1%卖出 数量:${getEffectiveTradeVolume()}`"
+        >
+          {{ sendingConditionVolumeBoth ? '...' : `量双向${getEffectiveTradeVolume()}` }}
         </button>
       </div>
     </td>
@@ -359,9 +393,13 @@ const upTrendSellPct = ref(props.strategy.upTrendSellPct ?? 0.5)
 const downTrendSellPct = ref(props.strategy.downTrendSellPct ?? 0.1)
 const downTrendBuyPct = ref(props.strategy.downTrendBuyPct ?? 0.5)
 
-// 条件配置按钮发送状态
-const sendingUpTrendBuy = ref(false)
-const sendingDownTrendSell = ref(false)
+// 条件单按钮发送状态（6个按钮）
+const sendingConditionAmountBuy = ref(false)
+const sendingConditionAmountSell = ref(false)
+const sendingConditionAmountBoth = ref(false)
+const sendingConditionVolumeBuy = ref(false)
+const sendingConditionVolumeSell = ref(false)
+const sendingConditionVolumeBoth = ref(false)
 
 // 可用的策略模板（从 localStorage 加载）
 const availableStrategyTemplates = ref([])
@@ -580,6 +618,197 @@ const handleDownTrendSell = async () => {
     alert('发送失败，请检查MQTT连接')
   } finally {
     sendingDownTrendSell.value = false
+  }
+}
+
+// ========== 条件单：6个按钮的处理函数 ==========
+
+// 基于金额：上涨1%买入
+const handleConditionAmountBuy = async () => {
+  if (!props.strategy.stockCode || !effectivePrice.value) {
+    alert('股票代码或价格不存在')
+    return
+  }
+  sendingConditionAmountBuy.value = true
+  const tradeAmount = defaultTradeAmount.value || 20000
+  const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
+
+  try {
+    await mqttConditionService.sendBuyOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume,
+      percentage: 1,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getBuySide()
+    })
+    console.log(`[条件单] 额↑买已发送: ${props.strategy.stockCode}, 上涨1%买入, 金额:${tradeAmount}, 数量:${tradeVolume}`)
+  } catch (error) {
+    console.error('[条件单] 额↑买失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingConditionAmountBuy.value = false
+  }
+}
+
+// 基于金额：下跌1%卖出
+const handleConditionAmountSell = async () => {
+  if (!props.strategy.stockCode || !effectivePrice.value) {
+    alert('股票代码或价格不存在')
+    return
+  }
+  sendingConditionAmountSell.value = true
+  const tradeAmount = defaultTradeAmount.value || 20000
+  const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
+
+  try {
+    await mqttConditionService.sendSellOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume,
+      percentage: 1,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getSellSide()
+    })
+    console.log(`[条件单] 额↓卖已发送: ${props.strategy.stockCode}, 下跌1%卖出, 金额:${tradeAmount}, 数量:${tradeVolume}`)
+  } catch (error) {
+    console.error('[条件单] 额↓卖失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingConditionAmountSell.value = false
+  }
+}
+
+// 基于金额：双向（上涨1%买入 + 下跌1%卖出）
+const handleConditionAmountBoth = async () => {
+  if (!props.strategy.stockCode || !effectivePrice.value) {
+    alert('股票代码或价格不存在')
+    return
+  }
+  sendingConditionAmountBoth.value = true
+  const tradeAmount = defaultTradeAmount.value || 20000
+  const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
+
+  try {
+    await mqttConditionService.sendBuyOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume,
+      percentage: 1,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getBuySide()
+    })
+    await mqttConditionService.sendSellOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume,
+      percentage: 1,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getSellSide()
+    })
+    console.log(`[条件单] 额双向已发送: ${props.strategy.stockCode}, 上涨1%买入+下跌1%卖出, 金额:${tradeAmount}, 数量:${tradeVolume}`)
+  } catch (error) {
+    console.error('[条件单] 额双向失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingConditionAmountBoth.value = false
+  }
+}
+
+// 基于数量：上涨1%买入
+const handleConditionVolumeBuy = async () => {
+  if (!props.strategy.stockCode) {
+    alert('股票代码不存在')
+    return
+  }
+  sendingConditionVolumeBuy.value = true
+  const tradeVolume = getEffectiveTradeVolume()
+
+  try {
+    await mqttConditionService.sendBuyOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume,
+      percentage: 1,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getBuySide()
+    })
+    console.log(`[条件单] 量↑买已发送: ${props.strategy.stockCode}, 上涨1%买入, 数量:${tradeVolume}`)
+  } catch (error) {
+    console.error('[条件单] 量↑买失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingConditionVolumeBuy.value = false
+  }
+}
+
+// 基于数量：下跌1%卖出
+const handleConditionVolumeSell = async () => {
+  if (!props.strategy.stockCode) {
+    alert('股票代码不存在')
+    return
+  }
+  sendingConditionVolumeSell.value = true
+  const tradeVolume = getEffectiveTradeVolume()
+
+  try {
+    await mqttConditionService.sendSellOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume,
+      percentage: 1,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getSellSide()
+    })
+    console.log(`[条件单] 量↓卖已发送: ${props.strategy.stockCode}, 下跌1%卖出, 数量:${tradeVolume}`)
+  } catch (error) {
+    console.error('[条件单] 量↓卖失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingConditionVolumeSell.value = false
+  }
+}
+
+// 基于数量：双向（上涨1%买入 + 下跌1%卖出）
+const handleConditionVolumeBoth = async () => {
+  if (!props.strategy.stockCode) {
+    alert('股票代码不存在')
+    return
+  }
+  sendingConditionVolumeBoth.value = true
+  const tradeVolume = getEffectiveTradeVolume()
+
+  try {
+    await mqttConditionService.sendBuyOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume,
+      percentage: 1,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getBuySide()
+    })
+    await mqttConditionService.sendSellOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume,
+      percentage: 1,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getSellSide()
+    })
+    console.log(`[条件单] 量双向已发送: ${props.strategy.stockCode}, 上涨1%买入+下跌1%卖出, 数量:${tradeVolume}`)
+  } catch (error) {
+    console.error('[条件单] 量双向失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingConditionVolumeBoth.value = false
   }
 }
 
