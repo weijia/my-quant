@@ -927,6 +927,15 @@ const getAccountType = () => {
   return props.strategy.accountType === 'credit' ? 'credit' : 'default'
 }
 
+// 获取券商 provider
+const getProvider = () => {
+  // 只返回已知的券商代码，其他返回空字符串
+  if (props.strategy.provider === 'pingan' || props.strategy.provider === 'founder') {
+    return props.strategy.provider
+  }
+  return ''
+}
+
 // 判断是否为手动设置的策略
 // 只有当用户在策略编辑器中明确修改过策略时才标记为手动
 const isManualStrategy = (strategy) => {
