@@ -242,4 +242,4 @@ class AppConfigService {
 const appConfigService = new AppConfigService()
 
 export default appConfigService
-export { AppConfigService, STORAGE_KEY, DEFAULT_CONFIG }
+export { appConfigService, AppConfigService, STORAGE_KEY, DEFAULT_CONFIG }
