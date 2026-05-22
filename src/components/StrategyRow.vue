@@ -468,26 +468,33 @@ const sendingConditionVolumeBoth = ref(false)
 const sendingMarketCloseBuy = ref(false)
 const hasMarketCloseBuyFlag = ref(false)
 
-// 加载收市买入标记
+// 加载收市买入标记（从统一配置）
 const loadMarketCloseBuyFlag = () => {
   if (props.strategy.id) {
-    const key = `marketCloseBuy_${props.strategy.id}`
-    const saved = localStorage.getItem(key)
-    hasMarketCloseBuyFlag.value = saved === 'true'
+    const config = appConfigService.getMarketCloseBuyForStrategy(props.strategy.id)
+    hasMarketCloseBuyFlag.value = !!config
   }
 }
 
-// 保存收市买入标记
-const saveMarketCloseBuyFlag = (value) => {
+// 保存收市买入标记（到统一配置）
+const saveMarketCloseBuyFlag = (value, configData = null) => {
   if (props.strategy.id) {
-    const key = `marketCloseBuy_${props.strategy.id}`
-    localStorage.setItem(key, value ? 'true' : 'false')
+    if (value && configData) {
+      appConfigService.setMarketCloseBuyForStrategy(props.strategy.id, configData)
+    } else if (!value) {
+      appConfigService.clearMarketCloseBuyForStrategy(props.strategy.id)
+    }
     hasMarketCloseBuyFlag.value = value
   }
 }
 
 // 初始化加载收市买入标记
 loadMarketCloseBuyFlag()
+
+// 监听配置更新事件，重新加载收市买状态
+window.addEventListener('appConfigUpdated', () => {
+  loadMarketCloseBuyFlag()
+})
 
 // 条件单涨跌幅（缺省0.1%）
 const conditionPct = ref(0.1)
@@ -955,26 +962,22 @@ const handleMarketCloseBuy = async () => {
     alert('股票代码不存在')
     return
   }
-  
+
   // 如果已经有标记，则取消
   if (hasMarketCloseBuyFlag.value) {
     saveMarketCloseBuyFlag(false)
     console.log(`[收市买入] 已取消: ${props.strategy.stockCode}`)
     return
   }
-  
+
   incrementCount('marketCloseBuy')
   sendingMarketCloseBuy.value = true
-  
+
   try {
-    // 保存标记
-    saveMarketCloseBuyFlag(true)
-    
     // 计算交易数量（使用默认数量或1/4持仓）
     const tradeVolume = getEffectiveTradeVolume()
-    
-    // 保存收市买入配置到 localStorage
-    const configKey = `marketCloseBuyConfig_${props.strategy.id}`
+
+    // 保存收市买入配置到统一配置
     const config = {
       stockCode: props.strategy.stockCode,
       stockName: props.strategy.name,
@@ -985,15 +988,15 @@ const handleMarketCloseBuy = async () => {
       side: getBuySide(),
       createdAt: new Date().toISOString()
     }
-    localStorage.setItem(configKey, JSON.stringify(config))
-    
+    saveMarketCloseBuyFlag(true, config)
+
     console.log(`[收市买入] 已设置: ${props.strategy.stockCode}, 数量:${tradeVolume}, 上涨0.1%买入`)
-    
+
     // 检查当前时间是否接近2:45，如果是则立即执行
     const now = new Date()
     const hours = now.getHours()
     const minutes = now.getMinutes()
-    
+
     // 如果在2:45-2:50之间，立即执行
     if (hours === 14 && minutes >= 45 && minutes <= 50) {
       await executeMarketCloseBuy(config)
@@ -1019,10 +1022,9 @@ const executeMarketCloseBuy = async (config) => {
       side: config.side
     })
     console.log(`[收市买入] 条件单已发送: ${config.stockCode}, 上涨0.1%买入, 数量:${config.tradeVolume}`)
-    
+
     // 执行后清除标记
     saveMarketCloseBuyFlag(false)
-    localStorage.removeItem(`marketCloseBuyConfig_${props.strategy.id}`)
   } catch (error) {
     console.error('[收市买入] 发送失败:', error)
   }

@@ -4,6 +4,7 @@
  */
 
 import mqttConditionService from './MQTTConditionService.js'
+import appConfigService from './AppConfigService.js'
 
 class MarketCloseBuyService {
   constructor() {
@@ -86,35 +87,15 @@ class MarketCloseBuyService {
     }
   }
 
-  // 获取所有收市买入配置
+  // 获取所有收市买入配置（从统一配置）
   getAllMarketCloseBuyConfigs() {
     const configs = []
-    const keys = []
+    const allConfigs = appConfigService.getMarketCloseBuyConfig()
 
-    // 遍历 localStorage 找到所有收市买入配置
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key && key.startsWith('marketCloseBuyConfig_')) {
-        keys.push(key)
-      }
-    }
-
-    for (const key of keys) {
-      try {
-        const data = localStorage.getItem(key)
-        if (data) {
-          const config = JSON.parse(data)
-          // 检查标记是否仍然存在
-          const strategyId = key.replace('marketCloseBuyConfig_', '')
-          const flagKey = `marketCloseBuy_${strategyId}`
-          const flag = localStorage.getItem(flagKey)
-
-          if (flag === 'true') {
-            configs.push({ ...config, strategyId, configKey: key })
-          }
-        }
-      } catch (e) {
-        console.error('[收市买入服务] 解析配置失败:', key, e)
+    for (const strategyId in allConfigs) {
+      const config = allConfigs[strategyId]
+      if (config) {
+        configs.push({ ...config, strategyId })
       }
     }
 
@@ -138,9 +119,8 @@ class MarketCloseBuyService {
 
       console.log(`[收市买入服务] 成功: ${config.stockCode}`)
 
-      // 执行后清除标记和配置
-      localStorage.setItem(`marketCloseBuy_${config.strategyId}`, 'false')
-      localStorage.removeItem(config.configKey)
+      // 执行后清除配置
+      appConfigService.clearMarketCloseBuyForStrategy(config.strategyId)
 
       // 触发事件通知 UI 更新
       window.dispatchEvent(new CustomEvent('marketCloseBuyExecuted', {

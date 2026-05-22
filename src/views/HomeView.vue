@@ -1111,6 +1111,12 @@ onMounted(async () => {
     console.log('HomeView: 后台趋势同步完成:', result);
   });
 
+  // 监听配置更新事件，重新加载策略以应用新的趋势映射
+  window.addEventListener('appConfigUpdated', async () => {
+    console.log('HomeView: 检测到配置更新，重新加载策略...');
+    await loadStrategies();
+  });
+
   console.log('HomeView: 初始化完成（界面已可交互）');
 });
 </script>

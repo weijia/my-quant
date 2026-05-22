@@ -42,7 +42,9 @@ const DEFAULT_CONFIG = {
     low_volatility: 'normal',
     trend_unknown: 'normal',
     unset: 'normal'
-  }
+  },
+  // 收市买入配置
+  marketCloseBuy: {}
 }
 
 class AppConfigService {
@@ -80,9 +82,13 @@ class AppConfigService {
   // 从远程数据合并配置（WebDAV 下载后调用）
   mergeFromRemote(remoteConfig) {
     if (!remoteConfig || typeof remoteConfig !== 'object') return
+    console.log('[AppConfig] 合并前配置:', JSON.stringify(this.config?.trendStrategyMapping))
+    console.log('[AppConfig] 远程配置:', JSON.stringify(remoteConfig.trendStrategyMapping))
     this.config = this.mergeWithDefaults(remoteConfig)
     this.saveToLocalStorage()
-    console.log('[AppConfig] 已从远程合并配置')
+    console.log('[AppConfig] 已从远程合并配置:', JSON.stringify(this.config.trendStrategyMapping))
+    // 触发配置更新事件
+    window.dispatchEvent(new CustomEvent('appConfigUpdated', { detail: this.config }))
   }
 
   // 导出完整配置（用于上传到 WebDAV）
@@ -99,6 +105,7 @@ class AppConfigService {
     if (config.window) Object.assign(result.window, config.window)
     if (config.ui) Object.assign(result.ui, config.ui)
     if (config.trendStrategyMapping) Object.assign(result.trendStrategyMapping, config.trendStrategyMapping)
+    if (config.marketCloseBuy) result.marketCloseBuy = { ...config.marketCloseBuy }
     return result
   }
 
@@ -168,6 +175,36 @@ class AppConfigService {
   getStrategyTypeForTrend(trend) {
     const mapping = this.getTrendStrategyMapping()
     return mapping[trend] || 'normal'
+  }
+
+  // ========== 收市买入配置 ==========
+
+  getMarketCloseBuyConfig() {
+    return this.config.marketCloseBuy || {}
+  }
+
+  getMarketCloseBuyForStrategy(strategyId) {
+    const configs = this.getMarketCloseBuyConfig()
+    return configs[strategyId] || null
+  }
+
+  setMarketCloseBuyForStrategy(strategyId, config) {
+    if (!this.config.marketCloseBuy) {
+      this.config.marketCloseBuy = {}
+    }
+    if (config) {
+      this.config.marketCloseBuy[strategyId] = config
+    } else {
+      delete this.config.marketCloseBuy[strategyId]
+    }
+    this.saveToLocalStorage()
+  }
+
+  clearMarketCloseBuyForStrategy(strategyId) {
+    if (this.config.marketCloseBuy) {
+      delete this.config.marketCloseBuy[strategyId]
+      this.saveToLocalStorage()
+    }
   }
 }
 
