@@ -145,26 +145,23 @@
           <option value="desc">降序</option>
         </select>
       </div>
+        <!-- 可编辑提醒 Banner -->
+        <div class="banner-inline" @click="editBanner" :title="bannerText || '点击编辑提醒内容'">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" x2="12" y1="8" y2="12"/>
+            <line x1="12" x2="12.01" y1="16" y2="16"/>
+          </svg>
+          <span v-if="bannerText" class="banner-text">{{ bannerText }}</span>
+          <span v-else class="banner-placeholder">💡 点击更新，对用户的提醒...</span>
+          <button v-if="bannerText" class="banner-clear-inline" @click.stop="clearBanner" title="清除">
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 6 6 18"/>
+              <path d="m6 6 12 12"/>
+            </svg>
+          </button>
+        </div>
       </div>
-    </div>
-
-    <!-- 可编辑提醒 Banner -->
-    <div class="banner-section">
-      <div class="banner-content" @click="editBanner" :title="bannerText || '点击编辑提醒内容'">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" x2="12" y1="8" y2="12"/>
-          <line x1="12" x2="12.01" y1="16" y2="16"/>
-        </svg>
-        <span v-if="bannerText">{{ bannerText }}</span>
-        <span v-else class="banner-placeholder">💡 点击更新，对用户的提醒...</span>
-      </div>
-      <button v-if="bannerText" class="banner-clear-btn" @click.stop="clearBanner" title="清除提醒">
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M18 6 6 18"/>
-          <path d="m6 6 12 12"/>
-        </svg>
-      </button>
     </div>
 
     <main class="main-content">
@@ -1371,6 +1368,63 @@ onMounted(async () => {
 .banner-clear-btn:hover {
   color: white;
   background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 内联 Banner 样式 */
+.banner-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 4px 10px;
+  background: rgba(255, 165, 0, 0.15);
+  border: 1px solid rgba(255, 165, 0, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 300px;
+  flex-shrink: 0;
+}
+
+.banner-inline:hover {
+  background: rgba(255, 165, 0, 0.25);
+  border-color: rgba(255, 165, 0, 0.5);
+}
+
+.banner-inline svg {
+  color: #ffa500;
+  flex-shrink: 0;
+}
+
+.banner-inline .banner-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.banner-inline .banner-placeholder {
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.banner-clear-inline {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  margin-left: 4px;
+}
+
+.banner-clear-inline:hover {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 .filter-group {
