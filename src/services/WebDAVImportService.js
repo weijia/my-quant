@@ -791,6 +791,10 @@ class WebDAVImportService {
       const url = baseUrl + WEBDAV_PATHS.APP_CONFIG
       const configData = appConfigService.exportConfig()
 
+      // 确保目录存在
+      const dirUrl = baseUrl + '/app_data/my-quant/'
+      await this.ensureDirectoryExists(dirUrl)
+
       const response = await fetch(url, {
         method: 'PUT',
         headers: {
@@ -809,6 +813,45 @@ class WebDAVImportService {
       }
     } catch (error) {
       console.error('[WebDAV] 应用配置上传失败:', error)
+      return false
+    }
+  }
+
+  /**
+   * 确保 WebDAV 目录存在，不存在则创建
+   */
+  async ensureDirectoryExists(dirUrl) {
+    try {
+      // 检查目录是否存在
+      const checkResponse = await fetch(dirUrl, {
+        method: 'PROPFIND',
+        headers: {
+          'Depth': '0',
+          ...this.getAuthHeaders()
+        }
+      })
+
+      if (checkResponse.ok) {
+        console.log('[WebDAV] 目录已存在:', dirUrl)
+        return true
+      }
+
+      // 目录不存在，创建它
+      console.log('[WebDAV] 目录不存在，正在创建:', dirUrl)
+      const createResponse = await fetch(dirUrl, {
+        method: 'MKCOL',
+        headers: this.getAuthHeaders()
+      })
+
+      if (createResponse.ok || createResponse.status === 201) {
+        console.log('[WebDAV] 目录创建成功:', dirUrl)
+        return true
+      } else {
+        console.warn('[WebDAV] 目录创建失败:', createResponse.status)
+        return false
+      }
+    } catch (error) {
+      console.error('[WebDAV] 检查/创建目录失败:', error)
       return false
     }
   }
