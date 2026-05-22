@@ -41,12 +41,6 @@
               <path d="M5 12h14"/>
             </svg>
           </button>
-          <button @click="showToolsPanel = !showToolsPanel" class="btn btn-secondary toggle-btn" :class="{ active: showToolsPanel }" title="工具">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
-          </button>
           <button @click="toggleFullscreen" class="btn btn-secondary" :title="isFullscreen ? '退出全屏' : '全屏'">
             <svg v-if="!isFullscreen" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M8 3H5a2 2 0 0 0-2 2v3"/>
@@ -67,36 +61,6 @@
               <circle cx="12" cy="12" r="3"/>
             </svg>
           </router-link>
-        </div>
-      </div>
-      <div class="tools-panel" :class="{ collapsed: !showToolsPanel }">
-        <div class="tools-panel-content">
-          <button @click="exportData" class="btn btn-secondary" title="导出数据">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" x2="12" y1="15" y2="3"/>
-            </svg>
-
-          </button>
-          <label class="import-btn btn btn-secondary" title="导入数据">
-            <input type="file" accept=".json" @change="importData" style="display: none;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" x2="12" y1="3" y2="15"/>
-            </svg>
-
-          </label>
-          <button @click="importFromWebDAV" class="btn btn-secondary" title="同步WebDAV">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-              <path d="M3 3v5h5"/>
-              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
-              <path d="M16 16h5v5"/>
-            </svg>
-
-          </button>
         </div>
       </div>
     </header>
@@ -241,7 +205,6 @@ const mqttConnected = ref(false);
 const agentOnline = ref(false);
 const searchQuery = ref('');
 const searchInput = ref(null);
-const showToolsPanel = ref(false);
 const bannerText = ref(appConfigService.getBannerText());
 const isFullscreen = ref(false);
 
@@ -675,91 +638,6 @@ const handleConditionConfig = async (strategy, data) => {
   }
 }
 
-const exportData = async () => {
-  try {
-    const data = await database.exportData();
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `my-quant-strategies-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-  catch (error) {
-    console.error('失败:', error);
-    alert('失败');
-  }
-};
-const importData = async (event) => {
-  const file = event.target.files[0];
-  if (!file)
-    return;
-  try {
-    const text = await file.text();
-    let result;
-
-    try {
-      const jsonData = JSON.parse(text);
-      if (jsonData.stockData || jsonData.advancedStrategies || jsonData.conditionalStrategies) {
-        result = await webdavImportService.importFromJSON(jsonData);
-      } else {
-        const count = await database.importData(text);
-        result = {
-          success: true,
-          count: count,
-          message: `成功导入 ${count} 条数据`
-        };
-      }
-    } catch (parseError) {
-      const count = await database.importData(text);
-      result = {
-        success: true,
-        count: count,
-        message: `成功导入 ${count} 条数据`
-      };
-    }
-
-    await loadStrategies();
-    alert(result.message);
-  }
-  catch (error) {
-    console.error('失败:', error);
-    alert('失败，请确保文件格式正确');
-  }
-  event.target.value = '';
-};
-
-const importFromWebDAV = async () => {
-  const confirmed = confirm('确定要从 WebDAV 同步数据吗？\n\n此操作将清空当前所有策略数据，然后从 WebDAV 重新导入。');
-  if (!confirmed) {
-    return;
-  }
-
-  try {
-    const result = await webdavImportService.importFromWebDAV(true);
-    if (result.success) {
-      await loadStrategies();
-
-      // 如果 WebDAV 上有 MQTT 配置，加载并应用
-      if (result.mqttConfig) {
-        mqttConditionService.updateConfig(result.mqttConfig);
-        console.log('已从 WebDAV 加载 MQTT 配置');
-      }
-
-      alert(result.message);
-    }
-    else {
-      alert(result.message);
-    }
-  }
-  catch (error) {
-    console.error('从WebDAV失败:', error);
-    alert('从WebDAV失败');
-  }
-};
 const handleSearch = () => {
 };
 
@@ -1257,35 +1135,6 @@ onMounted(async () => {
   cursor: pointer;
 }
 
-.toggle-btn.active {
-  background-color: rgba(78, 205, 196, 0.3);
-  border: 1px solid rgba(78, 205, 196, 0.5);
-}
-
-.tools-panel {
-  max-height: 60px;
-  overflow: hidden;
-  transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
-  opacity: 1;
-  padding: 8px 20px;
-  background-color: rgba(0, 0, 0, 0.15);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.tools-panel.collapsed {
-  max-height: 0;
-  opacity: 0;
-  padding: 0 20px;
-  border-bottom: none;
-}
-
-.tools-panel-content {
-  display: flex;
-  gap: 10px;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
 .filter-bar {
   background-color: rgba(0,0,0,0.2);
   padding: 8px 20px;
@@ -1533,27 +1382,6 @@ onMounted(async () => {
   }
 
   .action-buttons .btn svg {
-    width: 12px;
-    height: 12px;
-  }
-
-  .tools-panel {
-    padding: 6px 12px;
-  }
-
-  .tools-panel-content {
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .tools-panel-content .btn,
-  .tools-panel-content .import-btn {
-    padding: 4px 8px;
-    font-size: 11px;
-  }
-
-  .tools-panel-content .btn svg,
-  .tools-panel-content .import-btn svg {
     width: 12px;
     height: 12px;
   }
