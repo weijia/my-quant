@@ -14,6 +14,7 @@
 
         <div class="search-section">
           <input
+            ref="searchInput"
             v-model="searchQuery"
             type="text"
             placeholder="搜索策略名称..."
@@ -219,6 +220,7 @@ const selectedStrategy = ref({});
 const mqttConnected = ref(false);
 const agentOnline = ref(false);
 const searchQuery = ref('');
+const searchInput = ref(null);
 const showToolsPanel = ref(false);
 const isFullscreen = ref(false);
 
@@ -742,6 +744,7 @@ const handleSearch = () => {
 
 const clearSearch = () => {
   searchQuery.value = '';
+  searchInput.value?.focus();
 };
 
 const loadMockData = async () => {
