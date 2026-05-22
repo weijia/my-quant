@@ -789,6 +789,9 @@ class WebDAVImportService {
       const webdavConfig = JSON.parse(configStr)
       const baseUrl = (webdavConfig.url || '').replace(/\/+$/, '')
       const url = baseUrl + WEBDAV_PATHS.APP_CONFIG
+
+      // 重新从 localStorage 加载最新配置，确保内存数据同步
+      appConfigService.loadFromLocalStorage()
       const configData = appConfigService.exportConfig()
 
       // 附加策略模板数据
@@ -797,10 +800,19 @@ class WebDAVImportService {
         try {
           configData.orderStrategyTemplates = JSON.parse(templatesStr)
           console.log('[WebDAV] 已附加策略模板数据，共', configData.orderStrategyTemplates.length, '个模板')
+          // 打印每个模板的趋势匹配
+          configData.orderStrategyTemplates.forEach((t, i) => {
+            console.log(`[WebDAV] 模板${i}: ${t.name}, trendMatches:`, t.trendMatches)
+          })
         } catch (e) {
           console.warn('[WebDAV] 解析策略模板失败:', e)
         }
+      } else {
+        console.warn('[WebDAV] localStorage 中未找到 orderStrategyTemplates')
       }
+
+      // 打印完整上传数据用于调试
+      console.log('[WebDAV] 上传配置数据:', JSON.stringify(configData, null, 2))
 
       // 确保目录存在
       const dirUrl = baseUrl + '/app_data/my-quant/'
