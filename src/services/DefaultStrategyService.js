@@ -179,7 +179,10 @@ class DefaultStrategyService {
     const trend = strategy.trendJudgment || strategy.autoTrendJudgment || 'unset'
     
     // 从配置中获取策略类型映射
+    const mapping = appConfigService.getTrendStrategyMapping()
     const strategyType = appConfigService.getStrategyTypeForTrend(trend)
+    
+    console.log(`[DefaultStrategy] 策略: ${strategy.name}, 趋势: ${trend}, 映射:`, mapping[trend], '->', strategyType)
     
     switch (strategyType) {
       case 'uptrend':
