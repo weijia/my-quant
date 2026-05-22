@@ -381,7 +381,7 @@ if (ctx.trendJudgment === 'trend_up') {
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import mqttConditionService, { PRESET_SERVERS } from '../services/MQTTConditionService'
 import { webdavImportService } from '../services/WebDAVImportService'
 import WEBDAV_PATHS from '../config/WebDAVPaths'
@@ -798,6 +798,14 @@ onMounted(() => {
   loadMQTTConfig()
   loadTemplates()
 })
+
+// 监听 templates 变化，自动同步趋势映射
+watch(templates, (newTemplates) => {
+  if (newTemplates && newTemplates.length > 0) {
+    console.log('[Settings] templates 变化，同步趋势映射')
+    appConfigService.syncTrendMappingFromTemplates(newTemplates)
+  }
+}, { deep: true })
 </script>
 
 <style scoped>
