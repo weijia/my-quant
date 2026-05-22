@@ -791,6 +791,17 @@ class WebDAVImportService {
       const url = baseUrl + WEBDAV_PATHS.APP_CONFIG
       const configData = appConfigService.exportConfig()
 
+      // 附加策略模板数据
+      const templatesStr = localStorage.getItem('orderStrategyTemplates')
+      if (templatesStr) {
+        try {
+          configData.orderStrategyTemplates = JSON.parse(templatesStr)
+          console.log('[WebDAV] 已附加策略模板数据，共', configData.orderStrategyTemplates.length, '个模板')
+        } catch (e) {
+          console.warn('[WebDAV] 解析策略模板失败:', e)
+        }
+      }
+
       // 确保目录存在
       const dirUrl = baseUrl + '/app_data/my-quant/'
       await this.ensureDirectoryExists(dirUrl)
@@ -887,6 +898,13 @@ class WebDAVImportService {
       if (response.ok) {
         const data = await response.json()
         appConfigService.mergeFromRemote(data)
+
+        // 恢复策略模板数据
+        if (data.orderStrategyTemplates && Array.isArray(data.orderStrategyTemplates)) {
+          localStorage.setItem('orderStrategyTemplates', JSON.stringify(data.orderStrategyTemplates))
+          console.log('[WebDAV] 已恢复策略模板数据，共', data.orderStrategyTemplates.length, '个模板')
+        }
+
         console.log('[WebDAV] 应用配置下载成功')
         return true
       } else if (response.status === 404) {
