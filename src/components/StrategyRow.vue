@@ -254,7 +254,7 @@
           class="condition-order-btn market-close-btn"
           :class="{ 'active': hasMarketCloseBuyFlag }"
           :disabled="sendingMarketCloseBuy || !strategy.stockCode"
-          :title="hasMarketCloseBuyFlag ? '已设置收市买入（2:45左右上涨0.1%买入）' : '点击设置收市买入（2:45左右上涨0.1%买入）'"
+          :title="`收市买入 上涨0.1%买入 数量:${getEffectiveTradeVolume()}股（2:45左右执行）`"
         >
           {{ sendingMarketCloseBuy ? '...' : (hasMarketCloseBuyFlag ? '收市✓' : '收市买') }}
         </button>
