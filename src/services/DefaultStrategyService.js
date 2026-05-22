@@ -3,6 +3,8 @@
  * 根据趋势自动为股票生成缺省策略
  */
 
+import appConfigService from './AppConfigService.js'
+
 class DefaultStrategyService {
   /**
    * 获取15日平均波动率（从趋势数据）
@@ -175,22 +177,18 @@ class DefaultStrategyService {
     }
 
     const trend = strategy.trendJudgment || strategy.autoTrendJudgment || 'unset'
-
-    switch (trend) {
-      case 'trend_up':
-      case 'high_volatility':
+    
+    // 从配置中获取策略类型映射
+    const strategyType = appConfigService.getStrategyTypeForTrend(trend)
+    
+    switch (strategyType) {
+      case 'uptrend':
         return this.generateUptrendStrategy(strategy)
       
-      case 'trend_down':
-      case 'trend_breakdown':
+      case 'downtrend':
         return this.generateDowntrendStrategy(strategy)
       
-      case 'trend_oscillation':
-      case 'trend_pullback':
-      case 'medium_volatility':
-      case 'low_volatility':
-      case 'trend_unknown':
-      case 'unset':
+      case 'normal':
       default:
         return this.generateNormalStrategy(strategy)
     }

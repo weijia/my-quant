@@ -28,6 +28,20 @@ const DEFAULT_CONFIG = {
     desktopVisibleColumns: ['name', 'quantity', 'trendIcon', 'conditionConfig', 'conditionOrder', 'quickOrder', 'advancedOrderSettings', 'advancedOrder'],
     sortBy: 'name',
     sortOrder: 'asc'
+  },
+  // 趋势与策略的匹配关系配置
+  trendStrategyMapping: {
+    // 趋势类型 -> 策略生成器名称
+    trend_up: 'uptrend',
+    high_volatility: 'uptrend',
+    trend_down: 'downtrend',
+    trend_breakdown: 'downtrend',
+    trend_oscillation: 'normal',
+    trend_pullback: 'normal',
+    medium_volatility: 'normal',
+    low_volatility: 'normal',
+    trend_unknown: 'normal',
+    unset: 'normal'
   }
 }
 
@@ -84,6 +98,7 @@ class AppConfigService {
     if (config.mqtt) Object.assign(result.mqtt, config.mqtt)
     if (config.window) Object.assign(result.window, config.window)
     if (config.ui) Object.assign(result.ui, config.ui)
+    if (config.trendStrategyMapping) Object.assign(result.trendStrategyMapping, config.trendStrategyMapping)
     return result
   }
 
@@ -138,6 +153,22 @@ class AppConfigService {
 
   get sortOrder() { return this.config.ui?.sortOrder || 'asc' }
   set sortOrder(val) { this.updateUIConfig({ sortOrder: val }) }
+
+  // ========== 趋势策略映射配置 ==========
+
+  getTrendStrategyMapping() {
+    return this.config.trendStrategyMapping || DEFAULT_CONFIG.trendStrategyMapping
+  }
+
+  updateTrendStrategyMapping(mapping) {
+    this.config.trendStrategyMapping = { ...this.config.trendStrategyMapping, ...mapping }
+    this.saveToLocalStorage()
+  }
+
+  getStrategyTypeForTrend(trend) {
+    const mapping = this.getTrendStrategyMapping()
+    return mapping[trend] || 'normal'
+  }
 }
 
 // 导出单例
