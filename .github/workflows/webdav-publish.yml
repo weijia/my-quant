@@ -59,4 +59,5 @@ jobs:
           webdav-password: ${{ secrets.WEBDAV_PASSWORD }}
           webdav-root: online/my-quant
           source-directory: ./dist
+          upload-directory: ${{ steps.version.outputs.tag }}
           copy-to-latest: true
