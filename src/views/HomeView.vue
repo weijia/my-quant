@@ -102,12 +102,30 @@
     </header>
 
     <div class="filter-bar">
-      <button class="filter-toggle" @click="showFilterPanel = !showFilterPanel">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :style="{ transform: showFilterPanel ? 'rotate(90deg)' : 'rotate(0deg)' }">
-          <polyline points="9 18 15 12 9 6"/>
-        </svg>
-        过滤条件
-      </button>
+      <div class="filter-header-row">
+        <button class="filter-toggle" @click="showFilterPanel = !showFilterPanel">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :style="{ transform: showFilterPanel ? 'rotate(90deg)' : 'rotate(0deg)' }">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+          过滤条件
+        </button>
+        <!-- 可编辑提醒 Banner -->
+        <div class="banner-inline" @click="editBanner" :title="bannerText || '点击编辑提醒内容'">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" x2="12" y1="8" y2="12"/>
+            <line x1="12" x2="12.01" y1="16" y2="16"/>
+          </svg>
+          <span v-if="bannerText" class="banner-text">{{ bannerText }}</span>
+          <span v-else class="banner-placeholder">💡 点击更新，对用户的提醒...</span>
+          <button v-if="bannerText" class="banner-clear-inline" @click.stop="clearBanner" title="清除">
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 6 6 18"/>
+              <path d="m6 6 12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
       <div class="filter-content" :class="{ collapsed: !showFilterPanel }">
         <div class="filter-group">
         <label>账户类型:</label>
@@ -145,22 +163,6 @@
           <option value="desc">降序</option>
         </select>
       </div>
-        <!-- 可编辑提醒 Banner -->
-        <div class="banner-inline" @click="editBanner" :title="bannerText || '点击编辑提醒内容'">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" x2="12" y1="8" y2="12"/>
-            <line x1="12" x2="12.01" y1="16" y2="16"/>
-          </svg>
-          <span v-if="bannerText" class="banner-text">{{ bannerText }}</span>
-          <span v-else class="banner-placeholder">💡 点击更新，对用户的提醒...</span>
-          <button v-if="bannerText" class="banner-clear-inline" @click.stop="clearBanner" title="清除">
-            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M18 6 6 18"/>
-              <path d="m6 6 12 12"/>
-            </svg>
-          </button>
-        </div>
       </div>
     </div>
 
@@ -1281,6 +1283,13 @@ onMounted(async () => {
   background-color: rgba(0,0,0,0.2);
   padding: 8px 20px;
   border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.filter-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .filter-toggle {
