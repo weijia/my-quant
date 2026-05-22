@@ -182,6 +182,40 @@ class AppConfigService {
     return mapping[trend] || 'normal'
   }
 
+  /**
+   * 从策略模板同步趋势映射关系
+   * 根据模板的 trendMatches 更新 trendStrategyMapping
+   */
+  syncTrendMappingFromTemplates(templates) {
+    if (!Array.isArray(templates)) return
+
+    const newMapping = { ...this.config.trendStrategyMapping }
+
+    templates.forEach(template => {
+      if (!template.name || !Array.isArray(template.trendMatches)) return
+
+      // 根据模板名称判断策略类型
+      let strategyType = 'normal'
+      const name = template.name.toLowerCase()
+      if (name.includes('上涨') || name.includes('up')) {
+        strategyType = 'uptrend'
+      } else if (name.includes('下跌') || name.includes('down')) {
+        strategyType = 'downtrend'
+      }
+
+      // 为每个匹配的趋势设置映射
+      template.trendMatches.forEach(trend => {
+        if (trend) {
+          newMapping[trend] = strategyType
+        }
+      })
+    })
+
+    this.config.trendStrategyMapping = newMapping
+    this.saveToLocalStorage()
+    console.log('[AppConfig] 已从模板同步趋势映射:', JSON.stringify(newMapping))
+  }
+
   // ========== 收市买入配置 ==========
 
   getMarketCloseBuyConfig() {

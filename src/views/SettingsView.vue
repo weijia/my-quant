@@ -696,6 +696,8 @@ const addDefaultStrategies = () => {
 
 const saveTemplates = () => {
   localStorage.setItem('orderStrategyTemplates', JSON.stringify(templates.value))
+  // 同步趋势映射关系到 AppConfigService
+  appConfigService.syncTrendMappingFromTemplates(templates.value)
 }
 
 const addTemplate = () => {
