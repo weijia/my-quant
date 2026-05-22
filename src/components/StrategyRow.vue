@@ -391,6 +391,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import mqttConditionService from '../services/MQTTConditionService.js'
 import clickCounterService from '../services/ClickCounterService.js'
+import appConfigService from '../services/AppConfigService.js'
 
 // 移动端检测
 const isMobile = ref(window.innerWidth <= 768)
