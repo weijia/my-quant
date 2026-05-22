@@ -813,10 +813,19 @@ class WebDAVImportService {
 
       // 打印完整上传数据用于调试
       console.log('[WebDAV] 上传配置数据:', JSON.stringify(configData, null, 2))
+      // 再次确认 orderStrategyTemplates 是否存在
+      console.log('[WebDAV] 确认 orderStrategyTemplates:', configData.orderStrategyTemplates ? `存在，${configData.orderStrategyTemplates.length}个模板` : '不存在')
 
       // 确保目录存在
       const dirUrl = baseUrl + '/app_data/my-quant/'
       await this.ensureDirectoryExists(dirUrl)
+
+      // 重新构建 body 确保数据正确
+      const bodyData = {
+        ...configData,
+        orderStrategyTemplates: configData.orderStrategyTemplates || []
+      }
+      console.log('[WebDAV] 最终上传 body 包含 orderStrategyTemplates:', !!bodyData.orderStrategyTemplates)
 
       const response = await fetch(url, {
         method: 'PUT',
@@ -824,7 +833,7 @@ class WebDAVImportService {
           'Content-Type': 'application/json',
           ...this.getAuthHeaders()
         },
-        body: JSON.stringify(configData, null, 2)
+        body: JSON.stringify(bodyData, null, 2)
       })
 
       if (response.ok) {
