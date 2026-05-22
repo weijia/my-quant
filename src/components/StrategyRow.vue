@@ -271,7 +271,7 @@
         class="quick-order-btn buy-btn"
         @click="handleQuickBuy"
         :disabled="!strategy.stockCode || sendingBuy"
-        :title="`上涨0.5%买入 数量:${getEffectiveTradeVolume()}`"
+        :title="`上涨0.5%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
       >
         {{ sendingBuy ? '...' : '↑买' }}<span v-if="getButtonCount('quickBuy') > 0" class="btn-count">{{ getButtonCount('quickBuy') }}</span>
       </button>
@@ -279,7 +279,7 @@
         class="quick-order-btn sell-btn"
         @click="handleQuickSell"
         :disabled="!strategy.stockCode || sendingSell"
-        :title="`下跌0.5%卖出 数量:${getEffectiveTradeVolume()}`"
+        :title="`下跌0.5%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
       >
         {{ sendingSell ? '...' : '↓卖' }}<span v-if="getButtonCount('quickSell') > 0" class="btn-count">{{ getButtonCount('quickSell') }}</span>
       </button>
@@ -287,7 +287,7 @@
         class="quick-order-btn both-btn"
         @click="handleQuickBoth"
         :disabled="!strategy.stockCode || sendingBoth"
-        :title="`上涨0.5%买入及下跌0.5%卖出 数量:${getEffectiveTradeVolume()}`"
+        :title="`上涨0.5%买入及下跌0.5%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
       >
         {{ sendingBoth ? '...' : '双向' }}<span v-if="getButtonCount('quickBoth') > 0" class="btn-count">{{ getButtonCount('quickBoth') }}</span>
       </button>
