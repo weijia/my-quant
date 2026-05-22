@@ -1,5 +1,6 @@
 import { database } from '../utils/Database'
 import WEBDAV_PATHS from '../config/WebDAVPaths'
+import appConfigService from './AppConfigService.js'
 
 class DataConverter {
   static convertStockData(webdavData) {
@@ -764,6 +765,97 @@ class WebDAVImportService {
         count: 0,
         message: '解析 JSON 数据失败: ' + error.message
       }
+    }
+  }
+
+  // ========== 应用配置文件（config.json）上传/下载 ==========
+
+  /**
+   * 上传应用配置到 WebDAV
+   */
+  async uploadAppConfig() {
+    if (!this.webdavBaseUrl) {
+      console.warn('[WebDAV] 未配置 WebDAV，跳过上传应用配置')
+      return false
+    }
+
+    try {
+      const configStr = localStorage.getItem('webDAVConfig')
+      if (!configStr) {
+        console.warn('[WebDAV] 未找到 WebDAV 配置，跳过上传应用配置')
+        return false
+      }
+
+      const webdavConfig = JSON.parse(configStr)
+      const baseUrl = (webdavConfig.url || '').replace(/\/+$/, '')
+      const url = baseUrl + WEBDAV_PATHS.APP_CONFIG
+      const configData = appConfigService.exportConfig()
+
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...this.getAuthHeaders()
+        },
+        body: JSON.stringify(configData, null, 2)
+      })
+
+      if (response.ok) {
+        console.log('[WebDAV] 应用配置上传成功')
+        return true
+      } else {
+        console.warn('[WebDAV] 应用配置上传失败:', response.status)
+        return false
+      }
+    } catch (error) {
+      console.error('[WebDAV] 应用配置上传失败:', error)
+      return false
+    }
+  }
+
+  /**
+   * 从 WebDAV 下载应用配置
+   */
+  async downloadAppConfig() {
+    if (!this.webdavBaseUrl) {
+      console.warn('[WebDAV] 未配置 WebDAV，跳过下载应用配置')
+      return false
+    }
+
+    try {
+      const configStr = localStorage.getItem('webDAVConfig')
+      if (!configStr) {
+        console.warn('[WebDAV] 未找到 WebDAV 配置，跳过下载应用配置')
+        return false
+      }
+
+      const webdavConfig = JSON.parse(configStr)
+      const baseUrl = (webdavConfig.url || '').replace(/\/+$/, '')
+      const url = baseUrl + WEBDAV_PATHS.APP_CONFIG
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          ...this.getAuthHeaders()
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        appConfigService.mergeFromRemote(data)
+        console.log('[WebDAV] 应用配置下载成功')
+        return true
+      } else if (response.status === 404) {
+        console.log('[WebDAV] 远程不存在应用配置文件')
+        return false
+      } else {
+        console.warn('[WebDAV] 应用配置下载失败:', response.status)
+        return false
+      }
+    } catch (error) {
+      console.error('[WebDAV] 应用配置下载失败:', error)
+      return false
     }
   }
 }

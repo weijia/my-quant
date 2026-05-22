@@ -16,6 +16,9 @@ const WEBDAV_PATHS = {
   // MQTT 配置文件
   MQTT_CONFIG: '/app_data/my-quant/mqtt-config.json',
 
+  // 应用统一配置文件
+  APP_CONFIG: '/app_data/my-quant/config.json',
+
   // 策略数据文件名
   STRATEGIES_FILE: 'all_strategies.json',
 }

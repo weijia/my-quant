@@ -22,6 +22,8 @@ export const PRESET_SERVERS = [
   }
 ];
 
+import appConfigService from './AppConfigService.js'
+
 // 默认配置
 const DEFAULT_MQTT_CONFIG = {
   serverType: 'emqx',           // 预置服务器 ID 或 'custom'
@@ -32,13 +34,12 @@ const DEFAULT_MQTT_CONFIG = {
   clientId: 'myquant_' + Math.random().toString(16).slice(2, 8)
 };
 
-// 从 localStorage 加载配置
+// 从统一配置服务加载 MQTT 配置
 const loadConfig = () => {
   try {
-    const saved = localStorage.getItem('mqttConditionConfig');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return { ...DEFAULT_MQTT_CONFIG, ...parsed };
+    const mqttConfig = appConfigService.getMqttConfig()
+    if (mqttConfig && mqttConfig.serverUrl) {
+      return { ...DEFAULT_MQTT_CONFIG, ...mqttConfig };
     }
   } catch (e) {
     console.error('[MQTT] 加载配置失败:', e);
@@ -46,9 +47,9 @@ const loadConfig = () => {
   return { ...DEFAULT_MQTT_CONFIG };
 };
 
-// 保存配置到 localStorage
+// 保存配置到统一配置服务
 const saveConfig = (config) => {
-  localStorage.setItem('mqttConditionConfig', JSON.stringify(config));
+  appConfigService.updateMqttConfig(config);
 };
 
 // 获取当前运行时配置

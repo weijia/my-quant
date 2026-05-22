@@ -56,6 +56,29 @@
         </div>
       </section>
 
+      <!-- 应用配置同步区块 -->
+      <section class="settings-section">
+        <h2 class="section-title">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ecdc4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" x2="12" y1="3" y2="15"/>
+          </svg>
+          应用配置同步
+        </h2>
+        <p class="config-hint">
+          将 MQTT、窗口、UI 等配置同步到 WebDAV（<code>/app_data/my-quant/config.json</code>）。
+        </p>
+        <div class="section-actions">
+          <button @click="downloadAppConfig" class="btn btn-secondary" :disabled="syncingConfig">
+            {{ syncingConfig === 'download' ? '下载中...' : '从 WebDAV 下载配置' }}
+          </button>
+          <button @click="uploadAppConfig" class="btn btn-primary" :disabled="syncingConfig">
+            {{ syncingConfig === 'upload' ? '上传中...' : '上传配置到 WebDAV' }}
+          </button>
+        </div>
+      </section>
+
       <!-- MQTT 配置区块 -->
       <section class="settings-section">
         <h2 class="section-title">
@@ -362,6 +385,7 @@ import { ref, reactive, onMounted } from 'vue'
 import mqttConditionService, { PRESET_SERVERS } from '../services/MQTTConditionService'
 import { webdavImportService } from '../services/WebDAVImportService'
 import WEBDAV_PATHS from '../config/WebDAVPaths'
+import appConfigService from '../services/AppConfigService.js'
 
 // WebDAV 配置
 const webdavConfigForm = reactive({
@@ -406,6 +430,42 @@ const mqttConfigForm = reactive({
 })
 const mqttConnected = ref(false)
 const testingConnection = ref(false)
+const syncingConfig = ref(false)
+
+// 应用配置上传/下载
+const downloadAppConfig = async () => {
+  syncingConfig.value = 'download'
+  try {
+    const success = await webdavImportService.downloadAppConfig()
+    if (success) {
+      // 重新加载 MQTT 配置到表单
+      loadMQTTConfig()
+      alert('配置下载成功，已合并到本地')
+    } else {
+      alert('配置下载失败，请检查 WebDAV 连接')
+    }
+  } catch (e) {
+    alert('配置下载失败: ' + e.message)
+  } finally {
+    syncingConfig.value = false
+  }
+}
+
+const uploadAppConfig = async () => {
+  syncingConfig.value = 'upload'
+  try {
+    const success = await webdavImportService.uploadAppConfig()
+    if (success) {
+      alert('配置上传成功')
+    } else {
+      alert('配置上传失败，请检查 WebDAV 连接')
+    }
+  } catch (e) {
+    alert('配置上传失败: ' + e.message)
+  } finally {
+    syncingConfig.value = false
+  }
+}
 
 const loadMQTTConfig = () => {
   const config = mqttConditionService.getConfig()

@@ -1,0 +1,147 @@
+/**
+ * 应用配置统一管理服务
+ * 将除 WebDAV 以外的本地配置统一存储到 localStorage 和 WebDAV config.json
+ */
+
+const STORAGE_KEY = 'myQuantConfig'
+
+// 默认配置
+const DEFAULT_CONFIG = {
+  mqtt: {
+    serverType: 'emqx',
+    serverUrl: 'wss://broker.emqx.io:8084/mqtt',
+    serverName: 'EMQX 公共集群',
+    topic: 'user/myquant/orders',
+    password: 'stock_condition_order_Secret',
+    clientId: 'myquant_' + Math.random().toString(16).slice(2, 8)
+  },
+  window: {
+    top: '50vh',
+    left: '50vw',
+    width: '600px',
+    height: '200px'
+  },
+  ui: {
+    hideZeroQuantity: false,
+    useMarginTrade: true,
+    mobileVisibleColumns: ['name', 'quantity', 'trendIcon', 'advancedOrder'],
+    desktopVisibleColumns: ['name', 'quantity', 'trendIcon', 'conditionConfig', 'conditionOrder', 'quickOrder', 'advancedOrderSettings', 'advancedOrder'],
+    sortBy: 'name',
+    sortOrder: 'asc'
+  }
+}
+
+class AppConfigService {
+  constructor() {
+    this.config = null
+    this.loadFromLocalStorage()
+  }
+
+  // 从 localStorage 加载配置
+  loadFromLocalStorage() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (saved) {
+        this.config = JSON.parse(saved)
+      }
+    } catch (e) {
+      console.error('[AppConfig] 加载 localStorage 配置失败:', e)
+    }
+    if (!this.config) {
+      this.config = JSON.parse(JSON.stringify(DEFAULT_CONFIG))
+    }
+    // 合并默认值（防止新增字段缺失）
+    this.config = this.mergeWithDefaults(this.config)
+  }
+
+  // 保存配置到 localStorage
+  saveToLocalStorage() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.config))
+    } catch (e) {
+      console.error('[AppConfig] 保存 localStorage 配置失败:', e)
+    }
+  }
+
+  // 从远程数据合并配置（WebDAV 下载后调用）
+  mergeFromRemote(remoteConfig) {
+    if (!remoteConfig || typeof remoteConfig !== 'object') return
+    this.config = this.mergeWithDefaults(remoteConfig)
+    this.saveToLocalStorage()
+    console.log('[AppConfig] 已从远程合并配置')
+  }
+
+  // 导出完整配置（用于上传到 WebDAV）
+  exportConfig() {
+    return JSON.parse(JSON.stringify(this.config))
+  }
+
+  // 合并默认值
+  mergeWithDefaults(config) {
+    const result = JSON.parse(JSON.stringify(DEFAULT_CONFIG))
+    if (!config) return result
+    // 深度合并各子配置
+    if (config.mqtt) Object.assign(result.mqtt, config.mqtt)
+    if (config.window) Object.assign(result.window, config.window)
+    if (config.ui) Object.assign(result.ui, config.ui)
+    return result
+  }
+
+  // ========== MQTT 配置 ==========
+
+  getMqttConfig() {
+    return this.config.mqtt || {}
+  }
+
+  updateMqttConfig(mqttConfig) {
+    this.config.mqtt = { ...this.config.mqtt, ...mqttConfig }
+    this.saveToLocalStorage()
+  }
+
+  // ========== 窗口配置 ==========
+
+  getWindowConfig() {
+    return this.config.window || {}
+  }
+
+  updateWindowConfig(windowConfig) {
+    this.config.window = { ...this.config.window, ...windowConfig }
+    this.saveToLocalStorage()
+  }
+
+  // ========== UI 配置 ==========
+
+  getUIConfig() {
+    return this.config.ui || {}
+  }
+
+  updateUIConfig(uiConfig) {
+    this.config.ui = { ...this.config.ui, ...uiConfig }
+    this.saveToLocalStorage()
+  }
+
+  // 便捷方法：UI 子项
+  get hideZeroQuantity() { return this.config.ui?.hideZeroQuantity ?? false }
+  set hideZeroQuantity(val) { this.updateUIConfig({ hideZeroQuantity: val }) }
+
+  get useMarginTrade() { return this.config.ui?.useMarginTrade ?? true }
+  set useMarginTrade(val) { this.updateUIConfig({ useMarginTrade: val }) }
+
+  get mobileVisibleColumns() { return this.config.ui?.mobileVisibleColumns || DEFAULT_CONFIG.ui.mobileVisibleColumns }
+  set mobileVisibleColumns(val) { this.updateUIConfig({ mobileVisibleColumns: val }) }
+
+  get desktopVisibleColumns() { return this.config.ui?.desktopVisibleColumns || DEFAULT_CONFIG.ui.desktopVisibleColumns }
+  set desktopVisibleColumns(val) { this.updateUIConfig({ desktopVisibleColumns: val }) }
+
+  get sortBy() { return this.config.ui?.sortBy || 'name' }
+  set sortBy(val) { this.updateUIConfig({ sortBy: val }) }
+
+  get sortOrder() { return this.config.ui?.sortOrder || 'asc' }
+  set sortOrder(val) { this.updateUIConfig({ sortOrder: val }) }
+}
+
+// 导出单例
+const appConfigService = new AppConfigService()
+
+export default appConfigService
+export { AppConfigService, STORAGE_KEY, DEFAULT_CONFIG }
