@@ -277,9 +277,9 @@ const emit = defineEmits([
 ])
 
 const showColumnSelectDialog = ref(false)
-// 从统一配置读取初始值
-const hideZeroQuantity = ref(appConfigService.hideZeroQuantity)
-const useMarginTrade = ref(appConfigService.useMarginTrade)
+// 从统一配置读取初始值，确保是布尔类型
+const hideZeroQuantity = ref(!!appConfigService.hideZeroQuantity)
+const useMarginTrade = ref(appConfigService.useMarginTrade !== false)
 
 const saveHideZeroQuantity = () => {
   appConfigService.hideZeroQuantity = hideZeroQuantity.value
@@ -291,8 +291,9 @@ const saveUseMarginTrade = () => {
 
 // 监听配置更新，同步本地状态
 const handleConfigUpdate = () => {
-  hideZeroQuantity.value = appConfigService.hideZeroQuantity
-  useMarginTrade.value = appConfigService.useMarginTrade
+  // 确保值是有效的布尔类型
+  hideZeroQuantity.value = !!appConfigService.hideZeroQuantity
+  useMarginTrade.value = appConfigService.useMarginTrade !== false
 }
 
 onMounted(() => {
