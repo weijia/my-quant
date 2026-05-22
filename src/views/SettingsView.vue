@@ -454,6 +454,8 @@ const downloadAppConfig = async () => {
 const uploadAppConfig = async () => {
   syncingConfig.value = 'upload'
   try {
+    // 上传前从当前页面 templates 同步趋势映射，确保数据最新
+    appConfigService.syncTrendMappingFromTemplates(templates.value)
     const success = await webdavImportService.uploadAppConfig()
     if (success) {
       alert('配置上传成功')
