@@ -147,6 +147,26 @@
       </div>
       </div>
     </div>
+
+    <!-- 可编辑提醒 Banner -->
+    <div class="banner-section">
+      <div class="banner-content" @click="editBanner" :title="bannerText || '点击编辑提醒内容'">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" x2="12" y1="8" y2="12"/>
+          <line x1="12" x2="12.01" y1="16" y2="16"/>
+        </svg>
+        <span v-if="bannerText">{{ bannerText }}</span>
+        <span v-else class="banner-placeholder">💡 点击更新，对用户的提醒...</span>
+      </div>
+      <button v-if="bannerText" class="banner-clear-btn" @click.stop="clearBanner" title="清除提醒">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18"/>
+          <path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
+
     <main class="main-content">
       <StrategyList
         :strategies="filteredStrategies"
@@ -222,6 +242,7 @@ const agentOnline = ref(false);
 const searchQuery = ref('');
 const searchInput = ref(null);
 const showToolsPanel = ref(false);
+const bannerText = ref(localStorage.getItem('homeBannerText') || '');
 const isFullscreen = ref(false);
 
 const toggleFullscreen = () => {
@@ -745,6 +766,20 @@ const handleSearch = () => {
 const clearSearch = () => {
   searchQuery.value = '';
   searchInput.value?.focus();
+};
+
+// Banner 编辑和清除
+const editBanner = () => {
+  const newText = prompt('请输入提醒内容:', bannerText.value);
+  if (newText !== null) {
+    bannerText.value = newText.trim();
+    localStorage.setItem('homeBannerText', bannerText.value);
+  }
+};
+
+const clearBanner = () => {
+  bannerText.value = '';
+  localStorage.removeItem('homeBannerText');
 };
 
 const loadMockData = async () => {
@@ -1284,6 +1319,58 @@ onMounted(async () => {
 .filter-content.collapsed {
   max-height: 0;
   opacity: 0;
+}
+
+/* Banner 样式 */
+.banner-section {
+  background: linear-gradient(90deg, rgba(255, 165, 0, 0.15), rgba(255, 165, 0, 0.05));
+  border-left: 3px solid #ffa500;
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.banner-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+}
+
+.banner-content:hover {
+  color: white;
+}
+
+.banner-content svg {
+  color: #ffa500;
+  flex-shrink: 0;
+}
+
+.banner-placeholder {
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
+}
+
+.banner-clear-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.banner-clear-btn:hover {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .filter-group {
