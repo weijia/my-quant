@@ -205,7 +205,7 @@
           :disabled="sendingConditionAmountBuy || !effectivePrice"
           :title="`上涨${conditionPct}%买入 金额:${defaultTradeAmount || 26000}`"
         >
-          {{ sendingConditionAmountBuy ? '...' : '额↑买' }}
+          {{ sendingConditionAmountBuy ? '...' : '额↑买' }}<span v-if="getButtonCount('amountBuy') > 0" class="btn-count">{{ getButtonCount('amountBuy') }}</span>
         </button>
         <button 
           @click="handleConditionAmountSell" 
@@ -213,7 +213,7 @@
           :disabled="sendingConditionAmountSell || !effectivePrice"
           :title="`下跌${conditionPct}%卖出 金额:${defaultTradeAmount || 26000}`"
         >
-          {{ sendingConditionAmountSell ? '...' : '额↓卖' }}
+          {{ sendingConditionAmountSell ? '...' : '额↓卖' }}<span v-if="getButtonCount('amountSell') > 0" class="btn-count">{{ getButtonCount('amountSell') }}</span>
         </button>
         <button 
           @click="handleConditionAmountBoth" 
@@ -221,7 +221,7 @@
           :disabled="sendingConditionAmountBoth || !effectivePrice"
           :title="`上涨${conditionPct}%买入+下跌${conditionPct}%卖出 金额:${defaultTradeAmount || 26000}`"
         >
-          {{ sendingConditionAmountBoth ? '...' : '额双向' }}
+          {{ sendingConditionAmountBoth ? '...' : '额双向' }}<span v-if="getButtonCount('amountBoth') > 0" class="btn-count">{{ getButtonCount('amountBoth') }}</span>
         </button>
         <!-- 基于数量（量）的按钮 -->
         <button 
@@ -230,7 +230,7 @@
           :disabled="sendingConditionVolumeBuy"
           :title="`上涨${conditionPct}%买入 数量:${getEffectiveTradeVolume()}`"
         >
-          {{ sendingConditionVolumeBuy ? '...' : '量↑买' }}
+          {{ sendingConditionVolumeBuy ? '...' : '量↑买' }}<span v-if="getButtonCount('volumeBuy') > 0" class="btn-count">{{ getButtonCount('volumeBuy') }}</span>
         </button>
         <button 
           @click="handleConditionVolumeSell" 
@@ -238,7 +238,7 @@
           :disabled="sendingConditionVolumeSell"
           :title="`下跌${conditionPct}%卖出 数量:${getEffectiveTradeVolume()}`"
         >
-          {{ sendingConditionVolumeSell ? '...' : '量↓卖' }}
+          {{ sendingConditionVolumeSell ? '...' : '量↓卖' }}<span v-if="getButtonCount('volumeSell') > 0" class="btn-count">{{ getButtonCount('volumeSell') }}</span>
         </button>
         <button 
           @click="handleConditionVolumeBoth" 
@@ -246,7 +246,7 @@
           :disabled="sendingConditionVolumeBoth"
           :title="`上涨${conditionPct}%买入+下跌${conditionPct}%卖出 数量:${getEffectiveTradeVolume()}`"
         >
-          {{ sendingConditionVolumeBoth ? '...' : '量双向' }}
+          {{ sendingConditionVolumeBoth ? '...' : '量双向' }}<span v-if="getButtonCount('volumeBoth') > 0" class="btn-count">{{ getButtonCount('volumeBoth') }}</span>
         </button>
         <!-- 收市买入按钮 -->
         <button 
@@ -256,7 +256,7 @@
           :disabled="sendingMarketCloseBuy || !strategy.stockCode"
           :title="`收市买入 上涨0.1%买入 数量:${getEffectiveTradeVolume()}股（2:45左右执行）`"
         >
-          {{ sendingMarketCloseBuy ? '...' : (hasMarketCloseBuyFlag ? '收市✓' : '收市买') }}
+          {{ sendingMarketCloseBuy ? '...' : (hasMarketCloseBuyFlag ? '收市✓' : '收市买') }}<span v-if="getButtonCount('marketCloseBuy') > 0" class="btn-count">{{ getButtonCount('marketCloseBuy') }}</span>
         </button>
       </div>
     </td>
@@ -273,7 +273,7 @@
         :disabled="!strategy.stockCode || sendingBuy"
         :title="`上涨0.5%买入 数量:${getEffectiveTradeVolume()}`"
       >
-        {{ sendingBuy ? '...' : '↑买' }}
+        {{ sendingBuy ? '...' : '↑买' }}<span v-if="getButtonCount('quickBuy') > 0" class="btn-count">{{ getButtonCount('quickBuy') }}</span>
       </button>
       <button
         class="quick-order-btn sell-btn"
@@ -281,7 +281,7 @@
         :disabled="!strategy.stockCode || sendingSell"
         :title="`下跌0.5%卖出 数量:${getEffectiveTradeVolume()}`"
       >
-        {{ sendingSell ? '...' : '↓卖' }}
+        {{ sendingSell ? '...' : '↓卖' }}<span v-if="getButtonCount('quickSell') > 0" class="btn-count">{{ getButtonCount('quickSell') }}</span>
       </button>
       <button
         class="quick-order-btn both-btn"
@@ -289,7 +289,7 @@
         :disabled="!strategy.stockCode || sendingBoth"
         :title="`上涨0.5%买入及下跌0.5%卖出 数量:${getEffectiveTradeVolume()}`"
       >
-        {{ sendingBoth ? '...' : '双向' }}
+        {{ sendingBoth ? '...' : '双向' }}<span v-if="getButtonCount('quickBoth') > 0" class="btn-count">{{ getButtonCount('quickBoth') }}</span>
       </button>
     </td>
     
@@ -390,6 +390,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import mqttConditionService from '../services/MQTTConditionService.js'
+import clickCounterService from '../services/ClickCounterService.js'
 
 // 移动端检测
 const isMobile = ref(window.innerWidth <= 768)
@@ -410,6 +411,35 @@ const props = defineProps({
     type: Boolean,
     default: true
   }
+})
+
+// 点击计数器
+const buttonCounts = ref({})
+
+const loadButtonCounts = () => {
+  const counts = {}
+  const buttons = ['quickBuy', 'quickSell', 'quickBoth', 'amountBuy', 'amountSell', 'amountBoth', 'volumeBuy', 'volumeSell', 'volumeBoth', 'marketCloseBuy']
+  buttons.forEach(btn => {
+    counts[btn] = clickCounterService.getCount(props.strategy.id, btn)
+  })
+  buttonCounts.value = counts
+}
+
+const getButtonCount = (buttonType) => {
+  return buttonCounts.value[buttonType] || 0
+}
+
+const incrementCount = (buttonType) => {
+  const newCount = clickCounterService.increment(props.strategy.id, buttonType)
+  buttonCounts.value[buttonType] = newCount
+}
+
+// 初始加载
+loadButtonCounts()
+
+// 策略变化时重新加载
+watch(() => props.strategy.id, () => {
+  loadButtonCounts()
 })
 
 const emit = defineEmits(['edit', 'delete', 'update-trend', 'batch-condition', 'execute-strategy', 'execute-strategy-by-amount', 'update-strategy-selection', 'update-trade-settings', 'update-condition-config'])
@@ -724,6 +754,7 @@ const handleConditionAmountBuy = async () => {
     alert('股票代码或价格不存在')
     return
   }
+  incrementCount('amountBuy')
   sendingConditionAmountBuy.value = true
   const tradeAmount = defaultTradeAmount.value || 26000
   const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
@@ -754,6 +785,7 @@ const handleConditionAmountSell = async () => {
     alert('股票代码或价格不存在')
     return
   }
+  incrementCount('amountSell')
   sendingConditionAmountSell.value = true
   const tradeAmount = defaultTradeAmount.value || 26000
   const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
@@ -784,6 +816,7 @@ const handleConditionAmountBoth = async () => {
     alert('股票代码或价格不存在')
     return
   }
+  incrementCount('amountBoth')
   sendingConditionAmountBoth.value = true
   const tradeAmount = defaultTradeAmount.value || 26000
   const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
@@ -823,6 +856,7 @@ const handleConditionVolumeBuy = async () => {
     alert('股票代码不存在')
     return
   }
+  incrementCount('volumeBuy')
   sendingConditionVolumeBuy.value = true
   const tradeVolume = getEffectiveTradeVolume()
   const pct = conditionPct.value || 0.1
@@ -852,6 +886,7 @@ const handleConditionVolumeSell = async () => {
     alert('股票代码不存在')
     return
   }
+  incrementCount('volumeSell')
   sendingConditionVolumeSell.value = true
   const tradeVolume = getEffectiveTradeVolume()
   const pct = conditionPct.value || 0.1
@@ -881,6 +916,7 @@ const handleConditionVolumeBoth = async () => {
     alert('股票代码不存在')
     return
   }
+  incrementCount('volumeBoth')
   sendingConditionVolumeBoth.value = true
   const tradeVolume = getEffectiveTradeVolume()
   const pct = conditionPct.value || 0.1
@@ -927,6 +963,7 @@ const handleMarketCloseBuy = async () => {
     return
   }
   
+  incrementCount('marketCloseBuy')
   sendingMarketCloseBuy.value = true
   
   try {
@@ -1149,6 +1186,7 @@ const getSellSide = () => {
 // 上涨买入
 const handleQuickBuy = async () => {
   if (!props.strategy.stockCode) return
+  incrementCount('quickBuy')
   sendingBuy.value = true
   const tradeVolume = getEffectiveTradeVolume()
   
@@ -1174,6 +1212,7 @@ const handleQuickBuy = async () => {
 // 下跌卖出
 const handleQuickSell = async () => {
   if (!props.strategy.stockCode) return
+  incrementCount('quickSell')
   sendingSell.value = true
   const tradeVolume = getEffectiveTradeVolume()
   
@@ -1199,6 +1238,7 @@ const handleQuickSell = async () => {
 // 双向下单
 const handleQuickBoth = async () => {
   if (!props.strategy.stockCode) return
+  incrementCount('quickBoth')
   sendingBoth.value = true
   const tradeVolume = getEffectiveTradeVolume()
   
@@ -2139,5 +2179,32 @@ const getTrendClass = (trend) => {
   .stock-code {
     display: none;
   }
+}
+
+/* 按钮点击计数 */
+.btn-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  margin-left: 3px;
+  font-size: 9px;
+  font-weight: bold;
+  background-color: rgba(255, 165, 0, 0.3);
+  color: #ffa500;
+  border-radius: 8px;
+  line-height: 1;
+}
+
+.quick-order-btn .btn-count {
+  background-color: rgba(255, 165, 0, 0.3);
+  color: #ffa500;
+}
+
+.condition-order-btn .btn-count {
+  background-color: rgba(255, 165, 0, 0.3);
+  color: #ffa500;
 }
 </style>
