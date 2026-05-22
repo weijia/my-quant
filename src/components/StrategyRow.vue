@@ -1150,7 +1150,7 @@ const getSellSide = () => {
 const handleQuickBuy = async () => {
   if (!props.strategy.stockCode) return
   sendingBuy.value = true
-  const tradeVolume = calculateTradeVolume(props.strategy.netPosition)
+  const tradeVolume = getEffectiveTradeVolume()
   
   try {
     await mqttConditionService.sendBuyOrder({
@@ -1175,7 +1175,7 @@ const handleQuickBuy = async () => {
 const handleQuickSell = async () => {
   if (!props.strategy.stockCode) return
   sendingSell.value = true
-  const tradeVolume = calculateTradeVolume(props.strategy.netPosition)
+  const tradeVolume = getEffectiveTradeVolume()
   
   try {
     await mqttConditionService.sendSellOrder({
@@ -1200,7 +1200,7 @@ const handleQuickSell = async () => {
 const handleQuickBoth = async () => {
   if (!props.strategy.stockCode) return
   sendingBoth.value = true
-  const tradeVolume = calculateTradeVolume(props.strategy.netPosition)
+  const tradeVolume = getEffectiveTradeVolume()
   
   try {
     await mqttConditionService.sendBothOrders({
