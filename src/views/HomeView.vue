@@ -222,6 +222,7 @@ import { database } from '../utils/Database'
 import { webdavImportService } from '../services/WebDAVImportService'
 import mqttConditionService from '../services/MQTTConditionService'
 import { defaultStrategyService } from '../services/DefaultStrategyService'
+import { appConfigService } from '../services/AppConfigService'
 import { versionDisplay, buildTimeDisplay } from '../version'
 import StrategyList from '../components/StrategyList.vue'
 import StrategyDialog from '../components/StrategyDialog.vue'
@@ -241,7 +242,7 @@ const agentOnline = ref(false);
 const searchQuery = ref('');
 const searchInput = ref(null);
 const showToolsPanel = ref(false);
-const bannerText = ref(localStorage.getItem('homeBannerText') || '');
+const bannerText = ref(appConfigService.getBannerText());
 const isFullscreen = ref(false);
 
 const toggleFullscreen = () => {
@@ -772,13 +773,13 @@ const editBanner = () => {
   const newText = prompt('请输入提醒内容:', bannerText.value);
   if (newText !== null) {
     bannerText.value = newText.trim();
-    localStorage.setItem('homeBannerText', bannerText.value);
+    appConfigService.setBannerText(bannerText.value);
   }
 };
 
 const clearBanner = () => {
   bannerText.value = '';
-  localStorage.removeItem('homeBannerText');
+  appConfigService.clearBanner();
 };
 
 const loadMockData = async () => {

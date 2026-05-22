@@ -44,7 +44,11 @@ const DEFAULT_CONFIG = {
     unset: 'normal'
   },
   // 收市买入配置
-  marketCloseBuy: {}
+  marketCloseBuy: {},
+  // Banner 提醒配置
+  banner: {
+    text: ''
+  }
 }
 
 class AppConfigService {
@@ -106,6 +110,7 @@ class AppConfigService {
     if (config.ui) Object.assign(result.ui, config.ui)
     if (config.trendStrategyMapping) Object.assign(result.trendStrategyMapping, config.trendStrategyMapping)
     if (config.marketCloseBuy) result.marketCloseBuy = { ...config.marketCloseBuy }
+    if (config.banner) result.banner = { ...config.banner }
     return result
   }
 
@@ -205,6 +210,31 @@ class AppConfigService {
       delete this.config.marketCloseBuy[strategyId]
       this.saveToLocalStorage()
     }
+  }
+
+  // ========== Banner 配置 ==========
+
+  getBannerConfig() {
+    return this.config.banner || { text: '' }
+  }
+
+  getBannerText() {
+    return this.config.banner?.text || ''
+  }
+
+  setBannerText(text) {
+    if (!this.config.banner) {
+      this.config.banner = { text: '' }
+    }
+    this.config.banner.text = text
+    this.saveToLocalStorage()
+  }
+
+  clearBanner() {
+    if (this.config.banner) {
+      this.config.banner.text = ''
+    }
+    this.saveToLocalStorage()
   }
 }
 
