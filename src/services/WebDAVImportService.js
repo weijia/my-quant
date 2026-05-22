@@ -331,7 +331,7 @@ class WebDAVImportService {
   }
 
   loadConfig() {
-    const configStr = localStorage.getItem('webDavConfig');
+    const configStr = localStorage.getItem('webDAVConfig');
     if (configStr) {
       try {
         const config = JSON.parse(configStr);
@@ -644,7 +644,7 @@ class WebDAVImportService {
     }
 
     try {
-      const configStr = localStorage.getItem('webDavConfig');
+      const configStr = localStorage.getItem('webDAVConfig');
       const webdavConfig = JSON.parse(configStr);
       const baseUrl = (webdavConfig.url || '').replace(/\/+$/, '');
       const url = baseUrl + WEBDAV_PATHS.MQTT_CONFIG
@@ -678,7 +678,7 @@ class WebDAVImportService {
     }
 
     try {
-      const configStr = localStorage.getItem('webDavConfig');
+      const configStr = localStorage.getItem('webDAVConfig');
       const webdavConfig = JSON.parse(configStr);
       const baseUrl = (webdavConfig.url || '').replace(/\/+$/, '');
       const url = baseUrl + WEBDAV_PATHS.MQTT_CONFIG

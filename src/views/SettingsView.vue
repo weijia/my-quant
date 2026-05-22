@@ -376,13 +376,13 @@ const saveWebDAVConfig = () => {
     username: webdavConfigForm.username,
     password: webdavConfigForm.password
   }
-  localStorage.setItem('webDavConfig', JSON.stringify(config))
+  localStorage.setItem('webDAVConfig', JSON.stringify(config))
   webdavImportService.loadConfig()
   alert('WebDAV 配置已保存')
 }
 
 const loadWebDAVConfig = () => {
-  const configStr = localStorage.getItem('webDavConfig')
+  const configStr = localStorage.getItem('webDAVConfig')
   if (configStr) {
     try {
       const config = JSON.parse(configStr)
