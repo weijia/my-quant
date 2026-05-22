@@ -213,8 +213,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import StrategyRow from './StrategyRow.vue'
+import appConfigService from '../services/AppConfigService.js'
 
 const props = defineProps({
   strategies: {
@@ -276,16 +277,31 @@ const emit = defineEmits([
 ])
 
 const showColumnSelectDialog = ref(false)
-const hideZeroQuantity = ref(localStorage.getItem('hideZeroQuantity') === 'true')
-const useMarginTrade = ref(localStorage.getItem('useMarginTrade') !== 'false')
+// 从统一配置读取初始值
+const hideZeroQuantity = ref(appConfigService.hideZeroQuantity)
+const useMarginTrade = ref(appConfigService.useMarginTrade)
 
 const saveHideZeroQuantity = () => {
-  localStorage.setItem('hideZeroQuantity', hideZeroQuantity.value)
+  appConfigService.hideZeroQuantity = hideZeroQuantity.value
 }
 
 const saveUseMarginTrade = () => {
-  localStorage.setItem('useMarginTrade', useMarginTrade.value)
+  appConfigService.useMarginTrade = useMarginTrade.value
 }
+
+// 监听配置更新，同步本地状态
+const handleConfigUpdate = () => {
+  hideZeroQuantity.value = appConfigService.hideZeroQuantity
+  useMarginTrade.value = appConfigService.useMarginTrade
+}
+
+onMounted(() => {
+  window.addEventListener('appConfigUpdated', handleConfigUpdate)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('appConfigUpdated', handleConfigUpdate)
+})
 
 const allColumns = [
   { key: 'name', label: '策略名称' },
