@@ -254,7 +254,7 @@
           class="condition-order-btn market-close-btn"
           :class="{ 'active': hasMarketCloseBuyFlag }"
           :disabled="sendingMarketCloseBuy || !strategy.stockCode"
-          :title="`收市买入 上涨0.1%买入 数量:${getEffectiveTradeVolume()}股（2:45左右执行）`"
+          :title="`收市买入 上涨0.1%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}股（2:45左右执行）`"
         >
           {{ sendingMarketCloseBuy ? '...' : (hasMarketCloseBuyFlag ? '收市✓' : '收市买') }}<span v-if="getButtonCount('marketCloseBuy') > 0" class="btn-count">{{ getButtonCount('marketCloseBuy') }}</span>
         </button>
