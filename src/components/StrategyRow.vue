@@ -28,7 +28,7 @@
     </td>
     
     <td v-if="visibleColumns.includes('decreasePercentage')" class="decrease-pct-cell">
-      <span :class="strategy.decreasePercentage ? 'decrease-value' : ''">{{ strategy.decreasePercentage ? '-' + strategy.decreasePercentage : '-' }}%</span>
+      <span :class="getDecreaseColorClass(strategy.decreasePercentage)">{{ strategy.decreasePercentage ? '-' + strategy.decreasePercentage : '-' }}%</span>
     </td>
     
     <td v-if="visibleColumns.includes('trendIcon')" class="trend-icon-cell">
@@ -1386,6 +1386,16 @@ const getChangeClass = (value) => {
   return num >= 0 ? 'positive' : 'negative'
 }
 
+// 根据下跌百分比返回颜色类，跌幅越大越红
+const getDecreaseColorClass = (value) => {
+  if (!value) return ''
+  const num = parseFloat(value)
+  if (num >= 20) return 'decrease-severe'      // 跌幅≥20%：深红
+  if (num >= 10) return 'decrease-heavy'       // 跌幅≥10%：红
+  if (num >= 5) return 'decrease-moderate'     // 跌幅≥5%：浅红
+  return 'decrease-light'                      // 跌幅<5%：白色
+}
+
 const getTrendClass = (trend) => {
   const trendColors = {
     trend_up: 'trend-up',
@@ -1515,6 +1525,23 @@ const getTrendClass = (trend) => {
 
 .decrease-value {
   color: white;
+}
+
+/* 下跌百分比颜色：跌幅越大越红 */
+.decrease-light {
+  color: white;
+}
+
+.decrease-moderate {
+  color: #ff9999;
+}
+
+.decrease-heavy {
+  color: #ff6666;
+}
+
+.decrease-severe {
+  color: #ff3333;
 }
 
 .trend-select {
