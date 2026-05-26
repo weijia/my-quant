@@ -193,61 +193,73 @@
 
     <!-- 条件单：6个按钮（基于额和量，使用条件配置中的涨跌幅） -->
     <td v-if="visibleColumns.includes('conditionOrder')" class="condition-order-cell">
-      <div class="condition-info">
-        <span class="condition-amount">{{ formatAmount(totalTradeAmount) || '-' }}</span>
-        <span class="condition-pct">±{{ conditionPct }}%</span>
-      </div>
       <div class="condition-order-btns">
-        <!-- 基于金额（额）的按钮 -->
-        <button 
-          @click="handleConditionAmountBuy" 
-          class="condition-order-btn amount-buy-btn"
-          :disabled="sendingConditionAmountBuy || !effectivePrice"
-          :title="`上涨${conditionPct}%买入 金额:${defaultTradeAmount || 26000} 数量:${calculateVolumeFromAmount(defaultTradeAmount || 26000, effectivePrice || 10)}`"
-        >
-          {{ sendingConditionAmountBuy ? '...' : '额↑买' }}<span v-if="getButtonCount('amountBuy') > 0" class="btn-count">{{ getButtonCount('amountBuy') }}</span>
-        </button>
-        <button 
-          @click="handleConditionAmountSell" 
-          class="condition-order-btn amount-sell-btn"
-          :disabled="sendingConditionAmountSell || !effectivePrice"
-          :title="`下跌${conditionPct}%卖出 金额:${defaultTradeAmount || 26000} 数量:${calculateVolumeFromAmount(defaultTradeAmount || 26000, effectivePrice || 10)}`"
-        >
-          {{ sendingConditionAmountSell ? '...' : '额↓卖' }}<span v-if="getButtonCount('amountSell') > 0" class="btn-count">{{ getButtonCount('amountSell') }}</span>
-        </button>
-        <button 
-          @click="handleConditionAmountBoth" 
-          class="condition-order-btn amount-both-btn"
-          :disabled="sendingConditionAmountBoth || !effectivePrice"
-          :title="`上涨${conditionPct}%买入+下跌${conditionPct}%卖出 金额:${defaultTradeAmount || 26000} 数量:${calculateVolumeFromAmount(defaultTradeAmount || 26000, effectivePrice || 10)}`"
-        >
-          {{ sendingConditionAmountBoth ? '...' : '额双向' }}<span v-if="getButtonCount('amountBoth') > 0" class="btn-count">{{ getButtonCount('amountBoth') }}</span>
-        </button>
-        <!-- 基于数量（量）的按钮 -->
-        <button 
-          @click="handleConditionVolumeBuy" 
-          class="condition-order-btn volume-buy-btn"
-          :disabled="sendingConditionVolumeBuy"
-          :title="`上涨${conditionPct}%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
-        >
-          {{ sendingConditionVolumeBuy ? '...' : '量↑买' }}<span v-if="getButtonCount('volumeBuy') > 0" class="btn-count">{{ getButtonCount('volumeBuy') }}</span>
-        </button>
-        <button 
-          @click="handleConditionVolumeSell" 
-          class="condition-order-btn volume-sell-btn"
-          :disabled="sendingConditionVolumeSell"
-          :title="`下跌${conditionPct}%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
-        >
-          {{ sendingConditionVolumeSell ? '...' : '量↓卖' }}<span v-if="getButtonCount('volumeSell') > 0" class="btn-count">{{ getButtonCount('volumeSell') }}</span>
-        </button>
-        <button 
-          @click="handleConditionVolumeBoth" 
-          class="condition-order-btn volume-both-btn"
-          :disabled="sendingConditionVolumeBoth"
-          :title="`上涨${conditionPct}%买入+下跌${conditionPct}%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
-        >
-          {{ sendingConditionVolumeBoth ? '...' : '量双向' }}<span v-if="getButtonCount('volumeBoth') > 0" class="btn-count">{{ getButtonCount('volumeBoth') }}</span>
-        </button>
+        <!-- 基于金额（额）的按钮组 -->
+        <div class="condition-group amount-group">
+          <div class="condition-info">
+            <span class="condition-amount amount-based">{{ formatAmount(defaultTradeAmount) || '-' }}</span>
+            <span class="condition-pct">±{{ conditionPct }}%</span>
+          </div>
+          <div class="condition-group-btns">
+            <button 
+              @click="handleConditionAmountBuy" 
+              class="condition-order-btn amount-buy-btn"
+              :disabled="sendingConditionAmountBuy || !effectivePrice"
+              :title="`上涨${conditionPct}%买入 金额:${defaultTradeAmount || 26000} 数量:${calculateVolumeFromAmount(defaultTradeAmount || 26000, effectivePrice || 10)}`"
+            >
+              {{ sendingConditionAmountBuy ? '...' : '额↑买' }}<span v-if="getButtonCount('amountBuy') > 0" class="btn-count">{{ getButtonCount('amountBuy') }}</span>
+            </button>
+            <button 
+              @click="handleConditionAmountSell" 
+              class="condition-order-btn amount-sell-btn"
+              :disabled="sendingConditionAmountSell || !effectivePrice"
+              :title="`下跌${conditionPct}%卖出 金额:${defaultTradeAmount || 26000} 数量:${calculateVolumeFromAmount(defaultTradeAmount || 26000, effectivePrice || 10)}`"
+            >
+              {{ sendingConditionAmountSell ? '...' : '额↓卖' }}<span v-if="getButtonCount('amountSell') > 0" class="btn-count">{{ getButtonCount('amountSell') }}</span>
+            </button>
+            <button 
+              @click="handleConditionAmountBoth" 
+              class="condition-order-btn amount-both-btn"
+              :disabled="sendingConditionAmountBoth || !effectivePrice"
+              :title="`上涨${conditionPct}%买入+下跌${conditionPct}%卖出 金额:${defaultTradeAmount || 26000} 数量:${calculateVolumeFromAmount(defaultTradeAmount || 26000, effectivePrice || 10)}`"
+            >
+              {{ sendingConditionAmountBoth ? '...' : '额双向' }}<span v-if="getButtonCount('amountBoth') > 0" class="btn-count">{{ getButtonCount('amountBoth') }}</span>
+            </button>
+          </div>
+        </div>
+        <!-- 基于数量（量）的按钮组 -->
+        <div class="condition-group volume-group">
+          <div class="condition-info">
+            <span class="condition-amount volume-based">{{ formatAmount(totalTradeAmount) || '-' }}</span>
+            <span class="condition-pct">±{{ conditionPct }}%</span>
+          </div>
+          <div class="condition-group-btns">
+            <button 
+              @click="handleConditionVolumeBuy" 
+              class="condition-order-btn volume-buy-btn"
+              :disabled="sendingConditionVolumeBuy"
+              :title="`上涨${conditionPct}%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
+            >
+              {{ sendingConditionVolumeBuy ? '...' : '量↑买' }}<span v-if="getButtonCount('volumeBuy') > 0" class="btn-count">{{ getButtonCount('volumeBuy') }}</span>
+            </button>
+            <button 
+              @click="handleConditionVolumeSell" 
+              class="condition-order-btn volume-sell-btn"
+              :disabled="sendingConditionVolumeSell"
+              :title="`下跌${conditionPct}%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
+            >
+              {{ sendingConditionVolumeSell ? '...' : '量↓卖' }}<span v-if="getButtonCount('volumeSell') > 0" class="btn-count">{{ getButtonCount('volumeSell') }}</span>
+            </button>
+            <button 
+              @click="handleConditionVolumeBoth" 
+              class="condition-order-btn volume-both-btn"
+              :disabled="sendingConditionVolumeBoth"
+              :title="`上涨${conditionPct}%买入+下跌${conditionPct}%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
+            >
+              {{ sendingConditionVolumeBoth ? '...' : '量双向' }}<span v-if="getButtonCount('volumeBoth') > 0" class="btn-count">{{ getButtonCount('volumeBoth') }}</span>
+            </button>
+          </div>
+        </div>
         <!-- 收市买入按钮 -->
         <button 
           @click="handleMarketCloseBuy" 
@@ -1893,6 +1905,19 @@ const getTrendClass = (trend) => {
 }
 
 .condition-order-btns {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+}
+
+.condition-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.condition-group-btns {
   display: flex;
   flex-direction: column;
   gap: 4px;
