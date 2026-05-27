@@ -189,6 +189,16 @@
           <button @click="setDefaultVolumeQuarter" class="quick-set-btn" title="设置为1/4持仓">1/4</button>
           <button @click="setDefaultVolumeEighth" class="quick-set-btn" title="设置为1/8持仓">1/8</button>
         </div>
+        <div class="condition-config-actions">
+          <button @click="saveConditionConfigToStorage" class="config-action-btn save-btn" title="保存当前配置">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            保存
+          </button>
+          <button @click="resetConditionConfig" class="config-action-btn reset-btn" title="重置为默认配置">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 3v9h9"/></svg>
+            重置
+          </button>
+        </div>
       </div>
     </td>
 
@@ -695,6 +705,64 @@ const saveConditionConfig = () => {
     downTrendBuyPct: downTrendBuyPct.value
   })
 }
+
+// 保存完整条件配置到 localStorage
+const saveConditionConfigToStorage = () => {
+  if (props.strategy.id) {
+    const key = `conditionConfig_${props.strategy.id}`
+    const config = {
+      defaultTradeAmount: defaultTradeAmount.value,
+      defaultTradeVolume: defaultTradeVolume.value,
+      manualPrice: manualPrice.value,
+      conditionPct: conditionPct.value
+    }
+    localStorage.setItem(key, JSON.stringify(config))
+    console.log(`[StrategyRow] 条件配置已保存: ${props.strategy.name}`, config)
+    alert('条件配置已保存')
+  }
+}
+
+// 从 localStorage 加载条件配置
+const loadConditionConfigFromStorage = () => {
+  if (props.strategy.id) {
+    const key = `conditionConfig_${props.strategy.id}`
+    const saved = localStorage.getItem(key)
+    if (saved) {
+      try {
+        const config = JSON.parse(saved)
+        defaultTradeAmount.value = config.defaultTradeAmount ?? 26000
+        defaultTradeVolume.value = config.defaultTradeVolume ?? null
+        manualPrice.value = config.manualPrice ?? null
+        conditionPct.value = config.conditionPct ?? 0.1
+        console.log(`[StrategyRow] 条件配置已加载: ${props.strategy.name}`, config)
+      } catch (e) {
+        console.error('加载条件配置失败:', e)
+      }
+    }
+  }
+}
+
+// 重置条件配置为默认值
+const resetConditionConfig = () => {
+  if (confirm('确定要重置条件配置为默认值吗？')) {
+    defaultTradeAmount.value = 26000
+    defaultTradeVolume.value = null
+    manualPrice.value = null
+    conditionPct.value = 0.1
+    
+    // 清除 localStorage 中保存的配置
+    if (props.strategy.id) {
+      const key = `conditionConfig_${props.strategy.id}`
+      localStorage.removeItem(key)
+    }
+    
+    console.log(`[StrategyRow] 条件配置已重置: ${props.strategy.name}`)
+    alert('条件配置已重置为默认值')
+  }
+}
+
+// 组件挂载时加载保存的条件配置
+loadConditionConfigFromStorage()
 
 // 条件配置：上涨买入（上涨X%买入 + 下跌Y%卖出）
 const handleUpTrendBuy = async () => {
@@ -2039,6 +2107,48 @@ const getTrendClass = (trend) => {
 
 .quick-set-btn:hover {
   background-color: rgba(78, 205, 196, 0.5);
+  color: white;
+}
+
+/* 条件配置操作按钮 */
+.condition-config-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.config-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px 6px;
+  font-size: 11px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.config-action-btn.save-btn {
+  background-color: rgba(40, 167, 69, 0.2);
+  border: 1px solid rgba(40, 167, 69, 0.5);
+  color: #28a745;
+}
+
+.config-action-btn.save-btn:hover {
+  background-color: rgba(40, 167, 69, 0.4);
+  color: white;
+}
+
+.config-action-btn.reset-btn {
+  background-color: rgba(108, 117, 125, 0.2);
+  border: 1px solid rgba(108, 117, 125, 0.5);
+  color: #6c757d;
+}
+
+.config-action-btn.reset-btn:hover {
+  background-color: rgba(108, 117, 125, 0.4);
   color: white;
 }
 
