@@ -455,14 +455,6 @@ const incrementCount = (buttonType) => {
   buttonCounts.value[buttonType] = newCount
 }
 
-// 初始加载
-loadButtonCounts()
-
-// 策略变化时重新加载
-watch(() => props.strategy.id, () => {
-  loadButtonCounts()
-})
-
 const emit = defineEmits(['edit', 'delete', 'update-trend', 'batch-condition', 'execute-strategy', 'execute-strategy-by-amount', 'update-strategy-selection', 'update-trade-settings', 'update-condition-config'])
 
 // 手动输入的价格（当 currentPrice 为空时使用）
@@ -491,21 +483,32 @@ const hasMarketCloseBuyFlag = ref(false)
 
 // 加载收市买入标记（从统一配置）
 const loadMarketCloseBuyFlag = () => {
+  console.log(`[StrategyRow] loadMarketCloseBuyFlag 被调用, strategy.id=${props.strategy?.id}`)
   if (props.strategy.id) {
     const config = appConfigService.getMarketCloseBuyForStrategy(props.strategy.id)
+    console.log(`[StrategyRow] 从 appConfigService 获取配置:`, config)
     hasMarketCloseBuyFlag.value = !!config
+    console.log(`[StrategyRow] hasMarketCloseBuyFlag 设置为: ${hasMarketCloseBuyFlag.value}`)
+  } else {
+    console.log(`[StrategyRow] strategy.id 为空，无法加载收市买状态`)
   }
 }
 
 // 保存收市买入标记（到统一配置）
 const saveMarketCloseBuyFlag = (value, configData = null) => {
+  console.log(`[StrategyRow] saveMarketCloseBuyFlag 被调用, value=${value}, strategy.id=${props.strategy?.id}`)
   if (props.strategy.id) {
     if (value && configData) {
       appConfigService.setMarketCloseBuyForStrategy(props.strategy.id, configData)
+      console.log(`[StrategyRow] 收市买配置已保存:`, configData)
     } else if (!value) {
       appConfigService.clearMarketCloseBuyForStrategy(props.strategy.id)
+      console.log(`[StrategyRow] 收市买配置已清除`)
     }
     hasMarketCloseBuyFlag.value = value
+    console.log(`[StrategyRow] hasMarketCloseBuyFlag 设置为: ${value}`)
+  } else {
+    console.log(`[StrategyRow] strategy.id 为空，无法保存收市买状态`)
   }
 }
 
@@ -514,12 +517,10 @@ loadMarketCloseBuyFlag()
 
 // 监听 props.strategy.id 变化，确保数据加载
 watch(() => props.strategy?.id, (newId, oldId) => {
-  if (newId && newId !== oldId) {
-    console.log(`[StrategyRow] strategy.id 变化: ${oldId} -> ${newId}, 重新加载收市买状态`)
-    loadMarketCloseBuyFlag()
-    loadButtonCounts()
-    loadConditionConfigFromStorage()
-  }
+  console.log(`[StrategyRow] strategy.id 变化: ${oldId} -> ${newId}`)
+  loadMarketCloseBuyFlag()
+  loadButtonCounts()
+  loadConditionConfigFromStorage()
 }, { immediate: true })
 
 // 监听配置更新事件，重新加载收市买状态
