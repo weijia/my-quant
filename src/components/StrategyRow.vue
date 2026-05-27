@@ -509,8 +509,18 @@ const saveMarketCloseBuyFlag = (value, configData = null) => {
   }
 }
 
-// 初始化加载收市买入标记
+// 初始化加载收市买入标记（可能在 onMounted 时 props 还未准备好）
 loadMarketCloseBuyFlag()
+
+// 监听 props.strategy.id 变化，确保数据加载
+watch(() => props.strategy?.id, (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    console.log(`[StrategyRow] strategy.id 变化: ${oldId} -> ${newId}, 重新加载收市买状态`)
+    loadMarketCloseBuyFlag()
+    loadButtonCounts()
+    loadConditionConfigFromStorage()
+  }
+}, { immediate: true })
 
 // 监听配置更新事件，重新加载收市买状态
 window.addEventListener('appConfigUpdated', () => {
@@ -1482,6 +1492,9 @@ const handleMarketCloseBuyExecuted = (event) => {
 
 onMounted(() => {
   window.addEventListener('marketCloseBuyExecuted', handleMarketCloseBuyExecuted)
+  // 确保收市买状态已加载（防止 props 在 script setup 时未准备好）
+  loadMarketCloseBuyFlag()
+  console.log(`[StrategyRow] onMounted: 收市买状态 = ${hasMarketCloseBuyFlag.value}, strategy.id = ${props.strategy?.id}`)
 })
 
 onUnmounted(() => {
