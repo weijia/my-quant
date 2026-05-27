@@ -1943,26 +1943,49 @@ const getTrendClass = (trend) => {
   cursor: not-allowed;
 }
 
-.condition-order-btn.up-btn {
-  border-color: rgba(255, 107, 107, 0.4);
-  background-color: rgba(255, 107, 107, 0.1);
-  color: #ff6b6b;
+.condition-order-btn.up-btn,
+.condition-order-btn.amount-buy-btn,
+.condition-order-btn.volume-buy-btn {
+  background-color: rgba(220, 53, 69, 0.3);
+  color: #dc3545;
+  border: 1px solid rgba(220, 53, 69, 0.5);
 }
 
-.condition-order-btn.up-btn:hover {
-  background-color: rgba(255, 107, 107, 0.2);
-  border-color: #ff6b6b;
+.condition-order-btn.up-btn:hover,
+.condition-order-btn.amount-buy-btn:hover,
+.condition-order-btn.volume-buy-btn:hover {
+  background-color: rgba(220, 53, 69, 0.5);
+  color: white;
 }
 
-.condition-order-btn.down-btn {
-  border-color: rgba(78, 205, 196, 0.4);
-  background-color: rgba(78, 205, 196, 0.1);
-  color: #4ecdc4;
+.condition-order-btn.down-btn,
+.condition-order-btn.amount-sell-btn,
+.condition-order-btn.volume-sell-btn {
+  background-color: rgba(40, 167, 69, 0.3);
+  color: #28a745;
+  border: 1px solid rgba(40, 167, 69, 0.5);
 }
 
-.condition-order-btn.down-btn:hover {
-  background-color: rgba(78, 205, 196, 0.2);
-  border-color: #4ecdc4;
+.condition-order-btn.down-btn:hover,
+.condition-order-btn.amount-sell-btn:hover,
+.condition-order-btn.volume-sell-btn:hover {
+  background-color: rgba(40, 167, 69, 0.5);
+  color: white;
+}
+
+.condition-order-btn.both-btn,
+.condition-order-btn.amount-both-btn,
+.condition-order-btn.volume-both-btn {
+  background-color: rgba(255, 193, 7, 0.3);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.5);
+}
+
+.condition-order-btn.both-btn:hover,
+.condition-order-btn.amount-both-btn:hover,
+.condition-order-btn.volume-both-btn:hover {
+  background-color: rgba(255, 193, 7, 0.5);
+  color: white;
 }
 
 /* 收市买入按钮 */
