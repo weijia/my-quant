@@ -485,7 +485,13 @@ const hasMarketCloseBuyFlag = ref(false)
 const loadMarketCloseBuyFlag = () => {
   console.log(`[StrategyRow] loadMarketCloseBuyFlag 被调用, strategy.id=${props.strategy?.id}`)
   if (props.strategy.id) {
-    const config = appConfigService.getMarketCloseBuyForStrategy(props.strategy.id)
+    // 使用稳定的 key（stockCode + accountType + provider）
+    const config = appConfigService.getMarketCloseBuyForStrategy(
+      props.strategy.id,
+      props.strategy.stockCode,
+      props.strategy.accountType,
+      props.strategy.provider
+    )
     console.log(`[StrategyRow] 从 appConfigService 获取配置:`, config)
     hasMarketCloseBuyFlag.value = !!config
     console.log(`[StrategyRow] hasMarketCloseBuyFlag 设置为: ${hasMarketCloseBuyFlag.value}`)
@@ -499,10 +505,21 @@ const saveMarketCloseBuyFlag = (value, configData = null) => {
   console.log(`[StrategyRow] saveMarketCloseBuyFlag 被调用, value=${value}, strategy.id=${props.strategy?.id}`)
   if (props.strategy.id) {
     if (value && configData) {
-      appConfigService.setMarketCloseBuyForStrategy(props.strategy.id, configData)
+      appConfigService.setMarketCloseBuyForStrategy(
+        props.strategy.id,
+        configData,
+        props.strategy.stockCode,
+        props.strategy.accountType,
+        props.strategy.provider
+      )
       console.log(`[StrategyRow] 收市买配置已保存:`, configData)
     } else if (!value) {
-      appConfigService.clearMarketCloseBuyForStrategy(props.strategy.id)
+      appConfigService.clearMarketCloseBuyForStrategy(
+        props.strategy.id,
+        props.strategy.stockCode,
+        props.strategy.accountType,
+        props.strategy.provider
+      )
       console.log(`[StrategyRow] 收市买配置已清除`)
     }
     hasMarketCloseBuyFlag.value = value
