@@ -190,13 +190,10 @@
           <button @click="setDefaultVolumeEighth" class="quick-set-btn" title="设置为1/8持仓">1/8</button>
         </div>
         <div class="condition-config-actions">
-          <button @click="saveConditionConfigToStorage" class="config-action-btn save-btn" title="保存当前配置">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            保存
-          </button>
-          <button @click="resetConditionConfig" class="config-action-btn reset-btn" title="重置为默认配置">
+          <button @click="resetConditionConfig" class="config-action-btn reset-btn" :class="{ 'has-custom-config': hasCustomConfig }" title="重置为默认配置">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 3v9h9"/></svg>
             重置
+            <span v-if="hasCustomConfig" class="config-indicator"></span>
           </button>
         </div>
       </div>
@@ -706,8 +703,27 @@ const saveConditionConfig = () => {
   })
 }
 
-// 保存完整条件配置到 localStorage
-const saveConditionConfigToStorage = () => {
+// 默认配置值
+const DEFAULT_TRADE_AMOUNT = 26000
+const DEFAULT_TRADE_VOLUME = null
+const DEFAULT_MANUAL_PRICE = null
+const DEFAULT_CONDITION_PCT = 0.1
+
+// 检查是否有自定义配置
+const hasCustomConfig = ref(false)
+
+// 更新自定义配置状态
+const updateCustomConfigStatus = () => {
+  const isCustom = 
+    defaultTradeAmount.value !== DEFAULT_TRADE_AMOUNT ||
+    defaultTradeVolume.value !== DEFAULT_TRADE_VOLUME ||
+    manualPrice.value !== DEFAULT_MANUAL_PRICE ||
+    conditionPct.value !== DEFAULT_CONDITION_PCT
+  hasCustomConfig.value = isCustom
+}
+
+// 自动保存条件配置到 localStorage（修改时自动保存）
+const autoSaveConditionConfig = () => {
   if (props.strategy.id) {
     const key = `conditionConfig_${props.strategy.id}`
     const config = {
@@ -717,8 +733,8 @@ const saveConditionConfigToStorage = () => {
       conditionPct: conditionPct.value
     }
     localStorage.setItem(key, JSON.stringify(config))
-    console.log(`[StrategyRow] 条件配置已保存: ${props.strategy.name}`, config)
-    alert('条件配置已保存')
+    updateCustomConfigStatus()
+    console.log(`[StrategyRow] 条件配置已自动保存: ${props.strategy.name}`, config)
   }
 }
 
@@ -730,25 +746,26 @@ const loadConditionConfigFromStorage = () => {
     if (saved) {
       try {
         const config = JSON.parse(saved)
-        defaultTradeAmount.value = config.defaultTradeAmount ?? 26000
-        defaultTradeVolume.value = config.defaultTradeVolume ?? null
-        manualPrice.value = config.manualPrice ?? null
-        conditionPct.value = config.conditionPct ?? 0.1
+        defaultTradeAmount.value = config.defaultTradeAmount ?? DEFAULT_TRADE_AMOUNT
+        defaultTradeVolume.value = config.defaultTradeVolume ?? DEFAULT_TRADE_VOLUME
+        manualPrice.value = config.manualPrice ?? DEFAULT_MANUAL_PRICE
+        conditionPct.value = config.conditionPct ?? DEFAULT_CONDITION_PCT
         console.log(`[StrategyRow] 条件配置已加载: ${props.strategy.name}`, config)
       } catch (e) {
         console.error('加载条件配置失败:', e)
       }
     }
+    updateCustomConfigStatus()
   }
 }
 
 // 重置条件配置为默认值
 const resetConditionConfig = () => {
   if (confirm('确定要重置条件配置为默认值吗？')) {
-    defaultTradeAmount.value = 26000
-    defaultTradeVolume.value = null
-    manualPrice.value = null
-    conditionPct.value = 0.1
+    defaultTradeAmount.value = DEFAULT_TRADE_AMOUNT
+    defaultTradeVolume.value = DEFAULT_TRADE_VOLUME
+    manualPrice.value = DEFAULT_MANUAL_PRICE
+    conditionPct.value = DEFAULT_CONDITION_PCT
     
     // 清除 localStorage 中保存的配置
     if (props.strategy.id) {
@@ -756,13 +773,18 @@ const resetConditionConfig = () => {
       localStorage.removeItem(key)
     }
     
+    hasCustomConfig.value = false
     console.log(`[StrategyRow] 条件配置已重置: ${props.strategy.name}`)
-    alert('条件配置已重置为默认值')
   }
 }
 
 // 组件挂载时加载保存的条件配置
 loadConditionConfigFromStorage()
+
+// 监听配置变化，自动保存
+watch([defaultTradeAmount, defaultTradeVolume, manualPrice, conditionPct], () => {
+  autoSaveConditionConfig()
+}, { deep: true })
 
 // 条件配置：上涨买入（上涨X%买入 + 下跌Y%卖出）
 const handleUpTrendBuy = async () => {
@@ -2145,11 +2167,36 @@ const getTrendClass = (trend) => {
   background-color: rgba(108, 117, 125, 0.2);
   border: 1px solid rgba(108, 117, 125, 0.5);
   color: #6c757d;
+  position: relative;
 }
 
 .config-action-btn.reset-btn:hover {
   background-color: rgba(108, 117, 125, 0.4);
   color: white;
+}
+
+/* 有自定义配置时的样式 */
+.config-action-btn.reset-btn.has-custom-config {
+  background-color: rgba(255, 193, 7, 0.2);
+  border-color: rgba(255, 193, 7, 0.6);
+  color: #ffc107;
+}
+
+.config-action-btn.reset-btn.has-custom-config:hover {
+  background-color: rgba(255, 193, 7, 0.4);
+  color: white;
+}
+
+/* 自定义配置指示器 */
+.config-indicator {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background-color: #ffc107;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.3);
 }
 
 /* 高级快捷下单 */
