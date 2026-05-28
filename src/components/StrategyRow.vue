@@ -269,27 +269,15 @@
           </div>
         </div>
         <!-- 收市买入按钮 -->
-        <div class="market-close-config">
-          <select 
-            v-model="selectedMarketCloseAccounts" 
-            multiple 
-            class="market-close-account-select"
-            title="选择要下单的账户（可多选）"
-          >
-            <option value="margin">融资</option>
-            <option value="cash">普通</option>
-            <option value="pingan">平安</option>
-          </select>
-          <button 
-            @click="handleMarketCloseBuy" 
-            class="condition-order-btn market-close-btn"
-            :class="{ 'active': hasMarketCloseBuyFlag }"
-            :disabled="sendingMarketCloseBuy || !strategy.stockCode || selectedMarketCloseAccounts.length === 0"
-            :title="`收市买入 上涨0.1%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}股（2:45左右执行）`"
-          >
-            {{ sendingMarketCloseBuy ? '...' : (hasMarketCloseBuyFlag ? '收市✓' : '收市买') }}<span v-if="getButtonCount('marketCloseBuy') > 0" class="btn-count">{{ getButtonCount('marketCloseBuy') }}</span>
-          </button>
-        </div>
+        <button 
+          @click="handleMarketCloseBuy" 
+          class="condition-order-btn market-close-btn"
+          :class="{ 'active': hasMarketCloseBuyFlag }"
+          :disabled="sendingMarketCloseBuy || !strategy.stockCode"
+          :title="`收市买入 上涨0.1%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}股（2:45左右执行）`"
+        >
+          {{ sendingMarketCloseBuy ? '...' : (hasMarketCloseBuyFlag ? '收市✓' : '收市买') }}<span v-if="getButtonCount('marketCloseBuy') > 0" class="btn-count">{{ getButtonCount('marketCloseBuy') }}</span>
+        </button>
       </div>
     </td>
     
@@ -492,7 +480,6 @@ const sendingConditionVolumeBoth = ref(false)
 // 收市买入按钮状态
 const sendingMarketCloseBuy = ref(false)
 const hasMarketCloseBuyFlag = ref(false)
-const selectedMarketCloseAccounts = ref(['margin'])  // 默认选择融资账户
 
 // 加载收市买入标记（从统一配置，支持多账户）
 const loadMarketCloseBuyFlag = () => {
@@ -504,15 +491,9 @@ const loadMarketCloseBuyFlag = () => {
     
     if (allConfigs.length > 0) {
       hasMarketCloseBuyFlag.value = true
-      // 从第一个配置中恢复选择的账户类型
-      const firstConfig = allConfigs[0].config
-      if (firstConfig.accounts) {
-        selectedMarketCloseAccounts.value = firstConfig.accounts
-      }
-      console.log(`[StrategyRow] 已加载 ${allConfigs.length} 个账户配置, 选择的账户:`, selectedMarketCloseAccounts.value)
+      console.log(`[StrategyRow] 已加载 ${allConfigs.length} 个账户配置`)
     } else {
       hasMarketCloseBuyFlag.value = false
-      selectedMarketCloseAccounts.value = ['margin']  // 重置为默认值
     }
     console.log(`[StrategyRow] hasMarketCloseBuyFlag 设置为: ${hasMarketCloseBuyFlag.value}`)
   } else {
@@ -1102,11 +1083,6 @@ const handleMarketCloseBuy = async () => {
     return
   }
 
-  if (selectedMarketCloseAccounts.value.length === 0) {
-    alert('请选择至少一个账户类型')
-    return
-  }
-
   incrementCount('marketCloseBuy')
   sendingMarketCloseBuy.value = true
 
@@ -1114,49 +1090,29 @@ const handleMarketCloseBuy = async () => {
     // 计算交易数量（使用默认数量或1/4持仓）
     const tradeVolume = getEffectiveTradeVolume()
 
-    // 账户类型映射
-    const accountTypeMap = {
-      'margin': { accountType: 'margin', provider: '' },
-      'cash': { accountType: 'cash', provider: '' },
-      'pingan': { accountType: 'margin', provider: 'pingan' }
+    // 保存收市买入配置（使用当前策略的账户信息）
+    const config = {
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume: tradeVolume,
+      percentage: 0.1,  // 上涨0.1%
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getBuySide(),
+      createdAt: new Date().toISOString()
     }
 
-    // 按顺序保存每个账户的配置
-    const accountConfigs = []
-    for (const account of selectedMarketCloseAccounts.value) {
-      const accountInfo = accountTypeMap[account]
-      if (!accountInfo) continue
-
-      const config = {
-        stockCode: props.strategy.stockCode,
-        stockName: props.strategy.name,
-        tradeVolume: tradeVolume,
-        percentage: 0.1,  // 上涨0.1%
-        provider: accountInfo.provider,
-        accountType: accountInfo.accountType,
-        side: 'buy',
-        createdAt: new Date().toISOString(),
-        accounts: selectedMarketCloseAccounts.value  // 记录所有选择的账户
-      }
-      
-      // 使用稳定的 key 保存配置
-      const stableKey = appConfigService.getMarketCloseKey(
-        props.strategy.stockCode,
-        accountInfo.accountType,
-        accountInfo.provider
-      )
-      appConfigService.setMarketCloseBuyForStrategy(
-        props.strategy.id,
-        config,
-        props.strategy.stockCode,
-        accountInfo.accountType,
-        accountInfo.provider
-      )
-      accountConfigs.push({ account, config })
-    }
+    // 使用稳定的 key 保存配置
+    appConfigService.setMarketCloseBuyForStrategy(
+      props.strategy.id,
+      config,
+      props.strategy.stockCode,
+      config.accountType,
+      config.provider
+    )
 
     hasMarketCloseBuyFlag.value = true
-    console.log(`[收市买入] 已设置: ${props.strategy.stockCode}, 账户:${selectedMarketCloseAccounts.value.join(',')}, 数量:${tradeVolume}, 上涨0.1%买入`)
+    console.log(`[收市买入] 已设置: ${props.strategy.stockCode}, 账户:${config.accountType}, 券商:${config.provider || '同花顺'}, 数量:${tradeVolume}`)
 
     // 检查当前时间是否接近2:45，如果是则立即执行
     const now = new Date()
@@ -1165,10 +1121,7 @@ const handleMarketCloseBuy = async () => {
 
     // 如果在2:45-2:50之间，立即执行
     if (hours === 14 && minutes >= 45 && minutes <= 50) {
-      for (const { config } of accountConfigs) {
-        await executeMarketCloseBuy(config)
-        await new Promise(resolve => setTimeout(resolve, 500))  // 间隔0.5秒
-      }
+      await executeMarketCloseBuy(config)
     }
   } catch (error) {
     console.error('[收市买入] 设置失败:', error)
@@ -2161,35 +2114,6 @@ const getTrendClass = (trend) => {
   border-color: #ffa500;
   color: white;
   font-weight: bold;
-}
-
-/* 收市买多账户选择 */
-.market-close-config {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: center;
-}
-
-.market-close-account-select {
-  width: 60px;
-  height: 24px;
-  font-size: 10px;
-  padding: 1px 4px;
-  border: 1px solid rgba(108, 117, 125, 0.5);
-  border-radius: 3px;
-  background-color: rgba(108, 117, 125, 0.2);
-  color: #6c757d;
-  cursor: pointer;
-}
-
-.market-close-account-select:focus {
-  outline: none;
-  border-color: #ffa500;
-}
-
-.market-close-account-select option {
-  padding: 2px;
 }
 
 .quick-set-btns {

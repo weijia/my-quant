@@ -70,7 +70,7 @@ class MarketCloseBuyService {
     await this.executeAllMarketCloseBuys()
   }
 
-  // 执行所有标记的收市买入
+  // 执行所有标记的收市买入（按账户类型分组，同账户一起下，不同账户间隔1秒）
   async executeAllMarketCloseBuys() {
     // 从 localStorage 获取所有收市买入配置
     const configs = this.getAllMarketCloseBuyConfigs()
@@ -82,9 +82,50 @@ class MarketCloseBuyService {
 
     console.log(`[收市买入服务] 发现 ${configs.length} 个收市买入任务`)
 
+    // 按账户类型分组（provider + accountType 作为分组 key）
+    const groups = {}
     for (const config of configs) {
-      await this.executeMarketCloseBuy(config)
+      const groupKey = `${config.provider || ''}_${config.accountType || ''}`
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          provider: config.provider || '',
+          accountType: config.accountType || '',
+          configs: []
+        }
+      }
+      groups[groupKey].configs.push(config)
     }
+
+    // 按固定顺序执行：融资 → 普通 → 平安
+    const order = ['_margin', '_cash', 'pingan_margin']
+    const sortedKeys = Object.keys(groups).sort((a, b) => {
+      const indexA = order.indexOf(a)
+      const indexB = order.indexOf(b)
+      return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB)
+    })
+
+    console.log(`[收市买入服务] 分为 ${sortedKeys.length} 个账户组:`, sortedKeys)
+
+    // 按组执行，不同组之间间隔1秒
+    for (let i = 0; i < sortedKeys.length; i++) {
+      const groupKey = sortedKeys[i]
+      const group = groups[groupKey]
+      const accountLabel = group.provider === 'pingan' ? '平安' : (group.accountType === 'margin' ? '融资' : '普通')
+      console.log(`[收市买入服务] 执行第 ${i + 1}/${sortedKeys.length} 组: ${accountLabel} (${group.configs.length} 个订单)`)
+
+      // 同一账户组的订单一起下发
+      for (const config of group.configs) {
+        await this.executeMarketCloseBuy(config)
+      }
+
+      // 不同组之间间隔1秒（最后一组不需要等待）
+      if (i < sortedKeys.length - 1) {
+        console.log(`[收市买入服务] 等待1秒后切换下一组...`)
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+    }
+
+    console.log('[收市买入服务] 所有收市买入任务执行完毕')
   }
 
   // 获取所有收市买入配置（从统一配置）
