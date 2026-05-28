@@ -239,7 +239,7 @@ class AppConfigService {
     return configs[strategyId] || null
   }
 
-  // 设置收市买入配置（使用稳定 key）
+  // 设置收市买入配置（使用稳定 key，支持多账户）
   setMarketCloseBuyForStrategy(strategyId, config, stockCode, accountType, provider) {
     if (!this.config.marketCloseBuy) {
       this.config.marketCloseBuy = {}
@@ -261,6 +261,32 @@ class AppConfigService {
       const stableKey = this.getMarketCloseKey(stockCode, accountType, provider)
       delete this.config.marketCloseBuy[stableKey]
       delete this.config.marketCloseBuy[strategyId]  // 兼容旧版
+      this.saveToLocalStorage()
+    }
+  }
+
+  // 获取某只股票的所有收市买配置（用于多账户下单）
+  getAllMarketCloseConfigsForStock(stockCode) {
+    const configs = this.getMarketCloseBuyConfig()
+    const result = []
+    for (const key in configs) {
+      if (key.startsWith(stockCode + '_')) {
+        result.push({ key, config: configs[key] })
+      }
+    }
+    return result
+  }
+
+  // 清除某只股票的所有收市买配置
+  clearAllMarketCloseConfigsForStock(stockCode) {
+    if (this.config.marketCloseBuy) {
+      const keysToDelete = []
+      for (const key in this.config.marketCloseBuy) {
+        if (key.startsWith(stockCode + '_')) {
+          keysToDelete.push(key)
+        }
+      }
+      keysToDelete.forEach(key => delete this.config.marketCloseBuy[key])
       this.saveToLocalStorage()
     }
   }

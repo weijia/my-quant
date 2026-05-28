@@ -269,15 +269,27 @@
           </div>
         </div>
         <!-- 收市买入按钮 -->
-        <button 
-          @click="handleMarketCloseBuy" 
-          class="condition-order-btn market-close-btn"
-          :class="{ 'active': hasMarketCloseBuyFlag }"
-          :disabled="sendingMarketCloseBuy || !strategy.stockCode"
-          :title="`收市买入 上涨0.1%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}股（2:45左右执行）`"
-        >
-          {{ sendingMarketCloseBuy ? '...' : (hasMarketCloseBuyFlag ? '收市✓' : '收市买') }}<span v-if="getButtonCount('marketCloseBuy') > 0" class="btn-count">{{ getButtonCount('marketCloseBuy') }}</span>
-        </button>
+        <div class="market-close-config">
+          <select 
+            v-model="selectedMarketCloseAccounts" 
+            multiple 
+            class="market-close-account-select"
+            title="选择要下单的账户（可多选）"
+          >
+            <option value="margin">融资</option>
+            <option value="cash">普通</option>
+            <option value="pingan">平安</option>
+          </select>
+          <button 
+            @click="handleMarketCloseBuy" 
+            class="condition-order-btn market-close-btn"
+            :class="{ 'active': hasMarketCloseBuyFlag }"
+            :disabled="sendingMarketCloseBuy || !strategy.stockCode || selectedMarketCloseAccounts.length === 0"
+            :title="`收市买入 上涨0.1%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}股（2:45左右执行）`"
+          >
+            {{ sendingMarketCloseBuy ? '...' : (hasMarketCloseBuyFlag ? '收市✓' : '收市买') }}<span v-if="getButtonCount('marketCloseBuy') > 0" class="btn-count">{{ getButtonCount('marketCloseBuy') }}</span>
+          </button>
+        </div>
       </div>
     </td>
     
@@ -480,57 +492,33 @@ const sendingConditionVolumeBoth = ref(false)
 // 收市买入按钮状态
 const sendingMarketCloseBuy = ref(false)
 const hasMarketCloseBuyFlag = ref(false)
+const selectedMarketCloseAccounts = ref(['margin'])  // 默认选择融资账户
 
-// 加载收市买入标记（从统一配置）
+// 加载收市买入标记（从统一配置，支持多账户）
 const loadMarketCloseBuyFlag = () => {
   console.log(`[StrategyRow] loadMarketCloseBuyFlag 被调用, strategy.id=${props.strategy?.id}`)
   if (props.strategy.id) {
-    // 使用稳定的 key（stockCode + accountType + provider）
-    const config = appConfigService.getMarketCloseBuyForStrategy(
-      props.strategy.id,
-      props.strategy.stockCode,
-      props.strategy.accountType,
-      props.strategy.provider
-    )
-    console.log(`[StrategyRow] 从 appConfigService 获取配置:`, config)
-    hasMarketCloseBuyFlag.value = !!config
+    // 获取该股票的所有收市买配置
+    const allConfigs = appConfigService.getAllMarketCloseConfigsForStock(props.strategy.stockCode)
+    console.log(`[StrategyRow] 从 appConfigService 获取配置:`, allConfigs)
+    
+    if (allConfigs.length > 0) {
+      hasMarketCloseBuyFlag.value = true
+      // 从第一个配置中恢复选择的账户类型
+      const firstConfig = allConfigs[0].config
+      if (firstConfig.accounts) {
+        selectedMarketCloseAccounts.value = firstConfig.accounts
+      }
+      console.log(`[StrategyRow] 已加载 ${allConfigs.length} 个账户配置, 选择的账户:`, selectedMarketCloseAccounts.value)
+    } else {
+      hasMarketCloseBuyFlag.value = false
+      selectedMarketCloseAccounts.value = ['margin']  // 重置为默认值
+    }
     console.log(`[StrategyRow] hasMarketCloseBuyFlag 设置为: ${hasMarketCloseBuyFlag.value}`)
   } else {
     console.log(`[StrategyRow] strategy.id 为空，无法加载收市买状态`)
   }
 }
-
-// 保存收市买入标记（到统一配置）
-const saveMarketCloseBuyFlag = (value, configData = null) => {
-  console.log(`[StrategyRow] saveMarketCloseBuyFlag 被调用, value=${value}, strategy.id=${props.strategy?.id}`)
-  if (props.strategy.id) {
-    if (value && configData) {
-      appConfigService.setMarketCloseBuyForStrategy(
-        props.strategy.id,
-        configData,
-        props.strategy.stockCode,
-        props.strategy.accountType,
-        props.strategy.provider
-      )
-      console.log(`[StrategyRow] 收市买配置已保存:`, configData)
-    } else if (!value) {
-      appConfigService.clearMarketCloseBuyForStrategy(
-        props.strategy.id,
-        props.strategy.stockCode,
-        props.strategy.accountType,
-        props.strategy.provider
-      )
-      console.log(`[StrategyRow] 收市买配置已清除`)
-    }
-    hasMarketCloseBuyFlag.value = value
-    console.log(`[StrategyRow] hasMarketCloseBuyFlag 设置为: ${value}`)
-  } else {
-    console.log(`[StrategyRow] strategy.id 为空，无法保存收市买状态`)
-  }
-}
-
-// 初始化加载收市买入标记（可能在 onMounted 时 props 还未准备好）
-loadMarketCloseBuyFlag()
 
 // 监听 props.strategy.id 变化，确保数据加载
 watch(() => props.strategy?.id, (newId, oldId) => {
@@ -1108,8 +1096,14 @@ const handleMarketCloseBuy = async () => {
 
   // 如果已经有标记，则取消
   if (hasMarketCloseBuyFlag.value) {
-    saveMarketCloseBuyFlag(false)
+    appConfigService.clearAllMarketCloseConfigsForStock(props.strategy.stockCode)
+    hasMarketCloseBuyFlag.value = false
     console.log(`[收市买入] 已取消: ${props.strategy.stockCode}`)
+    return
+  }
+
+  if (selectedMarketCloseAccounts.value.length === 0) {
+    alert('请选择至少一个账户类型')
     return
   }
 
@@ -1120,20 +1114,49 @@ const handleMarketCloseBuy = async () => {
     // 计算交易数量（使用默认数量或1/4持仓）
     const tradeVolume = getEffectiveTradeVolume()
 
-    // 保存收市买入配置到统一配置
-    const config = {
-      stockCode: props.strategy.stockCode,
-      stockName: props.strategy.name,
-      tradeVolume: tradeVolume,
-      percentage: 0.1,  // 上涨0.1%
-      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
-      accountType: getAccountType(),
-      side: getBuySide(),
-      createdAt: new Date().toISOString()
+    // 账户类型映射
+    const accountTypeMap = {
+      'margin': { accountType: 'margin', provider: '' },
+      'cash': { accountType: 'cash', provider: '' },
+      'pingan': { accountType: 'margin', provider: 'pingan' }
     }
-    saveMarketCloseBuyFlag(true, config)
 
-    console.log(`[收市买入] 已设置: ${props.strategy.stockCode}, 数量:${tradeVolume}, 上涨0.1%买入`)
+    // 按顺序保存每个账户的配置
+    const accountConfigs = []
+    for (const account of selectedMarketCloseAccounts.value) {
+      const accountInfo = accountTypeMap[account]
+      if (!accountInfo) continue
+
+      const config = {
+        stockCode: props.strategy.stockCode,
+        stockName: props.strategy.name,
+        tradeVolume: tradeVolume,
+        percentage: 0.1,  // 上涨0.1%
+        provider: accountInfo.provider,
+        accountType: accountInfo.accountType,
+        side: 'buy',
+        createdAt: new Date().toISOString(),
+        accounts: selectedMarketCloseAccounts.value  // 记录所有选择的账户
+      }
+      
+      // 使用稳定的 key 保存配置
+      const stableKey = appConfigService.getMarketCloseKey(
+        props.strategy.stockCode,
+        accountInfo.accountType,
+        accountInfo.provider
+      )
+      appConfigService.setMarketCloseBuyForStrategy(
+        props.strategy.id,
+        config,
+        props.strategy.stockCode,
+        accountInfo.accountType,
+        accountInfo.provider
+      )
+      accountConfigs.push({ account, config })
+    }
+
+    hasMarketCloseBuyFlag.value = true
+    console.log(`[收市买入] 已设置: ${props.strategy.stockCode}, 账户:${selectedMarketCloseAccounts.value.join(',')}, 数量:${tradeVolume}, 上涨0.1%买入`)
 
     // 检查当前时间是否接近2:45，如果是则立即执行
     const now = new Date()
@@ -1142,7 +1165,10 @@ const handleMarketCloseBuy = async () => {
 
     // 如果在2:45-2:50之间，立即执行
     if (hours === 14 && minutes >= 45 && minutes <= 50) {
-      await executeMarketCloseBuy(config)
+      for (const { config } of accountConfigs) {
+        await executeMarketCloseBuy(config)
+        await new Promise(resolve => setTimeout(resolve, 500))  // 间隔0.5秒
+      }
     }
   } catch (error) {
     console.error('[收市买入] 设置失败:', error)
@@ -1164,10 +1190,7 @@ const executeMarketCloseBuy = async (config) => {
       accountType: config.accountType,
       side: config.side
     })
-    console.log(`[收市买入] 条件单已发送: ${config.stockCode}, 上涨0.1%买入, 数量:${config.tradeVolume}`)
-
-    // 执行后清除标记
-    saveMarketCloseBuyFlag(false)
+    console.log(`[收市买入] 条件单已发送: ${config.stockCode}, 上涨0.1%买入, 账户:${config.accountType}, 数量:${config.tradeVolume}`)
   } catch (error) {
     console.error('[收市买入] 发送失败:', error)
   }
@@ -2138,6 +2161,35 @@ const getTrendClass = (trend) => {
   border-color: #ffa500;
   color: white;
   font-weight: bold;
+}
+
+/* 收市买多账户选择 */
+.market-close-config {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.market-close-account-select {
+  width: 60px;
+  height: 24px;
+  font-size: 10px;
+  padding: 1px 4px;
+  border: 1px solid rgba(108, 117, 125, 0.5);
+  border-radius: 3px;
+  background-color: rgba(108, 117, 125, 0.2);
+  color: #6c757d;
+  cursor: pointer;
+}
+
+.market-close-account-select:focus {
+  outline: none;
+  border-color: #ffa500;
+}
+
+.market-close-account-select option {
+  padding: 2px;
 }
 
 .quick-set-btns {
