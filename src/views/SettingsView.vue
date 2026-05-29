@@ -376,6 +376,26 @@ if (ctx.trendJudgment === 'trend_up') {
           </div>
         </div>
       </section>
+
+      <!-- 版本信息区块 -->
+      <section class="settings-section">
+        <h2 class="section-title">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ecdc4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+          版本信息
+        </h2>
+        <div class="version-info">
+          <div class="version-item">
+            <span class="version-label">当前版本</span>
+            <span class="version-value">{{ versionDisplay }}</span>
+          </div>
+          <div class="version-item">
+            <span class="version-label">构建时间</span>
+            <span class="version-value">{{ buildTimeDisplay }}</span>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 </template>
@@ -386,6 +406,7 @@ import mqttConditionService, { PRESET_SERVERS } from '../services/MQTTConditionS
 import { webdavImportService } from '../services/WebDAVImportService'
 import WEBDAV_PATHS from '../config/WebDAVPaths'
 import appConfigService from '../services/AppConfigService.js'
+import { versionDisplay, buildTimeDisplay } from '../version.js'
 
 // WebDAV 配置
 const webdavConfigForm = reactive({
@@ -1364,5 +1385,33 @@ watch(templates, (newTemplates) => {
   .mqtt-status {
     flex-wrap: wrap;
   }
+}
+
+/* 版本信息样式 */
+.version-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 16px;
+  background-color: rgba(78, 205, 196, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(78, 205, 196, 0.2);
+}
+
+.version-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.version-label {
+  color: #888;
+  font-size: 14px;
+}
+
+.version-value {
+  color: #4ecdc4;
+  font-size: 14px;
+  font-weight: 500;
 }
 </style>
