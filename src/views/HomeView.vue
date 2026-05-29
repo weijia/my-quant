@@ -647,17 +647,29 @@ const clearSearch = () => {
 };
 
 // Banner 编辑和清除
-const editBanner = () => {
+const editBanner = async () => {
   const newText = prompt('请输入提醒内容:', bannerText.value);
   if (newText !== null) {
     bannerText.value = newText.trim();
     appConfigService.setBannerText(bannerText.value);
+    // 自动上传到 WebDAV
+    webdavImportService.uploadAppConfig().then(success => {
+      if (success) {
+        console.log('Banner 已同步到 WebDAV');
+      }
+    });
   }
 };
 
-const clearBanner = () => {
+const clearBanner = async () => {
   bannerText.value = '';
   appConfigService.clearBanner();
+  // 自动上传到 WebDAV
+  webdavImportService.uploadAppConfig().then(success => {
+    if (success) {
+      console.log('Banner 已清除并同步到 WebDAV');
+    }
+  });
 };
 
 const loadMockData = async () => {
@@ -977,6 +989,15 @@ onMounted(async () => {
     } else {
       console.warn('HomeView: WebDAV 同步失败:', result.message);
     }
+
+    // 同时下载应用配置（包括 Banner、MQTT 配置等），不阻塞界面
+    webdavImportService.downloadAppConfig().then(success => {
+      if (success) {
+        console.log('HomeView: 应用配置已从 WebDAV 同步（包括 Banner）');
+        // 更新 banner 显示
+        bannerText.value = appConfigService.getBannerText();
+      }
+    });
   } catch (error) {
     console.error('HomeView: WebDAV 同步出错:', error);
   }
@@ -993,6 +1014,9 @@ onMounted(async () => {
   // 监听配置更新事件，重新加载策略以应用新的趋势映射
   window.addEventListener('appConfigUpdated', async () => {
     console.log('HomeView: 检测到配置更新，重新加载策略...');
+    // 更新 banner 显示
+    bannerText.value = appConfigService.getBannerText();
+    console.log('HomeView: Banner 已更新:', bannerText.value);
     await loadStrategies();
   });
 

@@ -428,13 +428,22 @@ const currentDir = computed(() => {
 
 // 计算版本切换链接
 const switchLink = computed(() => {
+  // 如果是 latest，切换到 release
   if (currentDir.value === 'latest') {
     return {
       href: '../release/index.html',
       text: isChineseLocale() ? '切换到正式版' : 'Switch to Release'
     }
   }
+  // 如果是 release 或日期目录，切换到 latest
   if (currentDir.value === 'release' || /^\d{8}$/.test(currentDir.value)) {
+    return {
+      href: '../latest/index.html',
+      text: isChineseLocale() ? '切换到最新版' : 'Switch to Latest'
+    }
+  }
+  // 如果是版本号（如 v1.5.0）或非根目录，显示切换到 latest
+  if (currentDir.value && currentDir.value !== 'my-quant') {
     return {
       href: '../latest/index.html',
       text: isChineseLocale() ? '切换到最新版' : 'Switch to Latest'
