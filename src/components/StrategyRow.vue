@@ -719,10 +719,10 @@ const updateCustomConfigStatus = () => {
   hasCustomConfig.value = isCustom
 }
 
-// 自动保存条件配置到 localStorage（修改时自动保存）
+// 自动保存条件配置到 localStorage（修改时自动保存，使用稳定的 stockCode 作为 key）
 const autoSaveConditionConfig = () => {
-  if (props.strategy.id) {
-    const key = `conditionConfig_${props.strategy.id}`
+  if (props.strategy.stockCode) {
+    const key = `conditionConfig_${props.strategy.stockCode}`
     const config = {
       defaultTradeAmount: defaultTradeAmount.value,
       defaultTradeVolume: defaultTradeVolume.value,
@@ -735,10 +735,10 @@ const autoSaveConditionConfig = () => {
   }
 }
 
-// 从 localStorage 加载条件配置
+// 从 localStorage 加载条件配置（使用稳定的 stockCode 作为 key）
 const loadConditionConfigFromStorage = () => {
-  if (props.strategy.id) {
-    const key = `conditionConfig_${props.strategy.id}`
+  if (props.strategy.stockCode) {
+    const key = `conditionConfig_${props.strategy.stockCode}`
     const saved = localStorage.getItem(key)
     if (saved) {
       try {
@@ -765,8 +765,8 @@ const resetConditionConfig = () => {
     conditionPct.value = DEFAULT_CONDITION_PCT
     
     // 清除 localStorage 中保存的配置
-    if (props.strategy.id) {
-      const key = `conditionConfig_${props.strategy.id}`
+    if (props.strategy.stockCode) {
+      const key = `conditionConfig_${props.strategy.stockCode}`
       localStorage.removeItem(key)
     }
     
