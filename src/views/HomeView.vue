@@ -1248,8 +1248,10 @@ onMounted(async () => {
   cursor: pointer;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.9);
-  max-width: 300px;
-  flex-shrink: 0;
+  min-width: 100px;
+  flex: 1;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .banner-inline:hover {
@@ -1264,14 +1266,26 @@ onMounted(async () => {
 
 .banner-inline .banner-text {
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 165, 0, 0.5) transparent;
+}
+
+.banner-inline .banner-text::-webkit-scrollbar {
+  height: 4px;
+}
+
+.banner-inline .banner-text::-webkit-scrollbar-thumb {
+  background: rgba(255, 165, 0, 0.5);
+  border-radius: 2px;
 }
 
 .banner-inline .banner-placeholder {
   color: rgba(255, 255, 255, 0.5);
   font-style: italic;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .banner-clear-inline {
