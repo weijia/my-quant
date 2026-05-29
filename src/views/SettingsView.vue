@@ -10,6 +10,13 @@
           </svg>
         </router-link>
         <h1>设置</h1>
+        <a v-if="switchLink" :href="switchLink.href" class="header-version-link" :title="switchLink.text">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22v-4"/><path d="M12 6V2"/>
+            <path d="M4 14h4"/><path d="M16 14h4"/><path d="M21 3l-7 7"/><path d="M3 3l7 7"/>
+          </svg>
+          {{ switchLink.text }}
+        </a>
       </div>
     </header>
 
@@ -900,6 +907,31 @@ watch(templates, (newTemplates) => {
   gap: 12px;
   max-width: 900px;
   margin: 0 auto;
+}
+
+.header-version-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  color: #ffa500;
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 165, 0, 0.3);
+  background-color: rgba(255, 165, 0, 0.1);
+  font-size: 12px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.header-version-link:hover {
+  background-color: rgba(255, 165, 0, 0.2);
+  border-color: rgba(255, 165, 0, 0.5);
+}
+
+.header-version-link svg {
+  flex-shrink: 0;
 }
 
 .back-btn {

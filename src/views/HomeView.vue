@@ -1272,10 +1272,10 @@ onMounted(async () => {
   cursor: pointer;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.9);
-  min-width: 100px;
+  min-width: 120px;
   flex: 1;
   max-width: 100%;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .banner-inline:hover {
@@ -1292,6 +1292,7 @@ onMounted(async () => {
   flex: 1;
   overflow: hidden;
   min-width: 0;
+  max-width: 100%;
 }
 
 .banner-inline .banner-text {
@@ -1301,6 +1302,7 @@ onMounted(async () => {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 165, 0, 0.5) transparent;
   -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 
 .banner-inline .banner-text::-webkit-scrollbar {
