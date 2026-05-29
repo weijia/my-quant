@@ -10,6 +10,7 @@
 - 数据导入/导出
 - 从 WebDAV 同步 vue-dialog-userscript 数据
 - PouchDB 本地存储
+- **版本切换** - 支持 latest/release 版本切换（参考 auto-deploy skill）
 
 ## 技术栈
 
@@ -17,6 +18,31 @@
 - Vite
 - TailwindCSS 3
 - PouchDB
+
+## 项目结构
+
+```
+my-quant/
+├── .github/workflows/      # GitHub Actions 工作流
+│   ├── release.yml         # 发布到 GitHub Pages + Release
+│   └── webdav-publish.yml  # 部署到 WebDAV
+├── docs/                   # 文档
+│   ├── external-interface/ # 外部接口文档
+│   └── webdav/             # WebDAV 数据格式文档
+├── src/
+│   ├── components/         # Vue 组件
+│   │   ├── VersionSwitch.vue   # ⭐ 版本切换组件 (latest/release)
+│   │   ├── StrategyList.vue
+│   │   ├── StrategyRow.vue
+│   │   └── ...
+│   ├── views/              # 页面视图
+│   ├── services/           # 业务服务
+│   ├── utils/              # 工具函数
+│   ├── App.vue
+│   └── main.js
+├── README.md
+└── package.json
+```
 
 ## 开发
 
@@ -57,6 +83,28 @@ gh secret set WEBDAV_PASSWORD --repo %ROOT% --body YOUR_PASSWORD
 1. **WebDAV 自动部署**: 推送到 main/master 分支或打 `v*` 标签
 2. **GitHub Pages + Release**: 打 `v*` 标签时自动发布
 
+### 部署目录结构
+
+```
+online/
+├── my-quant/               # 版本目录（按 tag 命名）
+│   ├── v1.0.0/
+│   ├── v1.1.0/
+│   └── ...
+├── latest/                 # 始终指向最新版本
+└── release/                # 稳定版本（手动切换）
+```
+
+### 版本切换功能
+
+项目已集成 **版本切换组件** (`src/components/VersionSwitch.vue`)：
+
+- **latest 目录**: 始终自动指向最新发布的版本
+- **release 目录**: 稳定版本，可手动控制何时切换
+
+当用户访问 `latest` 版本时，页面右下角显示 **"切换到正式版"** 链接；
+当用户访问 `release` 或其他版本时，显示 **"切换到最新版"** 链接。
+
 ### 注意事项
 
 - 项目部署路径: `/my-quant/`
@@ -87,3 +135,11 @@ gh secret set WEBDAV_PASSWORD --repo %ROOT% --body YOUR_PASSWORD
 - my-quant 导出的格式
 - vue-dialog-userscript 的 `all_strategies.json` 格式
 
+## 参考 Skills
+
+本项目参考了以下 skills：
+
+| Skill | 用途 | 位置 |
+|-------|------|------|
+| [auto-deploy](https://github.com/weijia/my-skills/tree/main/auto-deploy) | 三通道自动部署 + 版本切换 | `.github/workflows/`, `src/components/VersionSwitch.vue` |
+| [version-display](https://github.com/weijia/my-skills/tree/main/version-display) | 版本号显示 | `src/version.js`, `src/views/SettingsView.vue` |
