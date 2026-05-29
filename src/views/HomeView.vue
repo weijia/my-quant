@@ -80,7 +80,12 @@
             <line x1="12" x2="12" y1="8" y2="12"/>
             <line x1="12" x2="12.01" y1="16" y2="16"/>
           </svg>
-          <span v-if="bannerText" class="banner-text-wrapper scrolling"><span class="banner-text">{{ bannerText }}</span></span>
+          <span v-if="bannerText" class="banner-text-wrapper scrolling">
+            <span class="banner-text">
+              <span class="banner-text-item">{{ bannerText }}</span>
+              <span class="banner-text-item">{{ bannerText }}</span>
+            </span>
+          </span>
           <span v-else class="banner-placeholder">💡 点击更新，对用户的提醒...</span>
           <button v-if="bannerText" class="banner-clear-inline" @click.stop="clearBanner" title="清除">
             <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1305,9 +1310,13 @@ onMounted(async () => {
 }
 
 .banner-inline .banner-text-wrapper.scrolling .banner-text {
-  display: inline-block;
-  animation: banner-scroll 15s linear infinite;
-  padding-right: 50px;
+  display: inline-flex;
+  animation: banner-scroll 12s linear infinite;
+}
+
+.banner-inline .banner-text-wrapper.scrolling .banner-text-item {
+  padding-right: 30px;
+  white-space: nowrap;
 }
 
 .banner-inline .banner-text-wrapper.scrolling .banner-text::after {
@@ -1322,10 +1331,10 @@ onMounted(async () => {
 
 @keyframes banner-scroll {
   0% {
-    transform: translateX(100%);
+    transform: translateX(0);
   }
   100% {
-    transform: translateX(-100%);
+    transform: translateX(-50%);
   }
 }
 
