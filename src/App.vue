@@ -1,10 +1,8 @@
 <template>
   <router-view />
-  <VersionSwitch />
 </template>
 
 <script setup>
-import VersionSwitch from './components/VersionSwitch.vue'
 </script>
 
 <style>

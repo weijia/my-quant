@@ -394,6 +394,10 @@ if (ctx.trendJudgment === 'trend_up') {
             <span class="version-label">构建时间</span>
             <span class="version-value">{{ buildTimeDisplay }}</span>
           </div>
+          <div v-if="switchLink" class="version-item version-switch">
+            <span class="version-label">版本切换</span>
+            <a :href="switchLink.href" class="version-link">{{ switchLink.text }}</a>
+          </div>
         </div>
       </section>
     </main>
@@ -401,12 +405,43 @@ if (ctx.trendJudgment === 'trend_up') {
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import mqttConditionService, { PRESET_SERVERS } from '../services/MQTTConditionService'
 import { webdavImportService } from '../services/WebDAVImportService'
 import WEBDAV_PATHS from '../config/WebDAVPaths'
 import appConfigService from '../services/AppConfigService.js'
 import { versionDisplay, buildTimeDisplay } from '../version.js'
+
+// 判断是否为中文环境
+const isChineseLocale = () => {
+  return navigator.language.startsWith('zh')
+}
+
+// 获取当前目录名
+const currentDir = computed(() => {
+  const pathname = window.location.pathname
+    .replace(/\/index\.html$/, '')
+    .replace(/\/$/, '')
+  const segments = pathname.split('/').filter(Boolean)
+  return segments[segments.length - 1] || ''
+})
+
+// 计算版本切换链接
+const switchLink = computed(() => {
+  if (currentDir.value === 'latest') {
+    return {
+      href: '../release/index.html',
+      text: isChineseLocale() ? '切换到正式版' : 'Switch to Release'
+    }
+  }
+  if (currentDir.value === 'release' || /^\d{8}$/.test(currentDir.value)) {
+    return {
+      href: '../latest/index.html',
+      text: isChineseLocale() ? '切换到最新版' : 'Switch to Latest'
+    }
+  }
+  return null
+})
 
 // WebDAV 配置
 const webdavConfigForm = reactive({
@@ -1413,5 +1448,26 @@ watch(templates, (newTemplates) => {
   color: #4ecdc4;
   font-size: 14px;
   font-weight: 500;
+}
+
+.version-switch .version-label {
+  min-width: 70px;
+}
+
+.version-link {
+  color: #ffa500;
+  text-decoration: none;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 165, 0, 0.3);
+  background-color: rgba(255, 165, 0, 0.1);
+  transition: all 0.2s;
+  font-size: 13px;
+}
+
+.version-link:hover {
+  background-color: rgba(255, 165, 0, 0.2);
+  border-color: rgba(255, 165, 0, 0.5);
+  color: #ffa500;
 }
 </style>
