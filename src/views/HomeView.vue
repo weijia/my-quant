@@ -80,7 +80,7 @@
             <line x1="12" x2="12" y1="8" y2="12"/>
             <line x1="12" x2="12.01" y1="16" y2="16"/>
           </svg>
-          <span v-if="bannerText" class="banner-text">{{ bannerText }}</span>
+          <span v-if="bannerText" class="banner-text-wrapper"><span class="banner-text">{{ bannerText }}</span></span>
           <span v-else class="banner-placeholder">💡 点击更新，对用户的提醒...</span>
           <button v-if="bannerText" class="banner-clear-inline" @click.stop="clearBanner" title="清除">
             <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1288,11 +1288,19 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
+.banner-inline .banner-text-wrapper {
+  flex: 1;
+  overflow: hidden;
+  min-width: 0;
+}
+
 .banner-inline .banner-text {
+  display: block;
   white-space: nowrap;
   overflow-x: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 165, 0, 0.5) transparent;
+  -webkit-overflow-scrolling: touch;
 }
 
 .banner-inline .banner-text::-webkit-scrollbar {

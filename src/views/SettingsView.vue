@@ -428,28 +428,35 @@ const currentDir = computed(() => {
 
 // 计算版本切换链接
 const switchLink = computed(() => {
+  const dir = currentDir.value
+  console.log('[Settings] 当前目录:', dir)
+  
   // 如果是 latest，切换到 release
-  if (currentDir.value === 'latest') {
+  if (dir === 'latest') {
     return {
       href: '../release/index.html',
       text: isChineseLocale() ? '切换到正式版' : 'Switch to Release'
     }
   }
   // 如果是 release 或日期目录，切换到 latest
-  if (currentDir.value === 'release' || /^\d{8}$/.test(currentDir.value)) {
+  if (dir === 'release' || /^\d{8}$/.test(dir)) {
     return {
       href: '../latest/index.html',
       text: isChineseLocale() ? '切换到最新版' : 'Switch to Latest'
     }
   }
-  // 如果是版本号（如 v1.5.0）或非根目录，显示切换到 latest
-  if (currentDir.value && currentDir.value !== 'my-quant') {
+  // 如果是版本号（如 v1.5.0）或其他目录，切换到 latest
+  if (dir && dir !== 'my-quant' && dir !== '') {
     return {
       href: '../latest/index.html',
       text: isChineseLocale() ? '切换到最新版' : 'Switch to Latest'
     }
   }
-  return null
+  // 如果是根目录或 my-quant，显示切换到 latest
+  return {
+    href: 'latest/index.html',
+    text: isChineseLocale() ? '切换到最新版' : 'Switch to Latest'
+  }
 })
 
 // WebDAV 配置
