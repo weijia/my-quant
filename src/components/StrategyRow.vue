@@ -274,7 +274,9 @@
           class="condition-order-btn market-close-btn"
           :class="{ 'active': hasMarketCloseBuyFlag }"
           :disabled="sendingMarketCloseBuy || !strategy.stockCode"
-          :title="`收市买入 上涨0.1%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}股（2:45左右执行）`"
+          :title="marketCloseBuyTime 
+            ? `收市买入 上涨0.1%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}股（2:45左右执行）\n设置时间: ${marketCloseBuyTime} ${isMarketCloseBuyToday ? '✓ 今天' : '✗ 非今天'}` 
+            : `收市买入 上涨0.1%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}股（2:45左右执行）`"
         >
           {{ sendingMarketCloseBuy ? '...' : (hasMarketCloseBuyFlag ? '收市✓' : '收市买') }}<span v-if="getButtonCount('marketCloseBuy') > 0" class="btn-count">{{ getButtonCount('marketCloseBuy') }}</span>
         </button>
@@ -480,6 +482,19 @@ const sendingConditionVolumeBoth = ref(false)
 // 收市买入按钮状态
 const sendingMarketCloseBuy = ref(false)
 const hasMarketCloseBuyFlag = ref(false)
+const marketCloseBuyTime = ref('')
+const isMarketCloseBuyToday = ref(false)
+
+// 检查是否是今天（东八区）
+const isTodayInCST = (isoString) => {
+  if (!isoString) return false
+  const date = new Date(isoString)
+  const now = new Date()
+  // 转换为东八区日期字符串比较
+  const dateStr = date.toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai' })
+  const nowStr = now.toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai' })
+  return dateStr === nowStr
+}
 
 // 加载收市买入标记（从统一配置，支持多账户）
 const loadMarketCloseBuyFlag = () => {
@@ -491,9 +506,15 @@ const loadMarketCloseBuyFlag = () => {
     
     if (allConfigs.length > 0) {
       hasMarketCloseBuyFlag.value = true
-      console.log(`[StrategyRow] 已加载 ${allConfigs.length} 个账户配置`)
+      // 获取第一个配置的时间信息
+      const firstConfig = allConfigs[0].config
+      marketCloseBuyTime.value = firstConfig.createdAtDisplay || ''
+      isMarketCloseBuyToday.value = isTodayInCST(firstConfig.createdAt)
+      console.log(`[StrategyRow] 已加载 ${allConfigs.length} 个账户配置, 时间:${marketCloseBuyTime.value}, 今天:${isMarketCloseBuyToday.value}`)
     } else {
       hasMarketCloseBuyFlag.value = false
+      marketCloseBuyTime.value = ''
+      isMarketCloseBuyToday.value = false
     }
     console.log(`[StrategyRow] hasMarketCloseBuyFlag 设置为: ${hasMarketCloseBuyFlag.value}`)
   } else {

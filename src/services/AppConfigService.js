@@ -247,6 +247,18 @@ class AppConfigService {
     if (config) {
       // 使用稳定 key
       const stableKey = this.getMarketCloseKey(stockCode, accountType, provider)
+      // 记录东八区时间 (Asia/Shanghai)
+      const now = new Date()
+      const cstTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }))
+      config.createdAt = cstTime.toISOString()
+      config.createdAtDisplay = cstTime.toLocaleString('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
       this.config.marketCloseBuy[stableKey] = config
       console.log(`[AppConfig] 收市买配置已保存, key=${stableKey}`, config)
     } else {
