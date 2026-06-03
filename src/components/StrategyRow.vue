@@ -506,9 +506,24 @@ const loadMarketCloseBuyFlag = () => {
     
     if (allConfigs.length > 0) {
       hasMarketCloseBuyFlag.value = true
-      // 获取第一个配置的时间信息
+      // 获取第一个配置的时间信息（兼容旧数据：只有 createdAt ISO 字符串）
       const firstConfig = allConfigs[0].config
-      marketCloseBuyTime.value = firstConfig.createdAtDisplay || ''
+      if (firstConfig.createdAtDisplay) {
+        marketCloseBuyTime.value = firstConfig.createdAtDisplay
+      } else if (firstConfig.createdAt) {
+        // 旧数据兼容：将 ISO 字符串格式化为东八区显示
+        const d = new Date(firstConfig.createdAt)
+        marketCloseBuyTime.value = d.toLocaleString('zh-CN', {
+          timeZone: 'Asia/Shanghai',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      } else {
+        marketCloseBuyTime.value = ''
+      }
       isMarketCloseBuyToday.value = isTodayInCST(firstConfig.createdAt)
       console.log(`[StrategyRow] 已加载 ${allConfigs.length} 个账户配置, 时间:${marketCloseBuyTime.value}, 今天:${isMarketCloseBuyToday.value}`)
     } else {
@@ -1100,6 +1115,8 @@ const handleMarketCloseBuy = async () => {
   if (hasMarketCloseBuyFlag.value) {
     appConfigService.clearAllMarketCloseConfigsForStock(props.strategy.stockCode)
     hasMarketCloseBuyFlag.value = false
+    marketCloseBuyTime.value = ''
+    isMarketCloseBuyToday.value = false
     console.log(`[收市买入] 已取消: ${props.strategy.stockCode}`)
     return
   }
@@ -1133,6 +1150,17 @@ const handleMarketCloseBuy = async () => {
     )
 
     hasMarketCloseBuyFlag.value = true
+    // 立即更新时间显示
+    const cstNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }))
+    marketCloseBuyTime.value = cstNow.toLocaleString('zh-CN', {
+      timeZone: 'Asia/Shanghai',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+    isMarketCloseBuyToday.value = true
     console.log(`[收市买入] 已设置: ${props.strategy.stockCode}, 账户:${config.accountType}, 券商:${config.provider || '同花顺'}, 数量:${tradeVolume}`)
 
     // 检查当前时间是否接近2:45，如果是则立即执行
