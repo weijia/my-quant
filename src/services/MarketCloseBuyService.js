@@ -87,13 +87,22 @@ class MarketCloseBuyService {
 
     for (const key in allConfigs) {
       const config = allConfigs[key]
-      if (config && config.createdAt) {
-        const configDate = new Date(config.createdAt)
-        const configDateStr = configDate.toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai' })
-        if (configDateStr !== todayStr) {
-          delete allConfigs[key]
-          cleanedCount++
-        }
+      if (!config) {
+        delete allConfigs[key]
+        cleanedCount++
+        continue
+      }
+      if (!config.createdAt) {
+        // 没有 createdAt 的旧数据，一律清理
+        delete allConfigs[key]
+        cleanedCount++
+        continue
+      }
+      const configDate = new Date(config.createdAt)
+      const configDateStr = configDate.toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai' })
+      if (configDateStr !== todayStr) {
+        delete allConfigs[key]
+        cleanedCount++
       }
     }
 
