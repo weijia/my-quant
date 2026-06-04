@@ -21,6 +21,8 @@ class MarketCloseBuyService {
     }
 
     console.log('[收市买入服务] 启动定时检查')
+    // 启动时立即清理非今天的收市买配置（无论几点打开页面）
+    this.cleanupOldConfigs()
     // 每分钟检查一次
     this.checkInterval = setInterval(() => {
       this.checkAndExecute()
