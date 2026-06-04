@@ -227,6 +227,12 @@ class AppConfigService {
     return this.config.marketCloseBuy || {}
   }
 
+  // 直接保存收市买配置（用于批量更新）
+  saveMarketCloseBuyConfig(configs) {
+    this.config.marketCloseBuy = configs
+    this.saveToLocalStorage()
+  }
+
   // 获取收市买入配置（兼容旧版 strategyId 方式 + 新版稳定 key 方式）
   getMarketCloseBuyForStrategy(strategyId, stockCode, accountType, provider) {
     const configs = this.getMarketCloseBuyConfig()

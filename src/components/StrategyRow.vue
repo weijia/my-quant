@@ -1533,8 +1533,14 @@ const handleMarketCloseBuyExecuted = (event) => {
   }
 }
 
+// 处理收市买清理事件
+const handleMarketCloseBuyCleaned = () => {
+  loadMarketCloseBuyFlag()
+}
+
 onMounted(() => {
   window.addEventListener('marketCloseBuyExecuted', handleMarketCloseBuyExecuted)
+  window.addEventListener('marketCloseBuyCleaned', handleMarketCloseBuyCleaned)
   // 确保收市买状态已加载（防止 props 在 script setup 时未准备好）
   loadMarketCloseBuyFlag()
   console.log(`[StrategyRow] onMounted: 收市买状态 = ${hasMarketCloseBuyFlag.value}, strategy.id = ${props.strategy?.id}`)
@@ -1542,6 +1548,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('marketCloseBuyExecuted', handleMarketCloseBuyExecuted)
+  window.removeEventListener('marketCloseBuyCleaned', handleMarketCloseBuyCleaned)
 })
 
 const getProfitLossClass = (value) => {
