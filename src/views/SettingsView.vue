@@ -649,7 +649,25 @@ const defaultStrategyScripts = [
     script: `// 通用上涨趋势策略
 // 下跌15日波动率卖出1/4持仓，上涨0.5%买入设定数量
 const vol = ctx.volatility15d * 100  // 转为百分比
-const sellVol = Math.floor(ctx.netPosition / 4 / 100) * 100  // 1/4持仓，取整到100
+
+// 持仓已经是100股，不生成卖出条件单
+if (ctx.netPosition === 100) {
+  return [
+    buy({
+      stockCode: ctx.stockCode,
+      stockName: ctx.stockName,
+      tradeVolume: ctx.defaultBuyVolume,
+      percentage: 0.5,
+      provider: ctx.provider,
+      accountType: ctx.accountType
+    })
+  ]
+}
+
+// 持仓市值小于20000时，卖出到只剩100股
+const sellVol = ctx.marketValue < 20000
+  ? Math.max(100, Math.floor((ctx.netPosition - 100) / 100) * 100)
+  : Math.floor(ctx.netPosition / 4 / 100) * 100  // 1/4持仓，取整到100
 
 return [
   sell({
@@ -678,7 +696,25 @@ return [
     script: `// 通用下跌趋势策略
 // 下跌15日波动率1/2卖出1/4持仓，上涨15日波动率买入设定数量
 const vol = ctx.volatility15d * 100  // 转为百分比
-const sellVol = Math.floor(ctx.netPosition / 4 / 100) * 100  // 1/4持仓，取整到100
+
+// 持仓已经是100股，不生成卖出条件单
+if (ctx.netPosition === 100) {
+  return [
+    buy({
+      stockCode: ctx.stockCode,
+      stockName: ctx.stockName,
+      tradeVolume: ctx.defaultBuyVolume,
+      percentage: parseFloat(vol.toFixed(2)),
+      provider: ctx.provider,
+      accountType: ctx.accountType
+    })
+  ]
+}
+
+// 持仓市值小于20000时，卖出到只剩100股
+const sellVol = ctx.marketValue < 20000
+  ? Math.max(100, Math.floor((ctx.netPosition - 100) / 100) * 100)
+  : Math.floor(ctx.netPosition / 4 / 100) * 100  // 1/4持仓，取整到100
 
 return [
   sell({
@@ -707,7 +743,25 @@ return [
     script: `// 通用普通策略
 // 上涨或下跌达15日波动率时，买入设定数量或卖出1/4持仓
 const vol = ctx.volatility15d * 100  // 转为百分比
-const sellVol = Math.floor(ctx.netPosition / 4 / 100) * 100  // 1/4持仓，取整到100
+
+// 持仓已经是100股，不生成卖出条件单
+if (ctx.netPosition === 100) {
+  return [
+    buy({
+      stockCode: ctx.stockCode,
+      stockName: ctx.stockName,
+      tradeVolume: ctx.defaultBuyVolume,
+      percentage: parseFloat(vol.toFixed(2)),
+      provider: ctx.provider,
+      accountType: ctx.accountType
+    })
+  ]
+}
+
+// 持仓市值小于20000时，卖出到只剩100股
+const sellVol = ctx.marketValue < 20000
+  ? Math.max(100, Math.floor((ctx.netPosition - 100) / 100) * 100)
+  : Math.floor(ctx.netPosition / 4 / 100) * 100  // 1/4持仓，取整到100
 
 return [
   sell({

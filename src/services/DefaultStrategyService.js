@@ -43,6 +43,23 @@ class DefaultStrategyService {
   }
 
   /**
+ * 计算卖出数量
+ * 持仓市值小于20000时卖出到只剩100股，否则卖出1/4持仓
+ * @param {Object} strategy - 策略对象
+ * @param {number} quarterPosition - 1/4持仓数量
+ * @returns {number} 卖出数量
+ */
+  calcSellVolume(strategy, quarterPosition) {
+    const marketValue = parseFloat(strategy.marketValue) || 0
+    if (marketValue < 20000) {
+      const netPosition = strategy.netPosition || 0
+      return Math.max(100, Math.floor((netPosition - 100) / 100) * 100)
+    }
+    return quarterPosition
+  }
+
+
+  /**
    * 生成通用上涨趋势策略
    * 
    * 规则：
@@ -59,13 +76,32 @@ class DefaultStrategyService {
     const buyVolume = this.getDefaultBuyVolume(strategy)
     if (!buyVolume || buyVolume <= 0) return null
 
+    // 持仓已经是100股，不生成卖出策略
+    if (strategy.netPosition === 100) {
+      return {
+        name: '通用上涨趋势策略',
+        description: `上涨0.5%买入（持仓已为100股，不卖出）`,
+        decreaseStrategies: [],
+        increaseStrategies: [
+          {
+            deltaPercentage: '0.5',
+            tradeVolume: buyVolume.toString(),
+            side: 'BUY'
+          }
+        ]
+      }
+    }
+
+    const quarterPosition = this.getQuarterPosition(strategy)
+    const sellVolume = this.calcSellVolume(strategy, quarterPosition)
+
     return {
       name: '通用上涨趋势策略',
       description: `下跌${volatility15d.toFixed(2)}%卖出，上涨0.5%买入`,
       decreaseStrategies: [
         {
           deltaPercentage: volatility15d.toFixed(2),
-          tradeVolume: buyVolume.toString(),
+          tradeVolume: sellVolume.toString(),
           side: 'SELL'
         }
       ],
@@ -96,11 +132,30 @@ class DefaultStrategyService {
     const quarterPosition = this.getQuarterPosition(strategy)
     const buyVolume = this.getDefaultBuyVolume(strategy)
     
-    if (!quarterPosition || quarterPosition <= 0) return null
     if (!buyVolume || buyVolume <= 0) return null
 
     const sellPercentage = (volatility15d / 2).toFixed(2)
     const buyPercentage = volatility15d.toFixed(2)
+
+    // 持仓已经是100股，不生成卖出策略
+    if (strategy.netPosition === 100) {
+      return {
+        name: '通用下跌趋势策略',
+        description: `上涨${buyPercentage}%买入${buyVolume}股（持仓已为100股，不卖出）`,
+        decreaseStrategies: [],
+        increaseStrategies: [
+          {
+            deltaPercentage: buyPercentage,
+            tradeVolume: buyVolume.toString(),
+            side: 'BUY'
+          }
+        ]
+      }
+    }
+
+    if (!quarterPosition || quarterPosition <= 0) return null
+
+    const sellVolume = this.calcSellVolume(strategy, quarterPosition)
 
     return {
       name: '通用下跌趋势策略',
@@ -108,7 +163,7 @@ class DefaultStrategyService {
       decreaseStrategies: [
         {
           deltaPercentage: sellPercentage,
-          tradeVolume: quarterPosition.toString(),
+          tradeVolume: sellVolume.toString(),
           side: 'SELL'
         }
       ],
@@ -139,10 +194,29 @@ class DefaultStrategyService {
     const quarterPosition = this.getQuarterPosition(strategy)
     const buyVolume = this.getDefaultBuyVolume(strategy)
     
-    if (!quarterPosition || quarterPosition <= 0) return null
     if (!buyVolume || buyVolume <= 0) return null
 
     const percentage = volatility15d.toFixed(2)
+
+    // 持仓已经是100股，不生成卖出策略
+    if (strategy.netPosition === 100) {
+      return {
+        name: '通用普通策略',
+        description: `上涨${percentage}%买入${buyVolume}股（持仓已为100股，不卖出）`,
+        decreaseStrategies: [],
+        increaseStrategies: [
+          {
+            deltaPercentage: percentage,
+            tradeVolume: buyVolume.toString(),
+            side: 'BUY'
+          }
+        ]
+      }
+    }
+
+    if (!quarterPosition || quarterPosition <= 0) return null
+
+    const sellVolume = this.calcSellVolume(strategy, quarterPosition)
 
     return {
       name: '通用普通策略',
@@ -150,7 +224,7 @@ class DefaultStrategyService {
       decreaseStrategies: [
         {
           deltaPercentage: percentage,
-          tradeVolume: quarterPosition.toString(),
+          tradeVolume: sellVolume.toString(),
           side: 'SELL'
         }
       ],
