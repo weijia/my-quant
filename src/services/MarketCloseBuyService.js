@@ -21,6 +21,8 @@ class MarketCloseBuyService {
     }
 
     console.log('[收市买入服务] 启动定时检查')
+    // 启动时立即清理非今天的收市买配置（无论几点打开页面）
+    this.cleanupOldConfigs()
     // 每分钟检查一次
     this.checkInterval = setInterval(() => {
       this.checkAndExecute()
@@ -46,6 +48,12 @@ class MarketCloseBuyService {
     const minutes = now.getMinutes()
     const currentDate = now.toDateString()
 
+    // 每天早上 9:00 清理非今天的收市买配置（防止昨天未执行的配置残留）
+    if (hours === 9 && minutes === 0 && this.lastCleanupDate !== currentDate) {
+      this.cleanupOldConfigs()
+      this.lastCleanupDate = currentDate
+    }
+
     // 检查是否在 14:45 - 14:50 之间
     if (hours !== 14 || minutes < 45 || minutes > 50) {
       return
@@ -68,6 +76,44 @@ class MarketCloseBuyService {
     this.lastExecutedDate = currentDate
 
     await this.executeAllMarketCloseBuys()
+  }
+
+  // 清理非今天的收市买配置
+  cleanupOldConfigs() {
+    const allConfigs = appConfigService.getMarketCloseBuyConfig()
+    const now = new Date()
+    const todayStr = now.toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai' })
+    let cleanedCount = 0
+
+    for (const key in allConfigs) {
+      const config = allConfigs[key]
+      if (!config) {
+        delete allConfigs[key]
+        cleanedCount++
+        continue
+      }
+      if (!config.createdAt) {
+        // 没有 createdAt 的旧数据，一律清理
+        delete allConfigs[key]
+        cleanedCount++
+        continue
+      }
+      const configDate = new Date(config.createdAt)
+      const configDateStr = configDate.toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai' })
+      if (configDateStr !== todayStr) {
+        delete allConfigs[key]
+        cleanedCount++
+      }
+    }
+
+    if (cleanedCount > 0) {
+      appConfigService.saveMarketCloseBuyConfig(allConfigs)
+      console.log(`[收市买入服务] 清理完成: 删除了 ${cleanedCount} 个非今天的配置`)
+      // 触发事件通知 UI 更新
+      window.dispatchEvent(new CustomEvent('marketCloseBuyCleaned', {
+        detail: { cleanedCount }
+      }))
+    }
   }
 
   // 执行所有标记的收市买入（按账户类型分组，同账户一起下，不同账户间隔1秒）

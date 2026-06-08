@@ -227,6 +227,12 @@ class AppConfigService {
     return this.config.marketCloseBuy || {}
   }
 
+  // 直接保存收市买配置（用于批量更新）
+  saveMarketCloseBuyConfig(configs) {
+    this.config.marketCloseBuy = configs
+    this.saveToLocalStorage()
+  }
+
   // 获取收市买入配置（兼容旧版 strategyId 方式 + 新版稳定 key 方式）
   getMarketCloseBuyForStrategy(strategyId, stockCode, accountType, provider) {
     const configs = this.getMarketCloseBuyConfig()
@@ -247,6 +253,18 @@ class AppConfigService {
     if (config) {
       // 使用稳定 key
       const stableKey = this.getMarketCloseKey(stockCode, accountType, provider)
+      // 记录东八区时间 (Asia/Shanghai)
+      const now = new Date()
+      const cstTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }))
+      config.createdAt = cstTime.toISOString()
+      config.createdAtDisplay = cstTime.toLocaleString('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
       this.config.marketCloseBuy[stableKey] = config
       console.log(`[AppConfig] 收市买配置已保存, key=${stableKey}`, config)
     } else {
