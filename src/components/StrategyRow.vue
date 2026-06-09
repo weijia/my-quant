@@ -280,6 +280,18 @@
         >
           {{ sendingMarketCloseBuy ? '...' : (hasMarketCloseBuyFlag ? '收市✓' : '收市买') }}<span v-if="getButtonCount('marketCloseBuy') > 0" class="btn-count">{{ getButtonCount('marketCloseBuy') }}</span>
         </button>
+        <!-- 收市卖出按钮 -->
+        <button 
+          @click="handleMarketCloseSell" 
+          class="condition-order-btn market-close-btn market-close-sell-btn"
+          :class="{ 'active': hasMarketCloseSellFlag }"
+          :disabled="sendingMarketCloseSell || !strategy.stockCode"
+          :title="marketCloseSellTime 
+            ? `收市卖出 下跌0.1%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}股（2:45左右执行）\n设置时间: ${marketCloseSellTime} ${isMarketCloseSellToday ? '✓ 今天' : '✗ 非今天'}` 
+            : `收市卖出 下跌0.1%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}股（2:45左右执行）`"
+        >
+          {{ sendingMarketCloseSell ? '...' : (hasMarketCloseSellFlag ? '收卖✓' : '收市卖') }}<span v-if="getButtonCount('marketCloseSell') > 0" class="btn-count">{{ getButtonCount('marketCloseSell') }}</span>
+        </button>
       </div>
     </td>
     
@@ -485,6 +497,12 @@ const hasMarketCloseBuyFlag = ref(false)
 const marketCloseBuyTime = ref('')
 const isMarketCloseBuyToday = ref(false)
 
+// 收市卖出按钮状态
+const sendingMarketCloseSell = ref(false)
+const hasMarketCloseSellFlag = ref(false)
+const marketCloseSellTime = ref('')
+const isMarketCloseSellToday = ref(false)
+
 // 检查是否是今天（东八区）
 const isTodayInCST = (isoString) => {
   if (!isoString) return false
@@ -534,6 +552,44 @@ const loadMarketCloseBuyFlag = () => {
     console.log(`[StrategyRow] hasMarketCloseBuyFlag 设置为: ${hasMarketCloseBuyFlag.value}`)
   } else {
     console.log(`[StrategyRow] strategy.id 为空，无法加载收市买状态`)
+  }
+}
+
+// 加载收市卖出标记
+const loadMarketCloseSellFlag = () => {
+  console.log(`[StrategyRow] loadMarketCloseSellFlag 被调用, strategy.id=${props.strategy?.id}`)
+  if (props.strategy.id) {
+    const allConfigs = appConfigService.getAllMarketCloseSellConfigsForStock(props.strategy.stockCode)
+    console.log(`[StrategyRow] 从 appConfigService 获取收市卖配置:`, allConfigs)
+    
+    if (allConfigs.length > 0) {
+      hasMarketCloseSellFlag.value = true
+      const firstConfig = allConfigs[0].config
+      if (firstConfig.createdAtDisplay) {
+        marketCloseSellTime.value = firstConfig.createdAtDisplay
+      } else if (firstConfig.createdAt) {
+        const d = new Date(firstConfig.createdAt)
+        marketCloseSellTime.value = d.toLocaleString('zh-CN', {
+          timeZone: 'Asia/Shanghai',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      } else {
+        marketCloseSellTime.value = ''
+      }
+      isMarketCloseSellToday.value = isTodayInCST(firstConfig.createdAt)
+      console.log(`[StrategyRow] 已加载 ${allConfigs.length} 个收市卖账户配置, 时间:${marketCloseSellTime.value}, 今天:${isMarketCloseSellToday.value}`)
+    } else {
+      hasMarketCloseSellFlag.value = false
+      marketCloseSellTime.value = ''
+      isMarketCloseSellToday.value = false
+    }
+    console.log(`[StrategyRow] hasMarketCloseSellFlag 设置为: ${hasMarketCloseSellFlag.value}`)
+  } else {
+    console.log(`[StrategyRow] strategy.id 为空，无法加载收市卖状态`)
   }
 }
 
@@ -1198,6 +1254,100 @@ const executeMarketCloseBuy = async (config) => {
   }
 }
 
+// 收市卖出：切换标记状态
+const handleMarketCloseSell = async () => {
+  if (!props.strategy.stockCode) {
+    alert('股票代码不存在')
+    return
+  }
+
+  // 如果已经有标记，则取消
+  if (hasMarketCloseSellFlag.value) {
+    appConfigService.clearAllMarketCloseSellConfigsForStock(props.strategy.stockCode)
+    hasMarketCloseSellFlag.value = false
+    marketCloseSellTime.value = ''
+    isMarketCloseSellToday.value = false
+    console.log(`[收市卖出] 已取消: ${props.strategy.stockCode}`)
+    return
+  }
+
+  incrementCount('marketCloseSell')
+  sendingMarketCloseSell.value = true
+
+  try {
+    // 计算交易数量（使用默认数量或1/4持仓）
+    const tradeVolume = getEffectiveTradeVolume()
+
+    // 保存收市卖出配置
+    const config = {
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume: tradeVolume,
+      percentage: 0.1,  // 下跌0.1%
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getSellSide(),
+      createdAt: new Date().toISOString()
+    }
+
+    // 使用稳定的 key 保存配置
+    appConfigService.setMarketCloseSellForStrategy(
+      props.strategy.id,
+      config,
+      props.strategy.stockCode,
+      config.accountType,
+      config.provider
+    )
+
+    hasMarketCloseSellFlag.value = true
+    // 立即更新时间显示
+    const cstNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }))
+    marketCloseSellTime.value = cstNow.toLocaleString('zh-CN', {
+      timeZone: 'Asia/Shanghai',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+    isMarketCloseSellToday.value = true
+    console.log(`[收市卖出] 已设置: ${props.strategy.stockCode}, 账户:${config.accountType}, 券商:${config.provider || '同花顺'}, 数量:${tradeVolume}`)
+
+    // 检查当前时间是否接近2:45，如果是则立即执行
+    const now = new Date()
+    const hours = now.getHours()
+    const minutes = now.getMinutes()
+
+    // 如果在2:45-2:50之间，立即执行
+    if (hours === 14 && minutes >= 45 && minutes <= 50) {
+      await executeMarketCloseSell(config)
+    }
+  } catch (error) {
+    console.error('[收市卖出] 设置失败:', error)
+    alert('设置失败')
+  } finally {
+    sendingMarketCloseSell.value = false
+  }
+}
+
+// 执行收市卖出条件单
+const executeMarketCloseSell = async (config) => {
+  try {
+    await mqttConditionService.sendSellOrder({
+      stockCode: config.stockCode,
+      stockName: config.stockName,
+      tradeVolume: config.tradeVolume,
+      percentage: config.percentage,
+      provider: config.provider,
+      accountType: config.accountType,
+      side: config.side
+    })
+    console.log(`[收市卖出] 条件单已发送: ${config.stockCode}, 下跌0.1%卖出, 账户:${config.accountType}, 数量:${config.tradeVolume}`)
+  } catch (error) {
+    console.error('[收市卖出] 发送失败:', error)
+  }
+}
+
 // 获取趋势图标
 const getTrendIcon = (trend) => {
   const icons = {
@@ -1538,17 +1688,34 @@ const handleMarketCloseBuyCleaned = () => {
   loadMarketCloseBuyFlag()
 }
 
+// 处理收市卖执行事件
+const handleMarketCloseSellExecuted = (event) => {
+  if (event.detail && event.detail.strategyId === props.strategy.id) {
+    loadMarketCloseSellFlag()
+  }
+}
+
+// 处理收市卖清理事件
+const handleMarketCloseSellCleaned = () => {
+  loadMarketCloseSellFlag()
+}
+
 onMounted(() => {
   window.addEventListener('marketCloseBuyExecuted', handleMarketCloseBuyExecuted)
   window.addEventListener('marketCloseBuyCleaned', handleMarketCloseBuyCleaned)
-  // 确保收市买状态已加载（防止 props 在 script setup 时未准备好）
+  window.addEventListener('marketCloseSellExecuted', handleMarketCloseSellExecuted)
+  window.addEventListener('marketCloseSellCleaned', handleMarketCloseSellCleaned)
+  // 确保收市买/卖状态已加载（防止 props 在 script setup 时未准备好）
   loadMarketCloseBuyFlag()
-  console.log(`[StrategyRow] onMounted: 收市买状态 = ${hasMarketCloseBuyFlag.value}, strategy.id = ${props.strategy?.id}`)
+  loadMarketCloseSellFlag()
+  console.log(`[StrategyRow] onMounted: 收市买状态 = ${hasMarketCloseBuyFlag.value}, 收市卖状态 = ${hasMarketCloseSellFlag.value}, strategy.id = ${props.strategy?.id}`)
 })
 
 onUnmounted(() => {
   window.removeEventListener('marketCloseBuyExecuted', handleMarketCloseBuyExecuted)
   window.removeEventListener('marketCloseBuyCleaned', handleMarketCloseBuyCleaned)
+  window.removeEventListener('marketCloseSellExecuted', handleMarketCloseSellExecuted)
+  window.removeEventListener('marketCloseSellCleaned', handleMarketCloseSellCleaned)
 })
 
 const getProfitLossClass = (value) => {
@@ -2168,6 +2335,24 @@ const getTrendClass = (trend) => {
 .condition-order-btn.market-close-btn.active {
   background-color: rgba(255, 165, 0, 0.5);
   border-color: #ffa500;
+  color: white;
+  font-weight: bold;
+}
+
+.condition-order-btn.market-close-sell-btn {
+  border-color: rgba(255, 100, 100, 0.4);
+  background-color: rgba(255, 100, 100, 0.1);
+  color: #ff6464;
+}
+
+.condition-order-btn.market-close-sell-btn:hover:not(:disabled) {
+  background-color: rgba(255, 100, 100, 0.3);
+  border-color: #ff6464;
+}
+
+.condition-order-btn.market-close-sell-btn.active {
+  background-color: rgba(255, 100, 100, 0.5);
+  border-color: #ff6464;
   color: white;
   font-weight: bold;
 }

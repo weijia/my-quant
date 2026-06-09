@@ -309,6 +309,72 @@ class AppConfigService {
     }
   }
 
+  // ========== 收市卖出配置 ==========
+
+  getMarketCloseSellConfig() {
+    return this.config.marketCloseSell || {}
+  }
+
+  // 直接保存收市卖配置（用于批量更新）
+  saveMarketCloseSellConfig(configs) {
+    this.config.marketCloseSell = configs
+    this.saveToLocalStorage()
+  }
+
+  // 设置收市卖出配置（使用稳定 key，支持多账户）
+  setMarketCloseSellForStrategy(strategyId, config, stockCode, accountType, provider) {
+    if (!this.config.marketCloseSell) {
+      this.config.marketCloseSell = {}
+    }
+    if (config) {
+      // 使用稳定 key
+      const stableKey = this.getMarketCloseKey(stockCode, accountType, provider)
+      // 记录东八区时间 (Asia/Shanghai)
+      const now = new Date()
+      const cstTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }))
+      config.createdAt = cstTime.toISOString()
+      config.createdAtDisplay = cstTime.toLocaleString('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+      this.config.marketCloseSell[stableKey] = config
+      console.log(`[AppConfig] 收市卖配置已保存, key=${stableKey}`, config)
+    } else {
+      delete this.config.marketCloseSell[strategyId]
+    }
+    this.saveToLocalStorage()
+  }
+
+  // 获取某只股票的所有收市卖配置
+  getAllMarketCloseSellConfigsForStock(stockCode) {
+    const configs = this.getMarketCloseSellConfig()
+    const result = []
+    for (const key in configs) {
+      if (key.startsWith(stockCode + '_')) {
+        result.push({ key, config: configs[key] })
+      }
+    }
+    return result
+  }
+
+  // 清除某只股票的所有收市卖配置
+  clearAllMarketCloseSellConfigsForStock(stockCode) {
+    if (this.config.marketCloseSell) {
+      const keysToDelete = []
+      for (const key in this.config.marketCloseSell) {
+        if (key.startsWith(stockCode + '_')) {
+          keysToDelete.push(key)
+        }
+      }
+      keysToDelete.forEach(key => delete this.config.marketCloseSell[key])
+      this.saveToLocalStorage()
+    }
+  }
+
   // ========== Banner 配置 ==========
 
   getBannerConfig() {

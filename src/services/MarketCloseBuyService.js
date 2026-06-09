@@ -72,46 +72,75 @@ class MarketCloseBuyService {
       return
     }
 
-    console.log('[收市买入服务] 到达执行时间，开始处理收市买入任务')
+    console.log('[收市买入服务] 到达执行时间，开始处理收市买入/卖出任务')
     this.lastExecutedDate = currentDate
 
     await this.executeAllMarketCloseBuys()
+    await this.executeAllMarketCloseSells()
   }
 
-  // 清理非今天的收市买配置
+  // 清理非今天的收市买/卖配置
   cleanupOldConfigs() {
-    const allConfigs = appConfigService.getMarketCloseBuyConfig()
     const now = new Date()
     const todayStr = now.toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai' })
-    let cleanedCount = 0
 
-    for (const key in allConfigs) {
-      const config = allConfigs[key]
+    // 清理收市买
+    const allBuyConfigs = appConfigService.getMarketCloseBuyConfig()
+    let buyCleanedCount = 0
+    for (const key in allBuyConfigs) {
+      const config = allBuyConfigs[key]
       if (!config) {
-        delete allConfigs[key]
-        cleanedCount++
+        delete allBuyConfigs[key]
+        buyCleanedCount++
         continue
       }
       if (!config.createdAt) {
-        // 没有 createdAt 的旧数据，一律清理
-        delete allConfigs[key]
-        cleanedCount++
+        delete allBuyConfigs[key]
+        buyCleanedCount++
         continue
       }
       const configDate = new Date(config.createdAt)
       const configDateStr = configDate.toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai' })
       if (configDateStr !== todayStr) {
-        delete allConfigs[key]
-        cleanedCount++
+        delete allBuyConfigs[key]
+        buyCleanedCount++
       }
     }
-
-    if (cleanedCount > 0) {
-      appConfigService.saveMarketCloseBuyConfig(allConfigs)
-      console.log(`[收市买入服务] 清理完成: 删除了 ${cleanedCount} 个非今天的配置`)
-      // 触发事件通知 UI 更新
+    if (buyCleanedCount > 0) {
+      appConfigService.saveMarketCloseBuyConfig(allBuyConfigs)
+      console.log(`[收市买入服务] 清理完成: 删除了 ${buyCleanedCount} 个非今天的配置`)
       window.dispatchEvent(new CustomEvent('marketCloseBuyCleaned', {
-        detail: { cleanedCount }
+        detail: { cleanedCount: buyCleanedCount }
+      }))
+    }
+
+    // 清理收市卖
+    const allSellConfigs = appConfigService.getMarketCloseSellConfig()
+    let sellCleanedCount = 0
+    for (const key in allSellConfigs) {
+      const config = allSellConfigs[key]
+      if (!config) {
+        delete allSellConfigs[key]
+        sellCleanedCount++
+        continue
+      }
+      if (!config.createdAt) {
+        delete allSellConfigs[key]
+        sellCleanedCount++
+        continue
+      }
+      const configDate = new Date(config.createdAt)
+      const configDateStr = configDate.toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai' })
+      if (configDateStr !== todayStr) {
+        delete allSellConfigs[key]
+        sellCleanedCount++
+      }
+    }
+    if (sellCleanedCount > 0) {
+      appConfigService.saveMarketCloseSellConfig(allSellConfigs)
+      console.log(`[收市卖出服务] 清理完成: 删除了 ${sellCleanedCount} 个非今天的配置`)
+      window.dispatchEvent(new CustomEvent('marketCloseSellCleaned', {
+        detail: { cleanedCount: sellCleanedCount }
       }))
     }
   }
@@ -174,10 +203,79 @@ class MarketCloseBuyService {
     console.log('[收市买入服务] 所有收市买入任务执行完毕')
   }
 
+  // 执行所有标记的收市卖出（按账户类型分组）
+  async executeAllMarketCloseSells() {
+    const configs = this.getAllMarketCloseSellConfigs()
+
+    if (configs.length === 0) {
+      console.log('[收市卖出服务] 没有待执行的收市卖出任务')
+      return
+    }
+
+    console.log(`[收市卖出服务] 发现 ${configs.length} 个收市卖出任务`)
+
+    // 按账户类型分组
+    const groups = {}
+    for (const config of configs) {
+      const groupKey = `${config.provider || ''}_${config.accountType || ''}`
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          provider: config.provider || '',
+          accountType: config.accountType || '',
+          configs: []
+        }
+      }
+      groups[groupKey].configs.push(config)
+    }
+
+    // 按固定顺序执行
+    const order = ['_margin', '_cash', 'pingan_margin']
+    const sortedKeys = Object.keys(groups).sort((a, b) => {
+      const indexA = order.indexOf(a)
+      const indexB = order.indexOf(b)
+      return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB)
+    })
+
+    console.log(`[收市卖出服务] 分为 ${sortedKeys.length} 个账户组:`, sortedKeys)
+
+    for (let i = 0; i < sortedKeys.length; i++) {
+      const groupKey = sortedKeys[i]
+      const group = groups[groupKey]
+      const accountLabel = group.provider === 'pingan' ? '平安' : (group.accountType === 'margin' ? '融资' : '普通')
+      console.log(`[收市卖出服务] 执行第 ${i + 1}/${sortedKeys.length} 组: ${accountLabel} (${group.configs.length} 个订单)`)
+
+      for (const config of group.configs) {
+        await this.executeMarketCloseSell(config)
+      }
+
+      if (i < sortedKeys.length - 1) {
+        console.log(`[收市卖出服务] 等待1秒后切换下一组...`)
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+    }
+
+    console.log('[收市卖出服务] 所有收市卖出任务执行完毕')
+  }
+
   // 获取所有收市买入配置（从统一配置）
   getAllMarketCloseBuyConfigs() {
     const configs = []
     const allConfigs = appConfigService.getMarketCloseBuyConfig()
+
+    for (const strategyId in allConfigs) {
+      const config = allConfigs[strategyId]
+      if (config) {
+        configs.push({ ...config, strategyId })
+      }
+    }
+
+    return configs
+  }
+
+  // 获取所有收市卖出配置
+  getAllMarketCloseSellConfigs() {
+    const configs = []
+    const allConfigs = appConfigService.getMarketCloseSellConfig()
 
     for (const strategyId in allConfigs) {
       const config = allConfigs[strategyId]
@@ -215,6 +313,35 @@ class MarketCloseBuyService {
       }))
     } catch (error) {
       console.error(`[收市买入服务] 失败: ${config.stockCode}`, error)
+    }
+  }
+
+  // 执行单个收市卖出
+  async executeMarketCloseSell(config) {
+    try {
+      console.log(`[收市卖出服务] 执行: ${config.stockCode}, 数量:${config.tradeVolume}, 下跌0.1%卖出`)
+
+      await mqttConditionService.sendSellOrder({
+        stockCode: config.stockCode,
+        stockName: config.stockName,
+        tradeVolume: config.tradeVolume,
+        percentage: 0.1,  // 下跌0.1%
+        provider: config.provider,
+        accountType: config.accountType,
+        side: config.side
+      })
+
+      console.log(`[收市卖出服务] 成功: ${config.stockCode}`)
+
+      // 执行后清除配置
+      appConfigService.clearMarketCloseSellForStrategy(config.strategyId)
+
+      // 触发事件通知 UI 更新
+      window.dispatchEvent(new CustomEvent('marketCloseSellExecuted', {
+        detail: { strategyId: config.strategyId, stockCode: config.stockCode }
+      }))
+    } catch (error) {
+      console.error(`[收市卖出服务] 失败: ${config.stockCode}`, error)
     }
   }
 
