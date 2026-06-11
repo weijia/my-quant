@@ -2320,41 +2320,40 @@ const getTrendClass = (trend) => {
   color: white;
 }
 
-/* 收市买入按钮 */
-/* 收市买入按钮 - 绿色 */
+/* 收市买入按钮 - 红色（买入=红） */
 .condition-order-btn.market-close-btn {
-  border-color: rgba(76, 175, 80, 0.4);
-  background-color: rgba(76, 175, 80, 0.1);
-  color: #4caf50;
-}
-
-.condition-order-btn.market-close-btn:hover:not(:disabled) {
-  background-color: rgba(76, 175, 80, 0.3);
-  border-color: #4caf50;
-}
-
-.condition-order-btn.market-close-btn.active {
-  background-color: rgba(76, 175, 80, 0.5);
-  border-color: #4caf50;
-  color: white;
-  font-weight: bold;
-}
-
-/* 收市卖出按钮 - 红色 */
-.condition-order-btn.market-close-sell-btn {
   border-color: rgba(255, 100, 100, 0.4);
   background-color: rgba(255, 100, 100, 0.1);
   color: #ff6464;
 }
 
-.condition-order-btn.market-close-sell-btn:hover:not(:disabled) {
+.condition-order-btn.market-close-btn:hover:not(:disabled) {
   background-color: rgba(255, 100, 100, 0.3);
   border-color: #ff6464;
 }
 
-.condition-order-btn.market-close-sell-btn.active {
+.condition-order-btn.market-close-btn.active {
   background-color: rgba(255, 100, 100, 0.5);
   border-color: #ff6464;
+  color: white;
+  font-weight: bold;
+}
+
+/* 收市卖出按钮 - 绿色（卖出=绿） */
+.condition-order-btn.market-close-sell-btn {
+  border-color: rgba(76, 175, 80, 0.4);
+  background-color: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+}
+
+.condition-order-btn.market-close-sell-btn:hover:not(:disabled) {
+  background-color: rgba(76, 175, 80, 0.3);
+  border-color: #4caf50;
+}
+
+.condition-order-btn.market-close-sell-btn.active {
+  background-color: rgba(76, 175, 80, 0.5);
+  border-color: #4caf50;
   color: white;
   font-weight: bold;
 }
