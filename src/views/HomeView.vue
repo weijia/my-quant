@@ -149,6 +149,10 @@
         @batch-condition="openBatchConditionDialog"
         @execute-strategy="handleExecuteStrategy"
         @execute-strategy-by-amount="handleExecuteStrategyByAmount"
+        @execute-strategy-buy-only="(s) => handleExecuteStrategyFiltered(s, false, 'buy')"
+        @execute-strategy-buy-only-by-amount="(s) => handleExecuteStrategyFiltered(s, true, 'buy')"
+        @execute-strategy-sell-only="(s) => handleExecuteStrategyFiltered(s, false, 'sell')"
+        @execute-strategy-sell-only-by-amount="(s) => handleExecuteStrategyFiltered(s, true, 'sell')"
         @update-strategy-selection="handleStrategySelection"
         @update-trade-settings="handleTradeSettings"
         @update-condition-config="handleConditionConfig"
@@ -440,7 +444,8 @@ const handleBatchConditionSubmit = async (data) => {
 };
 
 // 执行策略脚本生成条件单（内部实现）
-const executeStrategyInternal = async (strategy, useAmount = false) => {
+// filter: 'buy' = 只保留买入, 'sell' = 只保留卖出, null = 保留全部
+const executeStrategyInternal = async (strategy, useAmount = false, filter = null) => {
   // 1. 从 localStorage 加载策略模板
   let templates = []
   try {
@@ -524,12 +529,18 @@ const executeStrategyInternal = async (strategy, useAmount = false) => {
     return
   }
 
+  // 5. 过滤：只保留买入或只保留卖出
+  if (filter) {
+    totalMessages = totalMessages.filter(msg => msg.action === filter)
+  }
+
   if (totalMessages.length === 0) {
-    alert('策略脚本未生成任何条件单消息')
+    const filterLabel = filter === 'buy' ? '买入' : '卖出'
+    alert('策略脚本未生成任何' + filterLabel + '条件单消息')
     return
   }
 
-  // 5. 按额模式：将 tradeVolume 转换为 tradeAmount
+  // 6. 按额模式：将 tradeVolume 转换为 tradeAmount
   if (useAmount) {
     totalMessages = totalMessages.map(msg => {
       const data = { ...msg.data }
@@ -541,8 +552,9 @@ const executeStrategyInternal = async (strategy, useAmount = false) => {
     })
   }
 
-  // 6. 确认并发送
-  const modeLabel = useAmount ? ' [按额模式]' : ' [按量模式]'
+  // 7. 确认并发送
+  const filterLabel = filter === 'buy' ? ' [仅买入]' : filter === 'sell' ? ' [仅卖出]' : ''
+  const modeLabel = (useAmount ? ' [按额模式]' : ' [按量模式]') + filterLabel
   const preview = totalMessages.map((msg, i) => {
     const action = msg.action === 'buy' ? '买入' : '卖出'
     const vol = msg.data.tradeVolume || msg.data.tradeAmount || '-'
@@ -608,6 +620,11 @@ const handleExecuteStrategy = async (strategy) => {
 // 按额执行策略脚本
 const handleExecuteStrategyByAmount = async (strategy) => {
   await executeStrategyInternal(strategy, true)
+}
+
+// 过滤执行策略脚本（只买入或只卖出）
+const handleExecuteStrategyFiltered = async (strategy, useAmount = false, filter = null) => {
+  await executeStrategyInternal(strategy, useAmount, filter)
 }
 
 // 处理策略选择更新

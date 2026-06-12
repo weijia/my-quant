@@ -78,6 +78,20 @@
         <button @click="executeStrategyByAmount" class="execute-strategy-btn amount-btn" title="按额执行策略脚本生成条件单">
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         </button>
+        <!-- 自动上涨条件单 -->
+        <button @click="executeStrategyBuyOnly" class="execute-strategy-btn buy-only-btn" title="自动上涨条件单（按量）">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        </button>
+        <button @click="executeStrategyBuyOnlyByAmount" class="execute-strategy-btn buy-only-amount-btn" title="自动上涨条件单（按额）">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/><line x1="12" y1="1" x2="12" y2="23"/></svg>
+        </button>
+        <!-- 自动下跌条件单 -->
+        <button @click="executeStrategySellOnly" class="execute-strategy-btn sell-only-btn" title="自动下跌条件单（按量）">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+        </button>
+        <button @click="executeStrategySellOnlyByAmount" class="execute-strategy-btn sell-only-amount-btn" title="自动下跌条件单（按额）">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/><line x1="12" y1="1" x2="12" y2="23"/></svg>
+        </button>
       </div>
     </td>
 
@@ -1432,6 +1446,26 @@ const executeStrategyByAmount = () => {
   emit('execute-strategy-by-amount', props.strategy)
 }
 
+// 自动上涨条件单（按量）- 只生成买入
+const executeStrategyBuyOnly = () => {
+  emit('execute-strategy-buy-only', props.strategy)
+}
+
+// 自动上涨条件单（按额）- 只生成买入
+const executeStrategyBuyOnlyByAmount = () => {
+  emit('execute-strategy-buy-only-by-amount', props.strategy)
+}
+
+// 自动下跌条件单（按量）- 只生成卖出
+const executeStrategySellOnly = () => {
+  emit('execute-strategy-sell-only', props.strategy)
+}
+
+// 自动下跌条件单（按额）- 只生成卖出
+const executeStrategySellOnlyByAmount = () => {
+  emit('execute-strategy-sell-only-by-amount', props.strategy)
+}
+
 // 获取策略类型标签
 const getStrategyTypeLabel = (strategy) => {
   // 如果是手动设置，显示"手动策略"
@@ -2603,6 +2637,54 @@ const getTrendClass = (trend) => {
 .execute-strategy-btn.amount-btn:hover {
   background-color: rgba(255, 165, 0, 0.3);
   border-color: #ffa500;
+}
+
+/* 自动上涨条件单按钮 - 红色 */
+.execute-strategy-btn.buy-only-btn {
+  border-color: rgba(255, 100, 100, 0.4);
+  background-color: rgba(255, 100, 100, 0.1);
+  color: #ff6464;
+}
+
+.execute-strategy-btn.buy-only-btn:hover {
+  background-color: rgba(255, 100, 100, 0.3);
+  border-color: #ff6464;
+}
+
+/* 自动上涨条件单按钮（按额）- 深红色 */
+.execute-strategy-btn.buy-only-amount-btn {
+  border-color: rgba(200, 50, 50, 0.4);
+  background-color: rgba(200, 50, 50, 0.1);
+  color: #c83232;
+}
+
+.execute-strategy-btn.buy-only-amount-btn:hover {
+  background-color: rgba(200, 50, 50, 0.3);
+  border-color: #c83232;
+}
+
+/* 自动下跌条件单按钮 - 绿色 */
+.execute-strategy-btn.sell-only-btn {
+  border-color: rgba(76, 175, 80, 0.4);
+  background-color: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+}
+
+.execute-strategy-btn.sell-only-btn:hover {
+  background-color: rgba(76, 175, 80, 0.3);
+  border-color: #4caf50;
+}
+
+/* 自动下跌条件单按钮（按额）- 深绿色 */
+.execute-strategy-btn.sell-only-amount-btn {
+  border-color: rgba(50, 150, 50, 0.4);
+  background-color: rgba(50, 150, 50, 0.1);
+  color: #329632;
+}
+
+.execute-strategy-btn.sell-only-amount-btn:hover {
+  background-color: rgba(50, 150, 50, 0.3);
+  border-color: #329632;
 }
 
 .execute-strategy-btn svg {
