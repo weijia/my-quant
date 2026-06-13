@@ -869,11 +869,19 @@ const loadMockData = async () => {
 let cachedTrendData = null;
 let trendDataPromise = null;
 
-// 获取趋势数据（带缓存）
+// 获取趋势数据（带缓存，但检查 stockAnalysis 是否存在）
 const getTrendData = async () => {
   if (cachedTrendData) {
-    console.log('[调试-getTrendData] 使用缓存的趋势数据, keys 数量:', Object.keys(cachedTrendData).length);
-    return cachedTrendData;
+    // 检查缓存数据是否包含 stockAnalysis，如果不包含则刷新缓存
+    const sampleKey = Object.keys(cachedTrendData)[0];
+    const hasStockAnalysis = sampleKey && cachedTrendData[sampleKey] && cachedTrendData[sampleKey].stockAnalysis !== undefined;
+    if (hasStockAnalysis) {
+      console.log('[调试-getTrendData] 使用缓存的趋势数据（包含 stockAnalysis）, keys 数量:', Object.keys(cachedTrendData).length);
+      return cachedTrendData;
+    }
+    console.log('[调试-getTrendData] 缓存数据不包含 stockAnalysis，刷新缓存...');
+    cachedTrendData = null;
+    trendDataPromise = null;
   }
   if (trendDataPromise) {
     console.log('[调试-getTrendData] 等待进行中的趋势数据请求...');
