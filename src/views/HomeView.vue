@@ -149,10 +149,10 @@
         @batch-condition="openBatchConditionDialog"
         @execute-strategy="handleExecuteStrategy"
         @execute-strategy-by-amount="handleExecuteStrategyByAmount"
-        @execute-strategy-buy-only="(s) => handleExecuteStrategyFiltered(s, false, 'buy')"
-        @execute-strategy-buy-only-by-amount="(s) => handleExecuteStrategyFiltered(s, true, 'buy')"
-        @execute-strategy-sell-only="(s) => handleExecuteStrategyFiltered(s, false, 'sell')"
-        @execute-strategy-sell-only-by-amount="(s) => handleExecuteStrategyFiltered(s, true, 'sell')"
+        @execute-strategy-buy-only="handleExecuteStrategyBuyOnly"
+        @execute-strategy-buy-only-by-amount="handleExecuteStrategyBuyOnlyByAmount"
+        @execute-strategy-sell-only="handleExecuteStrategySellOnly"
+        @execute-strategy-sell-only-by-amount="handleExecuteStrategySellOnlyByAmount"
         @update-strategy-selection="handleStrategySelection"
         @update-trade-settings="handleTradeSettings"
         @update-condition-config="handleConditionConfig"
@@ -628,9 +628,24 @@ const handleExecuteStrategyByAmount = async (strategy) => {
   await executeStrategyInternal(strategy, true)
 }
 
-// 过滤执行策略脚本（只买入或只卖出）
-const handleExecuteStrategyFiltered = async (strategy, useAmount = false, filter = null) => {
-  await executeStrategyInternal(strategy, useAmount, filter)
+// 只买入 - 按量
+const handleExecuteStrategyBuyOnly = async (strategy) => {
+  await executeStrategyInternal(strategy, false, 'buy')
+}
+
+// 只买入 - 按额
+const handleExecuteStrategyBuyOnlyByAmount = async (strategy) => {
+  await executeStrategyInternal(strategy, true, 'buy')
+}
+
+// 只卖出 - 按量
+const handleExecuteStrategySellOnly = async (strategy) => {
+  await executeStrategyInternal(strategy, false, 'sell')
+}
+
+// 只卖出 - 按额
+const handleExecuteStrategySellOnlyByAmount = async (strategy) => {
+  await executeStrategyInternal(strategy, true, 'sell')
 }
 
 // 处理策略选择更新
