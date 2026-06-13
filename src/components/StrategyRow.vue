@@ -72,26 +72,32 @@
             {{ tpl.name }}
           </option>
         </select>
-        <button @click="executeStrategyScript" class="execute-strategy-btn" title="按量执行策略脚本生成条件单">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        </button>
-        <button @click="executeStrategyByAmount" class="execute-strategy-btn amount-btn" title="按额执行策略脚本生成条件单">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-        </button>
-        <!-- 自动上涨条件单 -->
-        <button @click="executeStrategyBuyOnly" class="execute-strategy-btn buy-only-btn" title="自动上涨条件单（按量）">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-        </button>
-        <button @click="executeStrategyBuyOnlyByAmount" class="execute-strategy-btn buy-only-amount-btn" title="自动上涨条件单（按额）">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/><line x1="12" y1="1" x2="12" y2="23"/></svg>
-        </button>
-        <!-- 自动下跌条件单 -->
-        <button @click="executeStrategySellOnly" class="execute-strategy-btn sell-only-btn" title="自动下跌条件单（按量）">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
-        </button>
-        <button @click="executeStrategySellOnlyByAmount" class="execute-strategy-btn sell-only-amount-btn" title="自动下跌条件单（按额）">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/><line x1="12" y1="1" x2="12" y2="23"/></svg>
-        </button>
+        <div class="strategy-btn-row">
+          <button @click="executeStrategyScript" class="execute-strategy-btn" title="按量执行策略脚本生成条件单">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </button>
+          <button @click="executeStrategyByAmount" class="execute-strategy-btn amount-btn" title="按额执行策略脚本生成条件单">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </button>
+        </div>
+        <div class="strategy-btn-row">
+          <!-- 自动上涨条件单 -->
+          <button @click="executeStrategyBuyOnly" class="execute-strategy-btn buy-only-btn" title="自动上涨条件单（按量）">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          </button>
+          <button @click="executeStrategyBuyOnlyByAmount" class="execute-strategy-btn buy-only-amount-btn" title="自动上涨条件单（按额）">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/><line x1="12" y1="1" x2="12" y2="23"/></svg>
+          </button>
+        </div>
+        <div class="strategy-btn-row">
+          <!-- 自动下跌条件单 -->
+          <button @click="executeStrategySellOnly" class="execute-strategy-btn sell-only-btn" title="自动下跌条件单（按量）">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+          </button>
+          <button @click="executeStrategySellOnlyByAmount" class="execute-strategy-btn sell-only-amount-btn" title="自动下跌条件单（按额）">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/><line x1="12" y1="1" x2="12" y2="23"/></svg>
+          </button>
+        </div>
       </div>
     </td>
 
@@ -282,30 +288,31 @@
             </button>
           </div>
         </div>
-        <!-- 收市买入按钮 -->
-        <button 
-          @click="handleMarketCloseBuy" 
-          class="condition-order-btn market-close-btn"
-          :class="{ 'active': hasMarketCloseBuyFlag }"
-          :disabled="sendingMarketCloseBuy || !strategy.stockCode"
-          :title="marketCloseBuyTime 
-            ? `收市买入 上涨0.1%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}股（2:45左右执行）\n设置时间: ${marketCloseBuyTime} ${isMarketCloseBuyToday ? '✓ 今天' : '✗ 非今天'}` 
-            : `收市买入 上涨0.1%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}股（2:45左右执行）`"
-        >
-          {{ sendingMarketCloseBuy ? '...' : (hasMarketCloseBuyFlag ? '收市✓' : '收市买') }}<span v-if="getButtonCount('marketCloseBuy') > 0" class="btn-count">{{ getButtonCount('marketCloseBuy') }}</span>
-        </button>
-        <!-- 收市卖出按钮 -->
-        <button 
-          @click="handleMarketCloseSell" 
-          class="condition-order-btn market-close-btn market-close-sell-btn"
-          :class="{ 'active': hasMarketCloseSellFlag }"
-          :disabled="sendingMarketCloseSell || !strategy.stockCode"
-          :title="marketCloseSellTime 
-            ? `收市卖出 下跌0.1%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}股（2:45左右执行）\n设置时间: ${marketCloseSellTime} ${isMarketCloseSellToday ? '✓ 今天' : '✗ 非今天'}` 
-            : `收市卖出 下跌0.1%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}股（2:45左右执行）`"
-        >
-          {{ sendingMarketCloseSell ? '...' : (hasMarketCloseSellFlag ? '收卖✓' : '收市卖') }}<span v-if="getButtonCount('marketCloseSell') > 0" class="btn-count">{{ getButtonCount('marketCloseSell') }}</span>
-        </button>
+        <!-- 收市买入/卖出按钮 -->
+        <div class="market-close-row">
+          <button 
+            @click="handleMarketCloseBuy" 
+            class="condition-order-btn market-close-btn"
+            :class="{ 'active': hasMarketCloseBuyFlag }"
+            :disabled="sendingMarketCloseBuy || !strategy.stockCode"
+            :title="marketCloseBuyTime 
+              ? `收市买入 上涨0.1%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}股（2:45左右执行）\n设置时间: ${marketCloseBuyTime} ${isMarketCloseBuyToday ? '✓ 今天' : '✗ 非今天'}` 
+              : `收市买入 上涨0.1%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}股（2:45左右执行）`"
+          >
+            {{ sendingMarketCloseBuy ? '...' : (hasMarketCloseBuyFlag ? '收市✓' : '收市买') }}<span v-if="getButtonCount('marketCloseBuy') > 0" class="btn-count">{{ getButtonCount('marketCloseBuy') }}</span>
+          </button>
+          <button 
+            @click="handleMarketCloseSell" 
+            class="condition-order-btn market-close-btn market-close-sell-btn"
+            :class="{ 'active': hasMarketCloseSellFlag }"
+            :disabled="sendingMarketCloseSell || !strategy.stockCode"
+            :title="marketCloseSellTime 
+              ? `收市卖出 下跌0.1%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}股（2:45左右执行）\n设置时间: ${marketCloseSellTime} ${isMarketCloseSellToday ? '✓ 今天' : '✗ 非今天'}` 
+              : `收市卖出 下跌0.1%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}股（2:45左右执行）`"
+          >
+            {{ sendingMarketCloseSell ? '...' : (hasMarketCloseSellFlag ? '收卖✓' : '收市卖') }}<span v-if="getButtonCount('marketCloseSell') > 0" class="btn-count">{{ getButtonCount('marketCloseSell') }}</span>
+          </button>
+        </div>
       </div>
     </td>
     
@@ -315,30 +322,32 @@
         <span class="quick-amount">{{ formatAmount(totalTradeAmount) || '-' }}</span>
         <span class="quick-pct">±0.5%</span>
       </div>
-      <button
-        class="quick-order-btn buy-btn"
-        @click="handleQuickBuy"
-        :disabled="!strategy.stockCode || sendingBuy"
-        :title="`上涨0.5%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
-      >
-        {{ sendingBuy ? '...' : '↑买' }}<span v-if="getButtonCount('quickBuy') > 0" class="btn-count">{{ getButtonCount('quickBuy') }}</span>
-      </button>
-      <button
-        class="quick-order-btn sell-btn"
-        @click="handleQuickSell"
-        :disabled="!strategy.stockCode || sendingSell"
-        :title="`下跌0.5%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
-      >
-        {{ sendingSell ? '...' : '↓卖' }}<span v-if="getButtonCount('quickSell') > 0" class="btn-count">{{ getButtonCount('quickSell') }}</span>
-      </button>
-      <button
-        class="quick-order-btn both-btn"
-        @click="handleQuickBoth"
-        :disabled="!strategy.stockCode || sendingBoth"
-        :title="`上涨0.5%买入及下跌0.5%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
-      >
-        {{ sendingBoth ? '...' : '双向' }}<span v-if="getButtonCount('quickBoth') > 0" class="btn-count">{{ getButtonCount('quickBoth') }}</span>
-      </button>
+      <div class="quick-btn-col">
+        <button
+          class="quick-order-btn buy-btn"
+          @click="handleQuickBuy"
+          :disabled="!strategy.stockCode || sendingBuy"
+          :title="`上涨0.5%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
+        >
+          {{ sendingBuy ? '...' : '↑买' }}<span v-if="getButtonCount('quickBuy') > 0" class="btn-count">{{ getButtonCount('quickBuy') }}</span>
+        </button>
+        <button
+          class="quick-order-btn sell-btn"
+          @click="handleQuickSell"
+          :disabled="!strategy.stockCode || sendingSell"
+          :title="`下跌0.5%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
+        >
+          {{ sendingSell ? '...' : '↓卖' }}<span v-if="getButtonCount('quickSell') > 0" class="btn-count">{{ getButtonCount('quickSell') }}</span>
+        </button>
+        <button
+          class="quick-order-btn both-btn"
+          @click="handleQuickBoth"
+          :disabled="!strategy.stockCode || sendingBoth"
+          :title="`上涨0.5%买入及下跌0.5%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
+        >
+          {{ sendingBoth ? '...' : '双向' }}<span v-if="getButtonCount('quickBoth') > 0" class="btn-count">{{ getButtonCount('quickBoth') }}</span>
+        </button>
+      </div>
     </td>
     
     <!-- 高级设置：上涨/下跌趋势的买卖百分比 -->
@@ -2067,8 +2076,8 @@ const getTrendClass = (trend) => {
 .quick-order-cell {
   display: table-cell;
   vertical-align: middle;
-  width: 160px;
-  min-width: 160px;
+  width: 80px;
+  min-width: 80px;
 }
 
 .quick-info {
@@ -2089,8 +2098,14 @@ const getTrendClass = (trend) => {
   color: #6a6;
 }
 
+.quick-btn-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .quick-order-cell .quick-order-btn {
-  margin: 0 2px;
+  margin: 0;
 }
 
 .quick-order-btn {
@@ -2280,8 +2295,14 @@ const getTrendClass = (trend) => {
 
 .condition-order-btns {
   display: flex;
-  flex-direction: row;
-  gap: 8px;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.market-close-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .condition-group {
@@ -2546,8 +2567,14 @@ const getTrendClass = (trend) => {
 
 .strategy-type-wrapper {
   display: flex;
-  align-items: center;
-  gap: 4px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.strategy-btn-row {
+  display: flex;
+  gap: 2px;
 }
 
 .strategy-type-badge {
