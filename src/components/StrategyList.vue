@@ -364,7 +364,23 @@ const getInitialVisibleColumns = () => {
     const storageKey = isMobileDevice() ? 'mobileVisibleColumns' : 'desktopVisibleColumns'
     const saved = localStorage.getItem(storageKey)
     const parsed = saved ? JSON.parse(saved) : null
-    return Array.isArray(parsed) ? parsed : getDefaultVisibleColumns()
+    if (Array.isArray(parsed)) {
+      // 检查是否包含 stockAnalysis，如果不包含则添加（新列自动显示）
+      if (!parsed.includes('stockAnalysis')) {
+        // 在 'trendIcon' 后面插入 'stockAnalysis'
+        const trendIconIndex = parsed.indexOf('trendIcon')
+        if (trendIconIndex !== -1) {
+          parsed.splice(trendIconIndex + 1, 0, 'stockAnalysis')
+        } else {
+          parsed.push('stockAnalysis')
+        }
+        // 保存更新后的配置
+        localStorage.setItem(storageKey, JSON.stringify(parsed))
+        console.log('[StrategyList] 自动添加 stockAnalysis 到可见列')
+      }
+      return parsed
+    }
+    return getDefaultVisibleColumns()
   } catch (error) {
     return getDefaultVisibleColumns()
   }
