@@ -76,10 +76,12 @@
           <button @click="executeStrategyScript" class="execute-strategy-btn" :title="`按量执行策略脚本生成条件单 数量:${getEffectiveTradeVolume()}股`">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             <span class="btn-amount">{{ formatAmount(totalTradeAmount) || '-' }}</span>
+            <span v-if="getButtonCount('strategyVolume') > 0" class="btn-count">{{ getButtonCount('strategyVolume') }}</span>
           </button>
           <button @click="executeStrategyByAmount" class="execute-strategy-btn amount-btn" :title="`按额执行策略脚本生成条件单 金额:${defaultTradeAmount || 26000}元`">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             <span class="btn-amount">{{ formatAmount(defaultTradeAmount) || '2.6万' }}</span>
+            <span v-if="getButtonCount('strategyAmount') > 0" class="btn-count">{{ getButtonCount('strategyAmount') }}</span>
           </button>
         </div>
         <div class="strategy-btn-row">
@@ -87,10 +89,12 @@
           <button @click="executeStrategyBuyOnly" class="execute-strategy-btn buy-only-btn" :title="`自动上涨条件单（按量） 数量:${getEffectiveTradeVolume()}股`">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
             <span class="btn-amount">{{ formatAmount(totalTradeAmount) || '-' }}</span>
+            <span v-if="getButtonCount('strategyBuyOnlyVolume') > 0" class="btn-count">{{ getButtonCount('strategyBuyOnlyVolume') }}</span>
           </button>
           <button @click="executeStrategyBuyOnlyByAmount" class="execute-strategy-btn buy-only-amount-btn" :title="`自动上涨条件单（按额） 金额:${defaultTradeAmount || 26000}元`">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/><line x1="12" y1="1" x2="12" y2="23"/></svg>
             <span class="btn-amount">{{ formatAmount(defaultTradeAmount) || '2.6万' }}</span>
+            <span v-if="getButtonCount('strategyBuyOnlyAmount') > 0" class="btn-count">{{ getButtonCount('strategyBuyOnlyAmount') }}</span>
           </button>
         </div>
         <div class="strategy-btn-row">
@@ -98,10 +102,12 @@
           <button @click="executeStrategySellOnly" class="execute-strategy-btn sell-only-btn" :title="`自动下跌条件单（按量） 数量:${getEffectiveTradeVolume()}股`">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
             <span class="btn-amount">{{ formatAmount(totalTradeAmount) || '-' }}</span>
+            <span v-if="getButtonCount('strategySellOnlyVolume') > 0" class="btn-count">{{ getButtonCount('strategySellOnlyVolume') }}</span>
           </button>
           <button @click="executeStrategySellOnlyByAmount" class="execute-strategy-btn sell-only-amount-btn" :title="`自动下跌条件单（按额） 金额:${defaultTradeAmount || 26000}元`">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/><line x1="12" y1="1" x2="12" y2="23"/></svg>
             <span class="btn-amount">{{ formatAmount(defaultTradeAmount) || '2.6万' }}</span>
+            <span v-if="getButtonCount('strategySellOnlyAmount') > 0" class="btn-count">{{ getButtonCount('strategySellOnlyAmount') }}</span>
           </button>
         </div>
       </div>
@@ -490,7 +496,7 @@ const buttonCounts = ref({})
 
 const loadButtonCounts = () => {
   const counts = {}
-  const buttons = ['quickBuy', 'quickSell', 'quickBoth', 'amountBuy', 'amountSell', 'amountBoth', 'volumeBuy', 'volumeSell', 'volumeBoth', 'marketCloseBuy']
+  const buttons = ['quickBuy', 'quickSell', 'quickBoth', 'amountBuy', 'amountSell', 'amountBoth', 'volumeBuy', 'volumeSell', 'volumeBoth', 'marketCloseBuy', 'marketCloseSell', 'strategyVolume', 'strategyAmount', 'strategyBuyOnlyVolume', 'strategyBuyOnlyAmount', 'strategySellOnlyVolume', 'strategySellOnlyAmount']
   buttons.forEach(btn => {
     counts[btn] = clickCounterService.getCount(props.strategy.id, btn)
   })
@@ -1461,31 +1467,37 @@ const isManualStrategy = (strategy) => {
 
 // 执行策略脚本（按量）
 const executeStrategyScript = () => {
+  incrementCount('strategyVolume')
   emit('execute-strategy', props.strategy)
 }
 
 // 执行策略脚本（按额）
 const executeStrategyByAmount = () => {
+  incrementCount('strategyAmount')
   emit('execute-strategy-by-amount', props.strategy)
 }
 
 // 自动上涨条件单（按量）- 只生成买入
 const executeStrategyBuyOnly = () => {
+  incrementCount('strategyBuyOnlyVolume')
   emit('execute-strategy-buy-only', props.strategy)
 }
 
 // 自动上涨条件单（按额）- 只生成买入
 const executeStrategyBuyOnlyByAmount = () => {
+  incrementCount('strategyBuyOnlyAmount')
   emit('execute-strategy-buy-only-by-amount', props.strategy)
 }
 
 // 自动下跌条件单（按量）- 只生成卖出
 const executeStrategySellOnly = () => {
+  incrementCount('strategySellOnlyVolume')
   emit('execute-strategy-sell-only', props.strategy)
 }
 
 // 自动下跌条件单（按额）- 只生成卖出
 const executeStrategySellOnlyByAmount = () => {
+  incrementCount('strategySellOnlyAmount')
   emit('execute-strategy-sell-only-by-amount', props.strategy)
 }
 
