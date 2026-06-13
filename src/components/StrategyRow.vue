@@ -2168,27 +2168,27 @@ const getTrendClass = (trend) => {
 }
 
 .settings-inputs {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 4px;
 }
 
 .setting-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
 }
 
 .setting-label {
-  font-size: 10px;
+  font-size: 9px;
   color: rgba(255, 255, 255, 0.6);
-  min-width: 12px;
+  min-width: 10px;
 }
 
 .setting-input {
-  width: 70px;
-  padding: 2px 6px;
-  font-size: 11px;
+  width: 50px;
+  padding: 1px 3px;
+  font-size: 10px;
   background-color: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 3px;
@@ -2209,13 +2209,13 @@ const getTrendClass = (trend) => {
 }
 
 .total-display {
-  min-width: 55px;
+  min-width: 40px;
 }
 
 .total-amount {
   display: inline-block;
-  padding: 2px 6px;
-  font-size: 11px;
+  padding: 1px 3px;
+  font-size: 10px;
   background-color: rgba(78, 205, 196, 0.1);
   border: 1px solid rgba(78, 205, 196, 0.3);
   border-radius: 3px;
@@ -2278,55 +2278,57 @@ const getTrendClass = (trend) => {
 
 /* 条件单列 */
 .condition-order-cell {
-  padding: 4px;
+  padding: 2px;
+  width: 140px;
+  min-width: 140px;
 }
 
 .condition-info {
   display: flex;
   justify-content: center;
   align-items: baseline;
-  gap: 4px;
-  margin-bottom: 2px;
+  gap: 2px;
+  margin-bottom: 1px;
 }
 
 .condition-amount {
-  font-size: 11px;
+  font-size: 9px;
   color: #888;
 }
 
 .condition-pct {
-  font-size: 10px;
+  font-size: 9px;
   color: #6a6;
 }
 
 .condition-order-btns {
   display: flex;
   flex-direction: row;
-  gap: 8px;
+  gap: 4px;
 }
 
 .market-close-row {
   display: flex;
-  flex-direction: row;
-  gap: 4px;
+  flex-direction: column;
+  gap: 1px;
 }
 
 .condition-group {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   flex: 1;
 }
 
 .condition-group-btns {
   display: flex;
-  flex-direction: row;
-  gap: 4px;
+  flex-direction: column;
+  gap: 1px;
 }
 
 .condition-order-btn {
-  padding: 4px 6px;
-  font-size: 10px;
+  padding: 2px 3px;
+  font-size: 9px;
   background-color: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 3px;
@@ -2429,14 +2431,15 @@ const getTrendClass = (trend) => {
 
 .quick-set-btns {
   display: flex;
-  gap: 4px;
-  margin-top: 4px;
+  gap: 2px;
+  margin-top: 2px;
+  grid-column: 1 / -1;
 }
 
 .quick-set-btn {
   flex: 1;
-  padding: 2px 4px;
-  font-size: 10px;
+  padding: 1px 2px;
+  font-size: 9px;
   background-color: rgba(78, 205, 196, 0.3);
   border: 1px solid rgba(78, 205, 196, 0.5);
   border-radius: 3px;
@@ -2454,7 +2457,8 @@ const getTrendClass = (trend) => {
 .condition-config-actions {
   display: flex;
   gap: 4px;
-  margin-top: 6px;
+  margin-top: 2px;
+  grid-column: 1 / -1;
 }
 
 .config-action-btn {
@@ -2462,9 +2466,9 @@ const getTrendClass = (trend) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 3px 6px;
-  font-size: 11px;
+  gap: 2px;
+  padding: 2px 4px;
+  font-size: 10px;
   border-radius: 3px;
   cursor: pointer;
   transition: all 0.2s;
