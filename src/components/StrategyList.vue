@@ -113,6 +113,7 @@
                 </label>
               </div>
             </th>
+            <th v-if="visibleColumns.includes('stockAnalysis')" style="width: 120px;">买卖建议</th>
             <th v-if="visibleColumns.includes('actions')" style="width: 80px;">操作</th>
           </tr>
         </thead>
@@ -324,6 +325,7 @@ const allColumns = [
   { key: 'quickOrder', label: '快捷' },
   { key: 'advancedOrderSettings', label: '高级设置' },
   { key: 'advancedOrder', label: '高级快捷' },
+  { key: 'stockAnalysis', label: '买卖建议' },
   { key: 'actions', label: '操作' }
 ]
 
@@ -332,6 +334,7 @@ const mobileDefaultVisibleColumns = [
   'name',
   'quantity',
   'trendIcon',
+  'stockAnalysis',
   'advancedOrder'
 ]
 
@@ -340,6 +343,7 @@ const desktopDefaultVisibleColumns = [
   'name',
   'quantity',
   'trendIcon',
+  'stockAnalysis',
   'conditionConfig',
   'conditionOrder',
   'quickOrder',

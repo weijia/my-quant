@@ -411,6 +411,14 @@
       </div>
     </td>
 
+    <td v-if="visibleColumns.includes('stockAnalysis')" class="stock-analysis-cell">
+      <div v-if="strategy.stockAnalysis" class="stock-analysis-content">
+        <span class="stock-analysis-action" :class="'action-' + strategy.stockAnalysis.action">{{ strategy.stockAnalysis.action }}</span>
+        <span v-if="strategy.stockAnalysis.reason" class="stock-analysis-reason" :title="strategy.stockAnalysis.reason">{{ strategy.stockAnalysis.reason }}</span>
+      </div>
+      <span v-else class="stock-analysis-empty">-</span>
+    </td>
+
     <td v-if="visibleColumns.includes('actions')" class="actions-cell">
       <button class="action-btn edit-btn" @click="$emit('edit', strategy)" title="编辑">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2718,6 +2726,96 @@ const getTrendClass = (trend) => {
 .strategy-select.manual-selected {
   border-color: rgba(78, 205, 196, 0.5);
   background-color: rgba(78, 205, 196, 0.1);
+}
+
+/* 买卖建议列 */
+.stock-analysis-cell {
+  max-width: 150px;
+  padding: 8px 6px;
+}
+
+.stock-analysis-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stock-analysis-action {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* 不同建议的颜色 */
+.action-买入 {
+  background-color: rgba(255, 100, 100, 0.2);
+  color: #ff6464;
+  border: 1px solid rgba(255, 100, 100, 0.4);
+}
+
+.action-买入关注 {
+  background-color: rgba(255, 150, 100, 0.2);
+  color: #ff9664;
+  border: 1px solid rgba(255, 150, 100, 0.4);
+}
+
+.action-分批买入 {
+  background-color: rgba(255, 180, 100, 0.2);
+  color: #ffb464;
+  border: 1px solid rgba(255, 180, 100, 0.4);
+}
+
+.action-持有 {
+  background-color: rgba(100, 200, 255, 0.2);
+  color: #64c8ff;
+  border: 1px solid rgba(100, 200, 255, 0.4);
+}
+
+.action-观望 {
+  background-color: rgba(150, 150, 150, 0.2);
+  color: #969696;
+  border: 1px solid rgba(150, 150, 150, 0.4);
+}
+
+.action-不追高 {
+  background-color: rgba(180, 160, 120, 0.2);
+  color: #b4a078;
+  border: 1px solid rgba(180, 160, 120, 0.4);
+}
+
+.action-减仓 {
+  background-color: rgba(255, 200, 100, 0.2);
+  color: #ffc864;
+  border: 1px solid rgba(255, 200, 100, 0.4);
+}
+
+.action-回避 {
+  background-color: rgba(255, 120, 80, 0.2);
+  color: #ff7850;
+  border: 1px solid rgba(255, 120, 80, 0.4);
+}
+
+.action-卖出 {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+}
+
+.stock-analysis-reason {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+
+.stock-analysis-empty {
+  color: rgba(255, 255, 255, 0.3);
 }
 
 @media (max-width: 768px) {
