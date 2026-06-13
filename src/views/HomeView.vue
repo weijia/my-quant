@@ -254,10 +254,16 @@ const filteredStrategies = computed(() => {
   }
   return result;
 });
+let loadStrategiesPromise = null
 const loadStrategies = async () => {
-  try {
-    // 先获取趋势数据缓存
-    const trendData = await getTrendData();
+  // 防止并发调用
+  if (loadStrategiesPromise) {
+    return loadStrategiesPromise
+  }
+  loadStrategiesPromise = (async () => {
+    try {
+      // 先获取趋势数据缓存
+      const trendData = await getTrendData();
 
     // 获取策略列表
     const result = await strategyService.getAllStrategies({
@@ -373,6 +379,10 @@ const loadStrategies = async () => {
   catch (error) {
     console.error('加载策略失败:', error);
   }
+  finally {
+    loadStrategiesPromise = null
+  }
+  })()
 };
 const showAddDialog = () => {
   isEditing.value = false;
@@ -978,9 +988,11 @@ const getTrendByStockCode = (stockCode, trendData) => {
       price_drop_ratio: trendInfo.price_drop_ratio != null ? trendInfo.price_drop_ratio : null,
       // 添加当前价格和15日波动率
       currentPrice: trendInfo.currentPrice != null ? trendInfo.currentPrice : null,
-      volatility15d: trendInfo.volatility15d != null ? trendInfo.volatility15d : null
+      volatility15d: trendInfo.volatility15d != null ? trendInfo.volatility15d : null,
+      // 买卖建议
+      stockAnalysis: trendInfo.stockAnalysis || null
     };
-    console.log(`[调试-getTrendByStockCode] 匹配成功: stockCode=${stockCode}, 方法=${matchMethod}, result=`, JSON.stringify(result));
+    console.debug(`[调试-getTrendByStockCode] 匹配成功: stockCode=${stockCode}, 方法=${matchMethod}, result=`, JSON.stringify(result));
     return result;
   }
 
@@ -1040,15 +1052,6 @@ onMounted(async () => {
     } else {
       console.warn('HomeView: WebDAV 同步失败:', result.message);
     }
-
-    // 同时下载应用配置（包括 Banner、MQTT 配置等），不阻塞界面
-    webdavImportService.downloadAppConfig().then(success => {
-      if (success) {
-        console.log('HomeView: 应用配置已从 WebDAV 同步（包括 Banner）');
-        // 更新 banner 显示
-        bannerText.value = appConfigService.getBannerText();
-      }
-    });
   } catch (error) {
     console.error('HomeView: WebDAV 同步出错:', error);
   }
@@ -1056,6 +1059,14 @@ onMounted(async () => {
   // 加载策略（从本地数据库）
   console.log('HomeView: 开始加载策略...');
   await loadStrategies();
+
+  // 策略加载完成后再下载应用配置，避免并发修改 strategies 导致 Vue 组件树混乱
+  webdavImportService.downloadAppConfig().then(async success => {
+    if (success) {
+      console.log('HomeView: 应用配置已从 WebDAV 同步（包括 Banner）');
+      bannerText.value = appConfigService.getBannerText();
+    }
+  });
 
   // 策略加载完成后，异步同步趋势到数据库（不阻塞界面）
   trendService.syncTrendJudgmentsFromWebDAV().then(result => {

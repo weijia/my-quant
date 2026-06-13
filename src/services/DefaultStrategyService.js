@@ -256,7 +256,7 @@ class DefaultStrategyService {
     const mapping = appConfigService.getTrendStrategyMapping()
     const strategyType = appConfigService.getStrategyTypeForTrend(trend)
     
-    console.log(`[DefaultStrategy] 策略: ${strategy.name}, 趋势: ${trend}, 映射:`, mapping[trend], '->', strategyType)
+    console.debug(`[DefaultStrategy] 策略: ${strategy.name}, 趋势: ${trend}, 映射:`, mapping[trend], '->', strategyType)
     
     switch (strategyType) {
       case 'uptrend':
