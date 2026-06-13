@@ -370,6 +370,11 @@ class WebDAVImportService {
   }
   
   async fetchFromWebDAV(filename = 'all_strategies.json') {
+    if (!this.isConfigured()) {
+      console.log('WebDAV 未配置，跳过导入')
+      return null
+    }
+
     const url = this.webdavBaseUrl + filename
     
     try {
@@ -383,6 +388,10 @@ class WebDAVImportService {
       })
       
       if (!response.ok) {
+        if (response.status === 404) {
+          console.warn('WebDAV 上不存在数据文件:', url)
+          return null
+        }
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       
@@ -390,8 +399,8 @@ class WebDAVImportService {
       console.log('成功获取数据')
       return data
     } catch (error) {
-      console.error('从 WebDAV 获取数据失败:', error)
-      throw error
+      console.warn('从 WebDAV 获取数据失败:', error.message)
+      return null
     }
   }
   
@@ -613,6 +622,14 @@ class WebDAVImportService {
         this.fetchTrendJudgments(),
         this.fetchMQTTConfig()
       ])
+
+      if (!webdavData) {
+        return {
+          success: false,
+          count: 0,
+          message: 'WebDAV 未配置或数据文件不存在'
+        }
+      }
 
       if (holdingsData) {
         webdavData.holdingsData = holdingsData

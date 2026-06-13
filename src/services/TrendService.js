@@ -117,7 +117,7 @@ class TrendService {
           if (updateData.trendJudgment) {
             await strategyService.updateStrategy(strategy.id, updateData)
             updatedCount++
-            console.log(`TrendService: 更新策略 ${strategy.name}(${stockCode}) 的趋势: ${updateData.trendJudgment}`)
+            console.debug(`TrendService: 更新策略 ${strategy.name}(${stockCode}) 的趋势: ${updateData.trendJudgment}`)
           }
         }
       }

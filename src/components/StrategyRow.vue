@@ -582,7 +582,7 @@ const loadMarketCloseSellFlag = () => {
   console.log(`[StrategyRow] loadMarketCloseSellFlag 被调用, strategy.id=${props.strategy?.id}`)
   if (props.strategy.id) {
     const allConfigs = appConfigService.getAllMarketCloseSellConfigsForStock(props.strategy.stockCode)
-    console.log(`[StrategyRow] 从 appConfigService 获取收市卖配置:`, allConfigs)
+    console.debug(`[StrategyRow] 从 appConfigService 获取收市卖配置:`, allConfigs)
     
     if (allConfigs.length > 0) {
       hasMarketCloseSellFlag.value = true
@@ -614,14 +614,6 @@ const loadMarketCloseSellFlag = () => {
     console.log(`[StrategyRow] strategy.id 为空，无法加载收市卖状态`)
   }
 }
-
-// 监听 props.strategy.id 变化，确保数据加载
-watch(() => props.strategy?.id, (newId, oldId) => {
-  console.log(`[StrategyRow] strategy.id 变化: ${oldId} -> ${newId}`)
-  loadMarketCloseBuyFlag()
-  loadButtonCounts()
-  loadConditionConfigFromStorage()
-}, { immediate: true })
 
 // 监听配置更新事件，重新加载收市买状态
 window.addEventListener('appConfigUpdated', () => {
@@ -824,7 +816,7 @@ const DEFAULT_CONDITION_PCT = 0.1
 const hasCustomConfig = ref(false)
 
 // 更新自定义配置状态
-const updateCustomConfigStatus = () => {
+function updateCustomConfigStatus() {
   const isCustom = 
     defaultTradeAmount.value !== DEFAULT_TRADE_AMOUNT ||
     defaultTradeVolume.value !== DEFAULT_TRADE_VOLUME ||
@@ -850,7 +842,7 @@ const autoSaveConditionConfig = () => {
 }
 
 // 从 localStorage 加载条件配置（使用稳定的 stockCode 作为 key）
-const loadConditionConfigFromStorage = () => {
+function loadConditionConfigFromStorage() {
   if (props.strategy.stockCode) {
     const key = `conditionConfig_${props.strategy.stockCode}`
     const saved = localStorage.getItem(key)
@@ -891,6 +883,14 @@ const resetConditionConfig = () => {
 
 // 组件挂载时加载保存的条件配置
 loadConditionConfigFromStorage()
+
+// 监听 props.strategy.id 变化，确保数据加载（不使用 immediate，因为上方已手动调用）
+watch(() => props.strategy?.id, (newId, oldId) => {
+  console.log(`[StrategyRow] strategy.id 变化: ${oldId} -> ${newId}`)
+  loadMarketCloseBuyFlag()
+  loadButtonCounts()
+  loadConditionConfigFromStorage()
+})
 
 // 监听配置变化，自动保存
 watch([defaultTradeAmount, defaultTradeVolume, manualPrice, conditionPct], () => {

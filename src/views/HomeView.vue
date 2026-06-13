@@ -187,7 +187,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { strategyService } from '../services/StrategyService'
 import { trendService } from '../services/TrendService'
@@ -289,7 +289,7 @@ const loadStrategies = async () => {
         strategy.name = cleanName(strategy.name, strategy.stockCode);
 
         // 【调试】记录每个策略注入前的 decreasePercentage
-        console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 注入前 decreasePercentage: ${strategy.decreasePercentage}, 本地值: ${strategy.decreasePercentage}`);
+        console.debug(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 注入前 decreasePercentage: ${strategy.decreasePercentage}, 本地值: ${strategy.decreasePercentage}`);
 
         // 注入实时趋势值和下跌百分比
         if (trendData) {
@@ -298,7 +298,7 @@ const loadStrategies = async () => {
             strategy.trendJudgment = normalizeTrendValue(trend.trendValue);
 
             // 【调试】打印完整的 trend 对象
-            console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), trend 对象:`, JSON.stringify(trend));
+            console.debug(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), trend 对象:`, JSON.stringify(trend));
 
             // 始终用趋势数据覆盖下跌百分比
             // 优先使用 price_drop_ratio（90天内最高价与当前价的下跌百分比）
@@ -308,14 +308,14 @@ const loadStrategies = async () => {
               // price_drop_ratio 已经是百分比格式，直接使用
               strategy.decreasePercentage = Math.round(trend.price_drop_ratio * 100) / 100;
               decreaseInjectedCount++;
-              console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 使用 price_drop_ratio: ${trend.price_drop_ratio}%`);
+              console.debug(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 使用 price_drop_ratio: ${trend.price_drop_ratio}%`);
             } else if (trend.decreasePercentage != null) {
               strategy.decreasePercentage = trend.decreasePercentage;
               decreaseInjectedCount++;
-              console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 使用 trend.decreasePercentage: ${strategy.decreasePercentage}`);
+              console.debug(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 使用 trend.decreasePercentage: ${strategy.decreasePercentage}`);
             } else {
               decreaseMissingCount++;
-              console.warn(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), trend 匹配成功但 price_drop_ratio 和 decreasePercentage 均为空! trend 对象:`, JSON.stringify(trend));
+              console.debug(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), trend 匹配成功但 price_drop_ratio 和 decreasePercentage 均为空! trend 对象:`, JSON.stringify(trend));
             }
 
             // 注入15日平均波动率
@@ -337,18 +337,18 @@ const loadStrategies = async () => {
             matchedCount++;
           } else {
             // 【调试】trend 匹配失败
-            console.warn(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 未能匹配到趋势数据! trendData 的 keys:`, Object.keys(trendData).slice(0, 10));
+            console.debug(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 未能匹配到趋势数据! trendData 的 keys:`, Object.keys(trendData).slice(0, 10));
           }
         } else {
           // 【调试】trendData 为空
-          console.warn(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), trendData 为空，无法注入下跌百分比`);
+          console.debug(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), trendData 为空，无法注入下跌百分比`);
         }
 
         // 【调试】记录注入后的最终值
-        console.log(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 注入后 decreasePercentage: ${strategy.decreasePercentage}`);
+        console.debug(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), 注入后 decreasePercentage: ${strategy.decreasePercentage}`);
       }
-      console.log(`[调试-decreasePercentage] ===== 汇总 =====`);
-      console.log(`[调试-decreasePercentage] 策略总数: ${result.length}, 趋势匹配数: ${matchedCount}, 下跌百分比注入数: ${decreaseInjectedCount}, 下跌百分比缺失数: ${decreaseMissingCount}`);
+      console.debug(`[调试-decreasePercentage] ===== 汇总 =====`);
+      console.debug(`[调试-decreasePercentage] 策略总数: ${result.length}, 趋势匹配数: ${matchedCount}, 下跌百分比注入数: ${decreaseInjectedCount}, 下跌百分比缺失数: ${decreaseMissingCount}`);
       console.log('loadStrategies: 为', matchedCount, '个策略注入了实时趋势值');
       if (!trendData) {
         console.warn('loadStrategies: 趋势数据为空，WebDAV 可能未配置或请求失败。策略将使用本地存储的下跌百分比。');
@@ -1068,6 +1068,8 @@ onMounted(async () => {
     // 更新 banner 显示
     bannerText.value = appConfigService.getBannerText();
     console.log('HomeView: Banner 已更新:', bannerText.value);
+    // 使用 nextTick 延迟加载策略，避免在 Vue flush 周期中同步修改响应式数据
+    await nextTick();
     await loadStrategies();
   });
 
