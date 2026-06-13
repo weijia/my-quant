@@ -328,6 +328,12 @@ const loadStrategies = async () => {
               strategy.currentPrice = trend.currentPrice;
             }
 
+            // 注入买卖建议分析数据
+            if (trend.stockAnalysis) {
+              strategy.stockAnalysis = trend.stockAnalysis;
+              console.log(`[调试-stockAnalysis] 策略: ${strategy.name}(${strategy.stockCode}), 注入 stockAnalysis:`, trend.stockAnalysis);
+            }
+
             matchedCount++;
           } else {
             // 【调试】trend 匹配失败

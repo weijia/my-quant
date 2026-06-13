@@ -551,7 +551,7 @@ class WebDAVImportService {
           if (!response.ok) continue
 
           const content = await response.json()
-          const { stockCode, trendJudgment, autoTrendJudgment, trendJudgmentUpdatedAt, autoTrendJudgmentUpdatedAt, decreasePercentage, price_drop_ratio, volatilityMetrics } = content
+          const { stockCode, trendJudgment, autoTrendJudgment, trendJudgmentUpdatedAt, autoTrendJudgmentUpdatedAt, decreasePercentage, price_drop_ratio, volatilityMetrics, stockAnalysis, stockAnalysisUpdatedAt } = content
 
           // 根据最新文档格式，price_drop_ratio 位于 volatilityMetrics 对象内
           // 且 price_drop_ratio 已经是百分比格式（如 19.77），不需要再乘以 100
@@ -584,7 +584,10 @@ class WebDAVImportService {
                 // 从波动率指标中获取当前价格
                 currentPrice: volatilityMetrics?.current_price || null,
                 // 从波动率指标中获取15日平均波动率
-                volatility15d: volatilityMetrics?.volatility_15d_ma || null
+                volatility15d: volatilityMetrics?.volatility_15d_ma || null,
+                // 买卖建议分析数据
+                stockAnalysis: stockAnalysis || null,
+                stockAnalysisUpdatedAt: stockAnalysisUpdatedAt || null
               }
               validCount++
             }
