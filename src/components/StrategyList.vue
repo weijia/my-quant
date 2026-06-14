@@ -141,7 +141,6 @@
             @update-trade-settings="(s, data) => $emit('update-trade-settings', s, data)"
             @update-condition-config="(s, data) => $emit('update-condition-config', s, data)"
           />
-      </td>
 
           <tr v-if="marginStrategies.length > 0" class="account-section-header margin-section">
             <td :colspan="visibleColumns.length">信用账户策略 ({{ marginStrategies.length }})</td>
