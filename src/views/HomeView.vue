@@ -504,6 +504,12 @@ const executeStrategyInternal = async (strategy, useAmount = false, filter = nul
   const currentPrice = strategy.currentPrice || 0
   const defaultAmount = strategy.defaultTradeAmount || 20000
 
+  // 根据账户类型推断 provider
+  const getProviderFromAccountType = (accountType) => {
+    // 信用账户默认使用 huatai，普通账户使用 pingan
+    return accountType === 'credit' ? 'huatai' : 'pingan'
+  }
+
   const ctx = {
     stockCode: strategy.stockCode,
     stockName: strategy.name,
@@ -517,7 +523,7 @@ const executeStrategyInternal = async (strategy, useAmount = false, filter = nul
     defaultBuyVolume: defaultBuyVolume,
     defaultSellVolume: sellVolume,
     defaultAmount: defaultAmount,
-    provider: strategy.provider || 'pingan',
+    provider: strategy.provider || getProviderFromAccountType(strategy.accountType),
     accountType: strategy.accountType || 'default'
   }
 
