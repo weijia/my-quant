@@ -556,14 +556,13 @@ const executeStrategyInternal = async (strategy, useAmount = false, filter = nul
     return
   }
 
-  // 6. 按额模式：将 tradeVolume 转换为 tradeAmount
+  // 6. 按额模式：使用 defaultTradeAmount 替换 tradeVolume
   if (useAmount) {
     totalMessages = totalMessages.map(msg => {
       const data = { ...msg.data }
-      if (data.tradeVolume && !data.tradeAmount) {
-        data.tradeAmount = data.tradeVolume * currentPrice
-        delete data.tradeVolume
-      }
+      // 按额模式：直接使用 defaultTradeAmount，删除 tradeVolume
+      data.tradeAmount = defaultAmount
+      delete data.tradeVolume
       return { ...msg, data }
     })
   }
