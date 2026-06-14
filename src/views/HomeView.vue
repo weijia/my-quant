@@ -502,7 +502,7 @@ const executeStrategyInternal = async (strategy, useAmount = false, filter = nul
   const defaultBuyVolume = parseInt(strategy.increaseAmount) || quarterPosition || 100
   const sellVolume = Math.max(100, Math.floor((strategy.netPosition || 0) / 4 / 100) * 100)
   const currentPrice = strategy.currentPrice || 0
-  const defaultAmount = 20000
+  const defaultAmount = strategy.defaultTradeAmount || 20000
 
   const ctx = {
     stockCode: strategy.stockCode,

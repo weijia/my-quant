@@ -1465,40 +1465,48 @@ const isManualStrategy = (strategy) => {
   return !!strategy.isManuallyEdited
 }
 
+// 构建包含 defaultTradeAmount 的策略对象
+const buildStrategyWithAmount = () => {
+  return {
+    ...props.strategy,
+    defaultTradeAmount: defaultTradeAmount.value || 26000
+  }
+}
+
 // 执行策略脚本（按量）
 const executeStrategyScript = () => {
   incrementCount('strategyVolume')
-  emit('execute-strategy', props.strategy)
+  emit('execute-strategy', buildStrategyWithAmount())
 }
 
 // 执行策略脚本（按额）
 const executeStrategyByAmount = () => {
   incrementCount('strategyAmount')
-  emit('execute-strategy-by-amount', props.strategy)
+  emit('execute-strategy-by-amount', buildStrategyWithAmount())
 }
 
 // 自动上涨条件单（按量）- 只生成买入
 const executeStrategyBuyOnly = () => {
   incrementCount('strategyBuyOnlyVolume')
-  emit('execute-strategy-buy-only', props.strategy)
+  emit('execute-strategy-buy-only', buildStrategyWithAmount())
 }
 
 // 自动上涨条件单（按额）- 只生成买入
 const executeStrategyBuyOnlyByAmount = () => {
   incrementCount('strategyBuyOnlyAmount')
-  emit('execute-strategy-buy-only-by-amount', props.strategy)
+  emit('execute-strategy-buy-only-by-amount', buildStrategyWithAmount())
 }
 
 // 自动下跌条件单（按量）- 只生成卖出
 const executeStrategySellOnly = () => {
   incrementCount('strategySellOnlyVolume')
-  emit('execute-strategy-sell-only', props.strategy)
+  emit('execute-strategy-sell-only', buildStrategyWithAmount())
 }
 
 // 自动下跌条件单（按额）- 只生成卖出
 const executeStrategySellOnlyByAmount = () => {
   incrementCount('strategySellOnlyAmount')
-  emit('execute-strategy-sell-only-by-amount', props.strategy)
+  emit('execute-strategy-sell-only-by-amount', buildStrategyWithAmount())
 }
 
 // 获取策略类型标签
