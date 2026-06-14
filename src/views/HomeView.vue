@@ -586,9 +586,13 @@ const executeStrategyInternal = async (strategy, useAmount = false, filter = nul
   let successCount = 0
   let sendErrors = []
 
+  console.log('[executeStrategyInternal] 开始发送条件单, 共', totalMessages.length, '条')
+  console.log('[executeStrategyInternal] MQTT 连接状态:', mqttConditionService.connected)
+
   for (const msg of totalMessages) {
     try {
       const data = msg.data
+      console.log('[executeStrategyInternal] 发送消息:', msg.action, JSON.stringify(data))
       if (msg.action === 'buy') {
         await mqttConditionService.sendBuyOrder({
           stockCode: data.stockCode,
@@ -614,8 +618,10 @@ const executeStrategyInternal = async (strategy, useAmount = false, filter = nul
           endDate: data.endDate
         })
       }
+      console.log('[executeStrategyInternal] 发送成功:', msg.action, data.stockCode)
       successCount++
     } catch (e) {
+      console.error('[executeStrategyInternal] 发送失败:', e.message)
       sendErrors.push(e.message)
     }
   }
