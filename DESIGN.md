@@ -263,6 +263,26 @@ graph TD
 - `delete`: 删除
 - `update-trend`: 更新趋势
 - `batch-condition`: 批量条件单
+- `execute-strategy`: 按量执行策略脚本
+- `execute-strategy-by-amount`: 按额执行策略脚本
+- `execute-strategy-buy-only`: 自动上涨条件单（按量，只生成买入）
+- `execute-strategy-buy-only-by-amount`: 自动上涨条件单（按额，只生成买入）
+- `execute-strategy-sell-only`: 自动下跌条件单（按量，只生成卖出）
+- `execute-strategy-sell-only-by-amount`: 自动下跌条件单（按额，只生成卖出）
+
+**策略列按钮说明**（位于策略选择框下方）：
+
+| 按钮 | 功能 | 模式 |
+|------|------|------|
+| 按量执行 | 执行匹配的策略脚本，按数量下单 | 按量 |
+| 按额执行 | 执行匹配的策略脚本，按金额下单 | 按额 |
+| 自动上涨（按量） | 只生成买入条件单，按数量下单 | 按量+仅买入 |
+| 自动上涨（按额） | 只生成买入条件单，按金额下单 | 按额+仅买入 |
+| 自动下跌（按量） | 只生成卖出条件单，按数量下单 | 按量+仅卖出 |
+| 自动下跌（按额） | 只生成卖出条件单，按金额下单 | 按额+仅卖出 |
+
+- 按钮显示对应金额/数量，点击后计数（每天8点自动清零）
+- 复用 `executeStrategyInternal` 函数，通过 `filter` 参数控制只买入/只卖出
 
 ### 7.3 StrategyDialog.vue - 策略编辑弹窗
 

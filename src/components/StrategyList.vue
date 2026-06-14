@@ -133,10 +133,15 @@
             @batch-condition="$emit('batch-condition', strategy)"
             @execute-strategy="(s) => $emit('execute-strategy', s)"
             @execute-strategy-by-amount="(s) => $emit('execute-strategy-by-amount', s)"
+            @execute-strategy-buy-only="(s) => $emit('execute-strategy-buy-only', s)"
+            @execute-strategy-buy-only-by-amount="(s) => $emit('execute-strategy-buy-only-by-amount', s)"
+            @execute-strategy-sell-only="(s) => $emit('execute-strategy-sell-only', s)"
+            @execute-strategy-sell-only-by-amount="(s) => $emit('execute-strategy-sell-only-by-amount', s)"
             @update-strategy-selection="(s, name) => $emit('update-strategy-selection', s, name)"
             @update-trade-settings="(s, data) => $emit('update-trade-settings', s, data)"
             @update-condition-config="(s, data) => $emit('update-condition-config', s, data)"
           />
+      </td>
 
           <tr v-if="marginStrategies.length > 0" class="account-section-header margin-section">
             <td :colspan="visibleColumns.length">信用账户策略 ({{ marginStrategies.length }})</td>
@@ -153,6 +158,10 @@
             @batch-condition="$emit('batch-condition', strategy)"
             @execute-strategy="(s) => $emit('execute-strategy', s)"
             @execute-strategy-by-amount="(s) => $emit('execute-strategy-by-amount', s)"
+            @execute-strategy-buy-only="(s) => $emit('execute-strategy-buy-only', s)"
+            @execute-strategy-buy-only-by-amount="(s) => $emit('execute-strategy-buy-only-by-amount', s)"
+            @execute-strategy-sell-only="(s) => $emit('execute-strategy-sell-only', s)"
+            @execute-strategy-sell-only-by-amount="(s) => $emit('execute-strategy-sell-only-by-amount', s)"
             @update-strategy-selection="(s, name) => $emit('update-strategy-selection', s, name)"
             @update-trade-settings="(s, data) => $emit('update-trade-settings', s, data)"
             @update-condition-config="(s, data) => $emit('update-condition-config', s, data)"
@@ -173,6 +182,10 @@
             @batch-condition="$emit('batch-condition', strategy)"
             @execute-strategy="(s) => $emit('execute-strategy', s)"
             @execute-strategy-by-amount="(s) => $emit('execute-strategy-by-amount', s)"
+            @execute-strategy-buy-only="(s) => $emit('execute-strategy-buy-only', s)"
+            @execute-strategy-buy-only-by-amount="(s) => $emit('execute-strategy-buy-only-by-amount', s)"
+            @execute-strategy-sell-only="(s) => $emit('execute-strategy-sell-only', s)"
+            @execute-strategy-sell-only-by-amount="(s) => $emit('execute-strategy-sell-only-by-amount', s)"
             @update-trade-settings="(s, data) => $emit('update-trade-settings', s, data)"
             @update-condition-config="(s, data) => $emit('update-condition-config', s, data)"
           />
@@ -270,6 +283,10 @@ const emit = defineEmits([
   'batch-condition',
   'execute-strategy',
   'execute-strategy-by-amount',
+  'execute-strategy-buy-only',
+  'execute-strategy-buy-only-by-amount',
+  'execute-strategy-sell-only',
+  'execute-strategy-sell-only-by-amount',
   'update-strategy-selection',
   'update-trade-settings',
   'update-condition-config',
