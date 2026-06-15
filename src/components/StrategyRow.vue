@@ -1,7 +1,7 @@
 <template>
   <tr class="strategy-row">
     <td v-if="visibleColumns.includes('name')" class="name-cell">
-      <div class="name-cell-inner">
+      <div class="name-cell-inner" :title="strategy.manualNotes || strategy.notes || ''">
         <span>{{ strategy.name }}</span>
         <span v-if="strategy.stockCode" class="stock-code">[{{ strategy.stockCode }}]</span>
       </div>
