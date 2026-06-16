@@ -88,7 +88,13 @@ class AppConfigService {
     if (!remoteConfig || typeof remoteConfig !== 'object') return
     console.log('[AppConfig] 合并前配置:', JSON.stringify(this.config?.trendStrategyMapping))
     console.log('[AppConfig] 远程配置:', JSON.stringify(remoteConfig.trendStrategyMapping))
+    // 保存本地 UI 配置（用户本地修改优先）
+    const localUI = this.config?.ui ? JSON.parse(JSON.stringify(this.config.ui)) : null
     this.config = this.mergeWithDefaults(remoteConfig)
+    // 恢复本地 UI 配置（如果存在）
+    if (localUI) {
+      this.config.ui = { ...this.config.ui, ...localUI }
+    }
     this.saveToLocalStorage()
     console.log('[AppConfig] 已从远程合并配置:', JSON.stringify(this.config.trendStrategyMapping))
     // 触发配置更新事件
