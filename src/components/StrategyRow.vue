@@ -1797,6 +1797,8 @@ onMounted(() => {
   // 确保收市买/卖状态已加载（防止 props 在 script setup 时未准备好）
   loadMarketCloseBuyFlag()
   loadMarketCloseSellFlag()
+  // 组件挂载时加载按钮计数（解决过滤后计数消失的问题）
+  loadButtonCounts()
   console.log(`[StrategyRow] onMounted: 收市买状态 = ${hasMarketCloseBuyFlag.value}, 收市卖状态 = ${hasMarketCloseSellFlag.value}, strategy.id = ${props.strategy?.id}`)
 })
 
