@@ -917,6 +917,11 @@ const resetConditionConfig = () => {
 // 组件挂载时加载保存的条件配置
 loadConditionConfigFromStorage()
 
+// 加载按钮计数（如果 props 已准备好）
+if (props.strategy?.id) {
+  loadButtonCounts()
+}
+
 // 监听 props.strategy.id 变化，确保数据加载（不使用 immediate，因为上方已手动调用）
 watch(() => props.strategy?.id, (newId, oldId) => {
   console.log(`[StrategyRow] strategy.id 变化: ${oldId} -> ${newId}`)
