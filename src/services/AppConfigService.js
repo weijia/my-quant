@@ -88,12 +88,21 @@ class AppConfigService {
     if (!remoteConfig || typeof remoteConfig !== 'object') return
     console.log('[AppConfig] 合并前配置:', JSON.stringify(this.config?.trendStrategyMapping))
     console.log('[AppConfig] 远程配置:', JSON.stringify(remoteConfig.trendStrategyMapping))
-    // 保存本地 UI 配置（用户本地修改优先）
+    // 保存本地 UI 配置和收市买/卖配置（用户本地修改优先）
     const localUI = this.config?.ui ? JSON.parse(JSON.stringify(this.config.ui)) : null
+    const localMarketCloseBuy = this.config?.marketCloseBuy ? JSON.parse(JSON.stringify(this.config.marketCloseBuy)) : null
+    const localMarketCloseSell = this.config?.marketCloseSell ? JSON.parse(JSON.stringify(this.config.marketCloseSell)) : null
     this.config = this.mergeWithDefaults(remoteConfig)
     // 恢复本地 UI 配置（如果存在）
     if (localUI) {
       this.config.ui = { ...this.config.ui, ...localUI }
+    }
+    // 恢复本地收市买/卖配置（如果存在）- 这些是按日更新的，不应被远程覆盖
+    if (localMarketCloseBuy) {
+      this.config.marketCloseBuy = localMarketCloseBuy
+    }
+    if (localMarketCloseSell) {
+      this.config.marketCloseSell = localMarketCloseSell
     }
     this.saveToLocalStorage()
     console.log('[AppConfig] 已从远程合并配置:', JSON.stringify(this.config.trendStrategyMapping))
