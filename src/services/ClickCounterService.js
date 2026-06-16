@@ -61,10 +61,14 @@ class ClickCounterService {
   checkAndResetIfNewDay() {
     const today = this.getTodayKey()
     if (this.lastResetDate !== today) {
+      // 只在 lastResetDate 已有值且与今天不同时才重置（真正的跨天）
+      // 首次加载时 lastResetDate 为 null，不应清空刚从 localStorage 加载的数据
+      if (this.lastResetDate !== null) {
+        this.counts = {}
+        this.saveToLocalStorage()
+        console.log('[ClickCounter] 新的一天，计数器已重置')
+      }
       this.lastResetDate = today
-      this.counts = {}
-      this.saveToLocalStorage()
-      console.log('[ClickCounter] 新的一天，计数器已重置')
     }
   }
 
