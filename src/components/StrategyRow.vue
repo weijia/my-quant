@@ -434,8 +434,9 @@
 
     <td v-if="visibleColumns.includes('stockAnalysis')" class="stock-analysis-cell">
       <div v-if="strategy.stockAnalysis" class="stock-analysis-content">
-        <span class="stock-analysis-action" :class="'action-' + strategy.stockAnalysis.action">{{ strategy.stockAnalysis.action }}</span>
+        <span class="stock-analysis-action" :class="'action-' + strategy.stockAnalysis.action" :title="strategy.stockAnalysis.reason">{{ strategy.stockAnalysis.action }}</span>
         <span v-if="strategy.stockAnalysis.reason" class="stock-analysis-reason" :title="strategy.stockAnalysis.reason">{{ strategy.stockAnalysis.reason }}</span>
+        <span v-if="strategy.stockAnalysis._generatedAt" class="stock-analysis-time" :title="strategy.stockAnalysis._generatedAt">{{ formatAnalysisTime(strategy.stockAnalysis._generatedAt) }}</span>
       </div>
       <span v-else class="stock-analysis-empty">-</span>
     </td>
@@ -720,6 +721,17 @@ const formatAmount = (amount) => {
     return (amount / 10000).toFixed(2) + '万'
   }
   return amount.toFixed(0)
+}
+
+// 格式化建议生成时间（显示为 06-16 14:32 格式）
+const formatAnalysisTime = (isoString) => {
+  if (!isoString) return ''
+  const d = new Date(isoString)
+  const month = (d.getMonth() + 1).toString().padStart(2, '0')
+  const day = d.getDate().toString().padStart(2, '0')
+  const hour = d.getHours().toString().padStart(2, '0')
+  const minute = d.getMinutes().toString().padStart(2, '0')
+  return `${month}-${day} ${hour}:${minute}`
 }
 
 const localTrend = ref(props.strategy.trendJudgment || 'unset')
@@ -2876,6 +2888,11 @@ const getTrendClass = (trend) => {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 140px;
+}
+
+.stock-analysis-time {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .stock-analysis-empty {

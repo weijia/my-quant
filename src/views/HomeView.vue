@@ -334,9 +334,12 @@ const loadStrategies = async () => {
               strategy.currentPrice = trend.currentPrice;
             }
 
-            // 注入买卖建议分析数据
+            // 注入买卖建议分析数据（包含生成时间）
             if (trend.stockAnalysis) {
-              strategy.stockAnalysis = trend.stockAnalysis;
+              strategy.stockAnalysis = {
+                ...trend.stockAnalysis,
+                _generatedAt: trend.stockAnalysisUpdatedAt || trend.trendJudgmentUpdatedAt || trend.autoTrendJudgmentUpdatedAt || null
+              };
               console.log(`[调试-stockAnalysis] 策略: ${strategy.name}(${strategy.stockCode}), 注入 stockAnalysis:`, trend.stockAnalysis);
             }
 
