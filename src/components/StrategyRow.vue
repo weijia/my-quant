@@ -328,18 +328,26 @@
       </div>
     </td>
     
-    <!-- 快捷：金额显示 + 百分比 + 3个按钮（固定0.5%，按数量下单） -->
+    <!-- 快捷：金额显示 + 百分比输入 + 3个按钮 -->
     <td v-if="visibleColumns.includes('quickOrder')" class="quick-order-cell">
       <div class="quick-info">
         <span class="quick-amount">{{ formatAmount(totalTradeAmount) || '-' }}</span>
-        <span class="quick-pct">±0.5%</span>
+        <input
+          v-model.number="quickOrderPct"
+          type="number"
+          class="quick-pct-input"
+          min="0"
+          step="0.1"
+          title="快捷下单触发百分比"
+        />
+        <span class="quick-pct-unit">%</span>
       </div>
       <div class="quick-btn-col">
         <button
           class="quick-order-btn buy-btn"
           @click="handleQuickBuy"
           :disabled="!strategy.stockCode || sendingBuy"
-          :title="`上涨0.5%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
+          :title="`上涨${quickOrderPct}%买入 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
         >
           {{ sendingBuy ? '...' : '↑买' }}<span v-if="getButtonCount('quickBuy') > 0" class="btn-count">{{ getButtonCount('quickBuy') }}</span>
         </button>
@@ -347,7 +355,7 @@
           class="quick-order-btn sell-btn"
           @click="handleQuickSell"
           :disabled="!strategy.stockCode || sendingSell"
-          :title="`下跌0.5%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
+          :title="`下跌${quickOrderPct}%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
         >
           {{ sendingSell ? '...' : '↓卖' }}<span v-if="getButtonCount('quickSell') > 0" class="btn-count">{{ getButtonCount('quickSell') }}</span>
         </button>
@@ -355,7 +363,7 @@
           class="quick-order-btn both-btn"
           @click="handleQuickBoth"
           :disabled="!strategy.stockCode || sendingBoth"
-          :title="`上涨0.5%买入及下跌0.5%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
+          :title="`上涨${quickOrderPct}%买入及下跌${quickOrderPct}%卖出 金额:${Math.round(getEffectiveTradeVolume() * (effectivePrice || 0))} 数量:${getEffectiveTradeVolume()}`"
         >
           {{ sendingBoth ? '...' : '双向' }}<span v-if="getButtonCount('quickBoth') > 0" class="btn-count">{{ getButtonCount('quickBoth') }}</span>
         </button>
@@ -645,6 +653,10 @@ window.addEventListener('appConfigUpdated', () => {
 // 条件单涨跌幅（缺省0.1%）
 const conditionPct = ref(0.1)
 
+// 快捷下单百分比（缺省0.5%）
+const DEFAULT_QUICK_ORDER_PCT = 0.5
+const quickOrderPct = ref(DEFAULT_QUICK_ORDER_PCT)
+
 // 保存条件单涨跌幅到 localStorage
 const saveConditionPct = () => {
   if (props.strategy.id) {
@@ -866,7 +878,8 @@ const autoSaveConditionConfig = () => {
       defaultTradeAmount: defaultTradeAmount.value,
       defaultTradeVolume: defaultTradeVolume.value,
       manualPrice: manualPrice.value,
-      conditionPct: conditionPct.value
+      conditionPct: conditionPct.value,
+      quickOrderPct: quickOrderPct.value
     }
     localStorage.setItem(key, JSON.stringify(config))
     updateCustomConfigStatus()
@@ -886,6 +899,7 @@ function loadConditionConfigFromStorage() {
         defaultTradeVolume.value = config.defaultTradeVolume ?? DEFAULT_TRADE_VOLUME
         manualPrice.value = config.manualPrice ?? DEFAULT_MANUAL_PRICE
         conditionPct.value = config.conditionPct ?? DEFAULT_CONDITION_PCT
+        quickOrderPct.value = config.quickOrderPct ?? DEFAULT_QUICK_ORDER_PCT
         console.log(`[StrategyRow] 条件配置已加载: ${props.strategy.name}`, config)
       } catch (e) {
         console.error('加载条件配置失败:', e)
@@ -902,6 +916,7 @@ const resetConditionConfig = () => {
     defaultTradeVolume.value = DEFAULT_TRADE_VOLUME
     manualPrice.value = DEFAULT_MANUAL_PRICE
     conditionPct.value = DEFAULT_CONDITION_PCT
+    quickOrderPct.value = DEFAULT_QUICK_ORDER_PCT
     
     // 清除 localStorage 中保存的配置
     if (props.strategy.stockCode) {
@@ -931,7 +946,7 @@ watch(() => props.strategy?.id, (newId, oldId) => {
 })
 
 // 监听配置变化，自动保存
-watch([defaultTradeAmount, defaultTradeVolume, manualPrice, conditionPct], () => {
+watch([defaultTradeAmount, defaultTradeVolume, manualPrice, conditionPct, quickOrderPct], () => {
   autoSaveConditionConfig()
 }, { deep: true })
 
@@ -1603,18 +1618,19 @@ const handleQuickBuy = async () => {
   incrementCount('quickBuy')
   sendingBuy.value = true
   const tradeVolume = getEffectiveTradeVolume()
+  const pct = quickOrderPct.value || 0.5
   
   try {
     await mqttConditionService.sendBuyOrder({
       stockCode: props.strategy.stockCode,
       stockName: props.strategy.name,
       tradeVolume,
-      percentage: 0.5,
+      percentage: pct,
       provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
       accountType: getAccountType(),
       side: getBuySide()
     })
-    console.log(`[快速下单] 上涨0.5%买入已发送: ${props.strategy.stockCode}, 数量: ${tradeVolume}`)
+    console.log(`[快速下单] 上涨${pct}%买入已发送: ${props.strategy.stockCode}, 数量: ${tradeVolume}`)
   } catch (error) {
     console.error('[快速下单] 买入失败:', error)
     alert('发送失败，请检查MQTT连接')
@@ -1629,18 +1645,19 @@ const handleQuickSell = async () => {
   incrementCount('quickSell')
   sendingSell.value = true
   const tradeVolume = getEffectiveTradeVolume()
+  const pct = quickOrderPct.value || 0.5
   
   try {
     await mqttConditionService.sendSellOrder({
       stockCode: props.strategy.stockCode,
       stockName: props.strategy.name,
       tradeVolume,
-      percentage: 0.5,
+      percentage: pct,
       provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
       accountType: getAccountType(),
       side: getSellSide()
     })
-    console.log(`[快速下单] 下跌0.5%卖出已发送: ${props.strategy.stockCode}, 数量: ${tradeVolume}`)
+    console.log(`[快速下单] 下跌${pct}%卖出已发送: ${props.strategy.stockCode}, 数量: ${tradeVolume}`)
   } catch (error) {
     console.error('[快速下单] 卖出失败:', error)
     alert('发送失败，请检查MQTT连接')
@@ -1655,13 +1672,14 @@ const handleQuickBoth = async () => {
   incrementCount('quickBoth')
   sendingBoth.value = true
   const tradeVolume = getEffectiveTradeVolume()
+  const pct = quickOrderPct.value || 0.5
   
   try {
     await mqttConditionService.sendBothOrders({
       stockCode: props.strategy.stockCode,
       stockName: props.strategy.name,
       tradeVolume,
-      percentage: 0.5,
+      percentage: pct,
       provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
       accountType: getAccountType()
     })
@@ -2139,6 +2157,28 @@ const getTrendClass = (trend) => {
 }
 
 .quick-pct {
+  font-size: 10px;
+  color: #6a6;
+}
+
+.quick-pct-input {
+  width: 36px;
+  padding: 1px 2px;
+  font-size: 10px;
+  color: #6a6;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  text-align: center;
+  outline: none;
+}
+
+.quick-pct-input:focus {
+  border-color: rgba(106, 170, 106, 0.5);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.quick-pct-unit {
   font-size: 10px;
   color: #6a6;
 }
