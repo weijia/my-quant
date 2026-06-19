@@ -54,7 +54,16 @@
             <th v-if="visibleColumns.includes('profitLoss')">盈亏%</th>
             <th v-if="visibleColumns.includes('dividendYield')">5年平均股息率</th>
             <th v-if="visibleColumns.includes('changePercent')">涨跌%</th>
-            <th v-if="visibleColumns.includes('decreasePercentage')" class="decrease-pct-header">下跌百分比</th>
+            <th v-if="visibleColumns.includes('decreasePercentage')" class="sortable-header decrease-pct-header" @click="handleSort('decreasePercentage')">
+              <div class="sort-header-content">
+                <span class="header-text">下跌百分比</span>
+                <span class="sort-icon">
+                  <span v-if="sortBy === 'decreasePercentage' && sortOrder === 'asc'">↑</span>
+                  <span v-else-if="sortBy === 'decreasePercentage' && sortOrder === 'desc'">↓</span>
+                  <span v-else>↕</span>
+                </span>
+              </div>
+            </th>
             <th v-if="visibleColumns.includes('trendIcon')" class="trend-icon-header" title="趋势">势</th>
             <th v-if="visibleColumns.includes('autoTrend')">
               <div class="filter-header">
