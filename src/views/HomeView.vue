@@ -35,6 +35,15 @@
         </div>
 
         <div class="action-buttons">
+          <button @click="toggleNote" class="btn btn-secondary" :class="{ active: noteVisible }" title="笔记">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+          </button>
           <button @click="showAddDialog" class="btn btn-primary" title="添加策略">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 5v14"/>
@@ -183,11 +192,34 @@
       @update:visible="showBatchConditionDialog = false"
       @submit="handleBatchConditionSubmit"
     />
+
+    <!-- 浮动笔记窗口 -->
+    <div
+      v-if="noteVisible"
+      class="floating-note"
+      :style="{ left: noteX + 'px', top: noteY + 'px' }"
+    >
+      <div class="note-header" @mousedown="startDrag">
+        <span class="note-title">笔记</span>
+        <button class="note-close" @click="toggleNote" title="关闭">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"/>
+            <path d="m6 6 12 12"/>
+          </svg>
+        </button>
+      </div>
+      <textarea
+        v-model="noteContent"
+        class="note-textarea"
+        placeholder="在此输入笔记内容..."
+        spellcheck="false"
+      ></textarea>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { strategyService } from '../services/StrategyService'
 import { trendService } from '../services/TrendService'
@@ -215,6 +247,58 @@ const agentOnline = ref(false);
 const searchQuery = ref('');
 const searchInput = ref(null);
 const bannerText = ref(appConfigService.getBannerText());
+
+// 浮动笔记
+const noteConfig = appConfigService.getNoteConfig();
+const noteVisible = ref(noteConfig.visible);
+const noteContent = ref(noteConfig.content);
+const noteX = ref(noteConfig.x);
+const noteY = ref(noteConfig.y);
+let isDragging = false;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+
+// 防抖保存笔记内容
+let noteSaveTimer = null;
+const saveNoteContent = () => {
+  if (noteSaveTimer) clearTimeout(noteSaveTimer);
+  noteSaveTimer = setTimeout(() => {
+    appConfigService.setNoteContent(noteContent.value);
+  }, 500);
+};
+
+// 笔记内容变化时自动保存
+watch(noteContent, saveNoteContent);
+
+const toggleNote = () => {
+  noteVisible.value = !noteVisible.value;
+  appConfigService.setNoteVisible(noteVisible.value);
+};
+
+const startDrag = (e) => {
+  isDragging = true;
+  dragOffsetX = e.clientX - noteX.value;
+  dragOffsetY = e.clientY - noteY.value;
+  document.addEventListener('mousemove', onDrag);
+  document.addEventListener('mouseup', stopDrag);
+};
+
+const onDrag = (e) => {
+  if (!isDragging) return;
+  noteX.value = e.clientX - dragOffsetX;
+  noteY.value = e.clientY - dragOffsetY;
+};
+
+const stopDrag = () => {
+  if (isDragging) {
+    isDragging = false;
+    document.removeEventListener('mousemove', onDrag);
+    document.removeEventListener('mouseup', stopDrag);
+    // 保存位置
+    appConfigService.setNotePosition(noteX.value, noteY.value);
+  }
+};
+
 const isFullscreen = ref(false);
 
 const toggleFullscreen = () => {
@@ -1552,5 +1636,83 @@ onMounted(async () => {
     width: 12px;
     height: 12px;
   }
+}
+
+/* 浮动笔记窗口 */
+.floating-note {
+  position: fixed;
+  width: 280px;
+  height: 200px;
+  background: rgba(30, 30, 50, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+}
+
+.note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px 8px 0 0;
+  cursor: move;
+  user-select: none;
+}
+
+.note-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.note-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.note-close:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.note-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.85);
+  resize: none;
+  font-family: inherit;
+}
+
+.note-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.note-textarea:focus {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* 笔记按钮激活状态 */
+.btn.active {
+  background: rgba(78, 205, 196, 0.2);
+  border-color: rgba(78, 205, 196, 0.4);
+  color: #4ecdc4;
 }
 </style>

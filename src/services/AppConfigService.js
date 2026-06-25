@@ -48,6 +48,13 @@ const DEFAULT_CONFIG = {
   // Banner 提醒配置
   banner: {
     text: ''
+  },
+  // 浮动笔记配置
+  note: {
+    content: '',
+    visible: false,
+    x: 20,
+    y: 80
   }
 }
 
@@ -126,6 +133,7 @@ class AppConfigService {
     if (config.trendStrategyMapping) Object.assign(result.trendStrategyMapping, config.trendStrategyMapping)
     if (config.marketCloseBuy) result.marketCloseBuy = { ...config.marketCloseBuy }
     if (config.banner) result.banner = { ...config.banner }
+    if (config.note) result.note = { ...result.note, ...config.note }
     return result
   }
 
@@ -412,6 +420,57 @@ class AppConfigService {
     if (this.config.banner) {
       this.config.banner.text = ''
     }
+    this.saveToLocalStorage()
+  }
+
+  // ========== 浮动笔记配置 ==========
+
+  getNoteConfig() {
+    return this.config.note || { ...DEFAULT_CONFIG.note }
+  }
+
+  updateNoteConfig(noteConfig) {
+    this.config.note = { ...this.config.note, ...noteConfig }
+    this.saveToLocalStorage()
+  }
+
+  getNoteContent() {
+    return this.config.note?.content || ''
+  }
+
+  setNoteContent(content) {
+    if (!this.config.note) {
+      this.config.note = { ...DEFAULT_CONFIG.note }
+    }
+    this.config.note.content = content
+    this.saveToLocalStorage()
+  }
+
+  getNoteVisible() {
+    return this.config.note?.visible ?? false
+  }
+
+  setNoteVisible(visible) {
+    if (!this.config.note) {
+      this.config.note = { ...DEFAULT_CONFIG.note }
+    }
+    this.config.note.visible = visible
+    this.saveToLocalStorage()
+  }
+
+  getNotePosition() {
+    return {
+      x: this.config.note?.x ?? DEFAULT_CONFIG.note.x,
+      y: this.config.note?.y ?? DEFAULT_CONFIG.note.y
+    }
+  }
+
+  setNotePosition(x, y) {
+    if (!this.config.note) {
+      this.config.note = { ...DEFAULT_CONFIG.note }
+    }
+    this.config.note.x = x
+    this.config.note.y = y
     this.saveToLocalStorage()
   }
 }
