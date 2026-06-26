@@ -63,6 +63,67 @@
         </div>
       </section>
 
+      <!-- Gitee 配置区块 -->
+      <section class="settings-section">
+        <h2 class="section-title">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ecdc4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+          </svg>
+          Gitee 同步
+        </h2>
+        <p class="config-hint">
+          将配置保存到 Gitee 仓库。策略脚本单独放在 <code>strategies.js</code>，其他配置放在 <code>config.json</code>。
+        </p>
+        <div class="config-paths">
+          <div class="path-item">
+            <span class="path-label">应用配置</span>
+            <code class="path-value">{{ giteeConfigForm.owner || 'owner' }}/{{ giteeConfigForm.repo || 'repo' }}/{{ giteeConfigForm.basePath || 'my-quant' }}/config.json</code>
+          </div>
+          <div class="path-item">
+            <span class="path-label">策略脚本</span>
+            <code class="path-value">{{ giteeConfigForm.owner || 'owner' }}/{{ giteeConfigForm.repo || 'repo' }}/{{ giteeConfigForm.basePath || 'my-quant' }}/strategies.js</code>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>个人访问令牌</label>
+          <input v-model="giteeConfigForm.token" type="password" placeholder="gitee personal access token" class="form-input" />
+        </div>
+        <div class="form-row">
+          <div class="form-group form-group-half">
+            <label>仓库所有者</label>
+            <input v-model="giteeConfigForm.owner" type="text" placeholder="username" class="form-input" />
+          </div>
+          <div class="form-group form-group-half">
+            <label>仓库名称</label>
+            <input v-model="giteeConfigForm.repo" type="text" placeholder="repo-name" class="form-input" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group form-group-half">
+            <label>分支</label>
+            <input v-model="giteeConfigForm.branch" type="text" placeholder="main" class="form-input" />
+          </div>
+          <div class="form-group form-group-half">
+            <label>文件路径</label>
+            <input v-model="giteeConfigForm.basePath" type="text" placeholder="my-quant" class="form-input" />
+          </div>
+        </div>
+        <div class="section-actions">
+          <button @click="testGiteeConnection" class="btn btn-secondary" :disabled="giteeTesting">
+            {{ giteeTesting ? '测试中...' : '测试连接' }}
+          </button>
+          <button @click="saveGiteeConfig" class="btn btn-primary">保存 Gitee 配置</button>
+        </div>
+        <div class="section-actions gitee-sync-actions">
+          <button @click="downloadGiteeConfig" class="btn btn-secondary" :disabled="giteeSyncing">
+            {{ giteeSyncing === 'download' ? '下载中...' : '从 Gitee 下载配置' }}
+          </button>
+          <button @click="uploadGiteeConfig" class="btn btn-primary" :disabled="giteeSyncing">
+            {{ giteeSyncing === 'upload' ? '上传中...' : '上传配置到 Gitee' }}
+          </button>
+        </div>
+      </section>
+
       <!-- 应用配置同步区块 -->
       <section class="settings-section">
         <h2 class="section-title">
@@ -71,7 +132,7 @@
             <polyline points="17 8 12 3 7 8"/>
             <line x1="12" x2="12" y1="3" y2="15"/>
           </svg>
-          应用配置同步
+          应用配置同步 (WebDAV)
         </h2>
         <p class="config-hint">
           将 MQTT、窗口、UI 等配置同步到 WebDAV（<code>/app_data/my-quant/config.json</code>）。
@@ -442,6 +503,7 @@ import mqttConditionService, { PRESET_SERVERS } from '../services/MQTTConditionS
 import { webdavImportService } from '../services/WebDAVImportService'
 import WEBDAV_PATHS from '../config/WebDAVPaths'
 import appConfigService from '../services/AppConfigService.js'
+import giteeService from '../services/GiteeService.js'
 import { versionDisplay, buildTimeDisplay } from '../version.js'
 
 // 判断是否为中文环境
@@ -520,6 +582,103 @@ const loadWebDAVConfig = () => {
     } catch (e) {
       console.error('加载 WebDAV 配置失败:', e)
     }
+  }
+}
+
+// Gitee 配置
+const giteeConfigForm = reactive({
+  token: '',
+  owner: '',
+  repo: '',
+  branch: 'main',
+  basePath: 'my-quant'
+})
+const giteeTesting = ref(false)
+const giteeSyncing = ref(false)
+
+const saveGiteeConfig = () => {
+  giteeService.setConfig({
+    token: giteeConfigForm.token,
+    owner: giteeConfigForm.owner,
+    repo: giteeConfigForm.repo,
+    branch: giteeConfigForm.branch || 'main',
+    basePath: giteeConfigForm.basePath || 'my-quant'
+  })
+  alert('Gitee 配置已保存')
+}
+
+const loadGiteeConfig = () => {
+  const config = giteeService.getConfig()
+  giteeConfigForm.token = config.token || ''
+  giteeConfigForm.owner = config.owner || ''
+  giteeConfigForm.repo = config.repo || ''
+  giteeConfigForm.branch = config.branch || 'main'
+  giteeConfigForm.basePath = config.basePath || 'my-quant'
+}
+
+const testGiteeConnection = async () => {
+  giteeTesting.value = true
+  try {
+    giteeService.setConfig({
+      token: giteeConfigForm.token,
+      owner: giteeConfigForm.owner,
+      repo: giteeConfigForm.repo,
+      branch: giteeConfigForm.branch || 'main',
+      basePath: giteeConfigForm.basePath || 'my-quant'
+    })
+    const result = await giteeService.testConnection()
+    alert(`连接成功！仓库: ${result.repoName}`)
+  } catch (e) {
+    alert('连接失败: ' + e.message)
+  } finally {
+    giteeTesting.value = false
+  }
+}
+
+const uploadGiteeConfig = async () => {
+  giteeSyncing.value = 'upload'
+  try {
+    giteeService.setConfig({
+      token: giteeConfigForm.token,
+      owner: giteeConfigForm.owner,
+      repo: giteeConfigForm.repo,
+      branch: giteeConfigForm.branch || 'main',
+      basePath: giteeConfigForm.basePath || 'my-quant'
+    })
+    // 上传前同步趋势映射
+    appConfigService.syncTrendMappingFromTemplates(templates.value)
+    await giteeService.upload()
+    alert('配置上传成功')
+  } catch (e) {
+    alert('上传失败: ' + e.message)
+  } finally {
+    giteeSyncing.value = false
+  }
+}
+
+const downloadGiteeConfig = async () => {
+  giteeSyncing.value = 'download'
+  try {
+    giteeService.setConfig({
+      token: giteeConfigForm.token,
+      owner: giteeConfigForm.owner,
+      repo: giteeConfigForm.repo,
+      branch: giteeConfigForm.branch || 'main',
+      basePath: giteeConfigForm.basePath || 'my-quant'
+    })
+    const result = await giteeService.download()
+    // 重新加载 MQTT 配置到表单
+    loadMQTTConfig()
+    // 重新加载策略模板
+    loadTemplates()
+    let msg = '配置下载成功'
+    if (result.configDownloaded) msg += '，config.json 已合并'
+    if (result.strategiesDownloaded) msg += '，strategies.js 已更新'
+    alert(msg)
+  } catch (e) {
+    alert('下载失败: ' + e.message)
+  } finally {
+    giteeSyncing.value = false
   }
 }
 
@@ -1039,6 +1198,7 @@ ${userPrompt.trim()}
 
 onMounted(() => {
   loadWebDAVConfig()
+  loadGiteeConfig()
   loadMQTTConfig()
   loadTemplates()
 })
@@ -1745,5 +1905,16 @@ watch(templates, (newTemplates) => {
   margin: 6px 0 0 0;
   font-size: 11px;
   color: rgba(255, 255, 255, 0.4);
+}
+
+/* Gitee 同步 */
+.gitee-sync-actions {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.form-group-half {
+  flex: 1;
 }
 </style>
