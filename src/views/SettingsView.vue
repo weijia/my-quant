@@ -974,22 +974,25 @@ const generateAIPrompt = async (index) => {
 
 脚本运行在以下环境中：
 - 输入变量 "ctx" 包含股票数据：
-  - ctx.stockCode: 股票代码（如 "600519"）
-  - ctx.stockName: 股票名称
-  - ctx.currentPrice: 当前价格
-  - ctx.avgPrice: 成本价
-  - ctx.quantity: 持仓数量
-  - ctx.marketValue: 市值
-  - ctx.profitLoss: 盈亏金额
-  - ctx.profitLossPct: 盈亏百分比
-  - ctx.changePercent: 当日涨跌幅
-  - ctx.trendJudgment: 趋势判断（如 trend_up, trend_down 等）
-  - ctx.decreasePercentage: 下跌百分比
+  - ctx.stockCode: 股票代码，6位数字（如 "600519"）
+  - ctx.stockName: 股票名称（如 "贵州茅台"）
+  - ctx.currentPrice: 当前收盘价（如 1680.00）
+  - ctx.netPosition: 当前持仓数量（股）（如 100）
+  - ctx.marketValue: 持仓市值 = 持仓 × 价格（如 168000）
+  - ctx.trendJudgment: 趋势判断类型（如 "trend_up", "trend_down" 等）
+  - ctx.volatility15d: 15日平均波动率（小数，如 1.65% 存为 0.0165）
+  - ctx.priceDropRatio: 最高价到当前价的下跌比率（如 0.05 表示 5%）
+  - ctx.isMarginAccount: 是否为融资融券账户（true/false）
+  - ctx.defaultBuyVolume: 缺省买入数量，优先使用策略的加仓数量，否则为持仓的 1/4
+  - ctx.defaultSellVolume: 缺省卖出数量，为持仓的 1/4（向下取整到 100 的倍数）
+  - ctx.defaultAmount: 缺省交易金额，固定值 20000 元
+  - ctx.provider: 券商代码（如 "pingan"）
+  - ctx.accountType: 账户类型（"default" 或 "credit"）
 
 - 辅助函数：
   - buy(data): 生成买入条件单消息
   - sell(data): 生成卖出条件单消息
-  - data 参数包含：percentage（触发百分比）, tradeVolume（交易数量）, provider, accountType, side
+  - data 参数包含：stockCode, stockName, tradeVolume（交易数量）, percentage（触发百分比）, provider, accountType, side
 
 - 脚本必须返回一个数组，每个元素是一条 MQTT 消息
 
