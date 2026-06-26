@@ -13,7 +13,7 @@ class GiteeService {
     this.token = ''
     this.owner = ''
     this.repo = ''
-    this.branch = 'main'
+    this.branch = 'master'
     this.basePath = 'my-quant'
     this.enabled = false
     this.loadConfig()
@@ -28,7 +28,7 @@ class GiteeService {
         this.token = config.token || ''
         this.owner = config.owner || ''
         this.repo = config.repo || ''
-        this.branch = config.branch || 'main'
+        this.branch = config.branch || 'master'
         this.basePath = config.basePath || 'my-quant'
         this.enabled = config.enabled || false
       }
@@ -59,7 +59,7 @@ class GiteeService {
     this.token = config.token || ''
     this.owner = config.owner || ''
     this.repo = config.repo || ''
-    this.branch = config.branch || 'main'
+    this.branch = config.branch || 'master'
     this.basePath = config.basePath || 'my-quant'
     this.enabled = config.enabled || false
     this.saveConfig()
@@ -93,7 +93,8 @@ class GiteeService {
       throw new Error('Gitee 未配置')
     }
 
-    const url = `${this.getApiBaseUrl()}/contents/${path}?access_token=${this.token}&ref=${this.branch}`
+    const encodedPath = encodeURIComponent(path).replace(/%2F/g, '/')
+    const url = `${this.getApiBaseUrl()}/contents/${encodedPath}?access_token=${this.token}&ref=${this.branch}`
 
     const response = await fetch(url, {
       method: 'GET',
@@ -124,7 +125,8 @@ class GiteeService {
       throw new Error('Gitee 未配置')
     }
 
-    const url = `${this.getApiBaseUrl()}/contents/${path}`
+    const encodedPath = encodeURIComponent(path).replace(/%2F/g, '/')
+    const url = `${this.getApiBaseUrl()}/contents/${encodedPath}`
     const body = {
       access_token: this.token,
       content: btoa(unescape(encodeURIComponent(content))), // base64
@@ -152,7 +154,8 @@ class GiteeService {
       throw new Error('Gitee 未配置')
     }
 
-    const url = `${this.getApiBaseUrl()}/contents/${path}`
+    const encodedPath = encodeURIComponent(path).replace(/%2F/g, '/')
+    const url = `${this.getApiBaseUrl()}/contents/${encodedPath}`
     const body = {
       access_token: this.token,
       content: btoa(unescape(encodeURIComponent(content))), // base64
@@ -186,30 +189,57 @@ class GiteeService {
   }
 
   // 生成 strategies.js 内容
+  // script 字段用模板字符串展开，方便在 Gitee 上直接查看和编辑
   generateStrategiesJs(templates) {
-    const cleanTemplates = templates.map(t => ({
-      name: t.name || '',
-      description: t.description || '',
-      script: t.script || '',
-      trendMatches: t.trendMatches || [],
-      isDefault: t.isDefault || false
-    }))
+    const lines = ['export default [']
 
-    const jsonStr = JSON.stringify(cleanTemplates, null, 2)
-      .replace(/`/g, '\\`') // 转义反引号
+    for (const t of templates) {
+      const name = JSON.stringify(t.name || '')
+      const description = JSON.stringify(t.description || '')
+      const script = t.script || ''
+      const trendMatches = JSON.stringify(t.trendMatches || [])
+      const isDefault = t.isDefault ? 'true' : 'false'
 
-    return `export default ${jsonStr}\n`
+      // script 用模板字符串包裹，处理内部的反引号和 ${}
+      const escapedScript = script
+        .replace(/\\/g, '\\\\')   // 先转义反斜杠
+        .replace(/`/g, '\\`')     // 转义反引号
+        .replace(/\$/g, '\\$')    // 转义美元符号（防止 ${} 被当作模板表达式）
+
+      lines.push('  {')
+      lines.push(`    name: ${name},`)
+      lines.push(`    description: ${description},`)
+      lines.push(`    script: \`${escapedScript}\`,`)
+      lines.push(`    trendMatches: ${trendMatches},`)
+      lines.push(`    isDefault: ${isDefault}`)
+      lines.push('  },')
+    }
+
+    // 移除最后一个逗号
+    if (templates.length > 0) {
+      lines[lines.length - 1] = lines[lines.length - 1].replace(/,$/, '')
+    }
+
+    lines.push(']\n')
+    return lines.join('\n')
   }
 
   // 解析 strategies.js 内容
   parseStrategiesJs(content) {
     try {
-      // 移除 export default 前缀，解析 JSON
-      const jsonStr = content.replace(/^\s*export\s+default\s*/, '').trim()
-      return JSON.parse(jsonStr)
+      // 使用 Function 构造函数安全地执行模块代码
+      const fn = new Function('return ' + content.replace(/^\s*export\s+default\s*/, ''))
+      return fn()
     } catch (e) {
       console.error('[Gitee] 解析 strategies.js 失败:', e)
-      return null
+      // 降级：尝试移除 export default 后用 JSON.parse
+      try {
+        const jsonStr = content.replace(/^\s*export\s+default\s*/, '').trim()
+        return JSON.parse(jsonStr)
+      } catch (e2) {
+        console.error('[Gitee] JSON 解析也失败:', e2)
+        return null
+      }
     }
   }
 
