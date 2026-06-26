@@ -353,6 +353,31 @@ if (ctx.trendJudgment === 'trend_up') {
               <p class="trend-hint">当股票的趋势判断为选中的任一值时，此策略将被应用</p>
             </div>
 
+            <!-- AI 提示词助手 -->
+            <div class="form-group ai-prompt-group">
+              <label class="ai-prompt-label">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                AI 提示词
+              </label>
+              <div class="ai-prompt-input-wrap">
+                <textarea
+                  v-model="aiPrompts[index]"
+                  class="ai-prompt-textarea"
+                  placeholder="描述你想要的策略，例如：上涨5%买入，下跌3%止损，分批建仓..."
+                  spellcheck="false"
+                ></textarea>
+                <button @click="generateAIPrompt(index)" class="btn btn-secondary btn-sm ai-generate-btn" title="生成完整提示词">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                  </svg>
+                  生成提示词
+                </button>
+              </div>
+              <p class="ai-prompt-hint">输入策略需求 → 点击生成 → 复制发给 AI → 粘贴返回的代码到下方脚本编辑器</p>
+            </div>
+
             <div class="form-group">
               <label>策略脚本</label>
               <textarea
@@ -599,6 +624,7 @@ const copiedIndex = ref(-1)
 const showApiHelp = ref(false)
 const previewResults = reactive({})
 const previewErrors = reactive({})
+const aiPrompts = reactive({})
 
 // 可用的趋势选项
 const availableTrends = [
@@ -925,6 +951,86 @@ const copyPreview = async (index) => {
     document.body.removeChild(textarea)
     copiedIndex.value = index
     setTimeout(() => { copiedIndex.value = -1 }, 2000)
+  }
+}
+
+// 生成 AI 提示词
+const generateAIPrompt = async (index) => {
+  const template = templates.value[index]
+  const userPrompt = aiPrompts[index] || ''
+
+  if (!userPrompt.trim()) {
+    alert('请先输入策略需求描述')
+    return
+  }
+
+  const trendLabels = (template.trendMatches || [])
+    .map(v => availableTrends.find(t => t.value === v)?.label || v)
+    .join('、')
+
+  const fullPrompt = `你是一个量化交易策略专家。请根据以下信息生成一个 JavaScript 策略脚本。
+
+## 框架说明
+
+脚本运行在以下环境中：
+- 输入变量 "ctx" 包含股票数据：
+  - ctx.stockCode: 股票代码（如 "600519"）
+  - ctx.stockName: 股票名称
+  - ctx.currentPrice: 当前价格
+  - ctx.avgPrice: 成本价
+  - ctx.quantity: 持仓数量
+  - ctx.marketValue: 市值
+  - ctx.profitLoss: 盈亏金额
+  - ctx.profitLossPct: 盈亏百分比
+  - ctx.changePercent: 当日涨跌幅
+  - ctx.trendJudgment: 趋势判断（如 trend_up, trend_down 等）
+  - ctx.decreasePercentage: 下跌百分比
+
+- 辅助函数：
+  - buy(data): 生成买入条件单消息
+  - sell(data): 生成卖出条件单消息
+  - data 参数包含：percentage（触发百分比）, tradeVolume（交易数量）, provider, accountType, side
+
+- 脚本必须返回一个数组，每个元素是一条 MQTT 消息
+
+## 当前策略信息
+
+- 策略名称：${template.name || '未命名'}
+- 策略描述：${template.description || '无'}
+- 匹配趋势：${trendLabels || '未设置'}
+
+## 当前脚本（如需要修改/优化）
+
+\`\`\`javascript
+${template.script || '// 暂无脚本'}
+\`\`\`
+
+## 用户需求
+
+${userPrompt.trim()}
+
+## 输出要求
+
+1. 返回完整的 JavaScript 策略脚本代码
+2. 代码必须是一个函数体，最后返回数组
+3. 使用 ctx 变量获取股票数据
+4. 使用 buy() / sell() 辅助函数生成条件单
+5. 添加必要的注释说明逻辑
+6. 代码格式规范，使用 2 空格缩进
+
+请直接返回代码，不要包含任何解释。`
+
+  try {
+    await navigator.clipboard.writeText(fullPrompt)
+    alert('AI 提示词已复制到剪贴板！请粘贴到 ChatGPT/Claude 等 AI 工具中。')
+  } catch (e) {
+    const textarea = document.createElement('textarea')
+    textarea.value = fullPrompt
+    document.body.appendChild(textarea)
+    textarea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textarea)
+    alert('AI 提示词已复制到剪贴板！请粘贴到 ChatGPT/Claude 等 AI 工具中。')
   }
 }
 
@@ -1573,5 +1679,68 @@ watch(templates, (newTemplates) => {
   background-color: rgba(255, 165, 0, 0.2);
   border-color: rgba(255, 165, 0, 0.5);
   color: #ffa500;
+}
+
+/* AI 提示词助手 */
+.ai-prompt-group {
+  background: rgba(78, 205, 196, 0.05);
+  border: 1px solid rgba(78, 205, 196, 0.15);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.ai-prompt-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4ecdc4;
+  margin-bottom: 8px;
+}
+
+.ai-prompt-input-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.ai-prompt-textarea {
+  flex: 1;
+  min-height: 60px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+}
+
+.ai-prompt-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.ai-prompt-textarea:focus {
+  border-color: rgba(78, 205, 196, 0.4);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.ai-generate-btn {
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
+.ai-prompt-hint {
+  margin: 6px 0 0 0;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
 }
 </style>
