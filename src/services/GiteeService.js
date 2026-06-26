@@ -189,7 +189,7 @@ class GiteeService {
   }
 
   // 生成 strategies.js 内容
-  // script 字段用模板字符串展开，方便在 Gitee 上直接查看和编辑
+  // script 字段改为真正的 JS 函数，Gitee 上可享受完整语法高亮
   generateStrategiesJs(templates) {
     const lines = ['export default [']
 
@@ -200,16 +200,20 @@ class GiteeService {
       const trendMatches = JSON.stringify(t.trendMatches || [])
       const isDefault = t.isDefault ? 'true' : 'false'
 
-      // script 用模板字符串包裹，处理内部的反引号和 ${}
-      const escapedScript = script
-        .replace(/\\/g, '\\\\')   // 先转义反斜杠
-        .replace(/`/g, '\\`')     // 转义反引号
-        .replace(/\$/g, '\\$')    // 转义美元符号（防止 ${} 被当作模板表达式）
-
       lines.push('  {')
       lines.push(`    name: ${name},`)
       lines.push(`    description: ${description},`)
-      lines.push(`    script: \`${escapedScript}\`,`)
+      lines.push(`    script(ctx, buy, sell) {`)
+
+      // 写入函数体，保持原始缩进（前面加 6 个空格）
+      if (script.trim()) {
+        const bodyLines = script.split('\n')
+        for (const line of bodyLines) {
+          lines.push(`      ${line}`)
+        }
+      }
+
+      lines.push(`    },`)
       lines.push(`    trendMatches: ${trendMatches},`)
       lines.push(`    isDefault: ${isDefault}`)
       lines.push('  },')
@@ -229,10 +233,38 @@ class GiteeService {
     try {
       // 使用 Function 构造函数安全地执行模块代码
       const fn = new Function('return ' + content.replace(/^\s*export\s+default\s*/, ''))
-      return fn()
+      const templates = fn()
+
+      // 把函数转回字符串存入 localStorage
+      if (Array.isArray(templates)) {
+        for (const t of templates) {
+          if (typeof t.script === 'function') {
+            const fnStr = t.script.toString()
+            // 提取函数体：去掉 "function script(ctx, buy, sell) {" 或 "script(ctx, buy, sell) {"
+            // 以及最后的 "}"
+            let body = fnStr
+              .replace(/^\s*function\s+\w*\s*\([^)]*\)\s*\{/, '')
+              .replace(/^\s*\w*\s*\([^)]*\)\s*\{/, '')
+              .replace(/\}\s*$/, '')
+              .trim()
+
+            // 去掉函数体的统一缩进（6 个空格）
+            const bodyLines = body.split('\n')
+            const trimmedLines = bodyLines.map(line => {
+              if (line.startsWith('      ')) {
+                return line.slice(6)
+              }
+              return line
+            })
+            t.script = trimmedLines.join('\n')
+          }
+        }
+      }
+
+      return templates
     } catch (e) {
       console.error('[Gitee] 解析 strategies.js 失败:', e)
-      // 降级：尝试移除 export default 后用 JSON.parse
+      // 降级：尝试移除 export default 后用 JSON.parse（兼容旧版模板字符串格式）
       try {
         const jsonStr = content.replace(/^\s*export\s+default\s*/, '').trim()
         return JSON.parse(jsonStr)
