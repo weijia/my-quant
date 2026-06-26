@@ -54,7 +54,9 @@ const DEFAULT_CONFIG = {
     content: '',
     visible: false,
     x: 20,
-    y: 80
+    y: 80,
+    width: 280,
+    height: 200
   }
 }
 
@@ -471,6 +473,22 @@ class AppConfigService {
     }
     this.config.note.x = x
     this.config.note.y = y
+    this.saveToLocalStorage()
+  }
+
+  getNoteSize() {
+    return {
+      width: this.config.note?.width ?? DEFAULT_CONFIG.note.width,
+      height: this.config.note?.height ?? DEFAULT_CONFIG.note.height
+    }
+  }
+
+  setNoteSize(width, height) {
+    if (!this.config.note) {
+      this.config.note = { ...DEFAULT_CONFIG.note }
+    }
+    this.config.note.width = width
+    this.config.note.height = height
     this.saveToLocalStorage()
   }
 }

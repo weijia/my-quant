@@ -197,7 +197,7 @@
     <div
       v-if="noteVisible"
       class="floating-note"
-      :style="{ left: noteX + 'px', top: noteY + 'px' }"
+      :style="{ left: noteX + 'px', top: noteY + 'px', width: noteWidth + 'px', height: noteHeight + 'px' }"
     >
       <div class="note-header" @mousedown="startDrag">
         <span class="note-title">笔记</span>
@@ -214,6 +214,7 @@
         placeholder="在此输入笔记内容..."
         spellcheck="false"
       ></textarea>
+      <div class="resize-handle" @mousedown="startResize" title="调整大小"></div>
     </div>
   </div>
 </template>
@@ -296,6 +297,44 @@ const stopDrag = () => {
     document.removeEventListener('mouseup', stopDrag);
     // 保存位置
     appConfigService.setNotePosition(noteX.value, noteY.value);
+  }
+};
+
+// 笔记窗口大小
+const noteSize = appConfigService.getNoteSize();
+const noteWidth = ref(noteSize.width);
+const noteHeight = ref(noteSize.height);
+let isResizing = false;
+let resizeStartX = 0;
+let resizeStartY = 0;
+let resizeStartWidth = 0;
+let resizeStartHeight = 0;
+
+const startResize = (e) => {
+  isResizing = true;
+  resizeStartX = e.clientX;
+  resizeStartY = e.clientY;
+  resizeStartWidth = noteWidth.value;
+  resizeStartHeight = noteHeight.value;
+  document.addEventListener('mousemove', onResize);
+  document.addEventListener('mouseup', stopResize);
+  e.preventDefault();
+};
+
+const onResize = (e) => {
+  if (!isResizing) return;
+  const newWidth = resizeStartWidth + (e.clientX - resizeStartX);
+  const newHeight = resizeStartHeight + (e.clientY - resizeStartY);
+  noteWidth.value = Math.max(200, newWidth);
+  noteHeight.value = Math.max(120, newHeight);
+};
+
+const stopResize = () => {
+  if (isResizing) {
+    isResizing = false;
+    document.removeEventListener('mousemove', onResize);
+    document.removeEventListener('mouseup', stopResize);
+    appConfigService.setNoteSize(noteWidth.value, noteHeight.value);
   }
 };
 
@@ -1641,8 +1680,8 @@ onMounted(async () => {
 /* 浮动笔记窗口 */
 .floating-note {
   position: fixed;
-  width: 280px;
-  height: 200px;
+  min-width: 200px;
+  min-height: 120px;
   background: rgba(30, 30, 50, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
@@ -1707,6 +1746,21 @@ onMounted(async () => {
 
 .note-textarea:focus {
   background: rgba(255, 255, 255, 0.02);
+}
+
+.resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: se-resize;
+  background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.2) 50%);
+  border-bottom-right-radius: 8px;
+}
+
+.resize-handle:hover {
+  background: linear-gradient(135deg, transparent 50%, rgba(78, 205, 196, 0.5) 50%);
 }
 
 /* 笔记按钮激活状态 */
