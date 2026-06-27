@@ -216,6 +216,16 @@
       ></textarea>
       <div class="resize-handle" @mousedown="startResize" title="调整大小"></div>
     </div>
+
+    <!-- Toast 提示 -->
+    <Transition name="toast-fade">
+      <div v-if="toastVisible" class="toast-container" :class="'toast-' + toastType">
+        <span class="toast-icon" v-if="toastType === 'error'">⚠</span>
+        <span class="toast-icon" v-else-if="toastType === 'success'">✓</span>
+        <span class="toast-text">{{ toastMessage }}</span>
+        <button class="toast-close" @click="toastVisible = false">✕</button>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -248,6 +258,24 @@ const agentOnline = ref(false);
 const searchQuery = ref('');
 const searchInput = ref(null);
 const bannerText = ref(appConfigService.getBannerText());
+
+// Toast 提示
+const toastMessage = ref('');
+const toastType = ref('info');
+const toastVisible = ref(false);
+let toastTimer = null;
+
+const showToast = (message, type = 'info', duration = 5000) => {
+  if (toastTimer) clearTimeout(toastTimer);
+  toastMessage.value = message;
+  toastType.value = type;
+  toastVisible.value = true;
+  if (duration > 0) {
+    toastTimer = setTimeout(() => {
+      toastVisible.value = false;
+    }, duration);
+  }
+};
 
 // 浮动笔记
 const noteConfig = appConfigService.getNoteConfig();
@@ -1155,6 +1183,25 @@ onMounted(async () => {
   // 监听 MQTT 消息
   mqttConditionService.onMessage((data, msgData) => {
     console.log('[HomeView] MQTT消息:', data, msgData);
+
+    // 处理错误状态
+    if (msgData && msgData.status === 'error') {
+      const errorMsg = msgData.message || '未知错误'
+      const stockCode = msgData.stockCode || msgData.orderId || ''
+      const errorDetail = stockCode ? `【${stockCode}】${errorMsg}` : errorMsg
+
+      // 显示在 Banner 中
+      bannerText.value = `⚠ ${errorDetail}`
+
+      // 如果登录态过期，标记 agent 离线
+      if (msgData.loginExpired) {
+        agentOnline.value = false
+        console.error('[HomeView] Agent 登录态已过期:', msgData)
+      }
+
+      // 同时弹出一个 toast 提示
+      showToast(`MQTT 错误: ${errorDetail}`, 'error')
+    }
   });
 
   // 监听 Agent 在线状态
@@ -1768,5 +1815,82 @@ onMounted(async () => {
   background: rgba(78, 205, 196, 0.2);
   border-color: rgba(78, 205, 196, 0.4);
   color: #4ecdc4;
+}
+
+/* Toast 提示 */
+.toast-container {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  z-index: 2000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  max-width: 400px;
+}
+
+.toast-error {
+  background: rgba(220, 53, 69, 0.95);
+  border: 1px solid rgba(220, 53, 69, 0.5);
+  color: white;
+}
+
+.toast-success {
+  background: rgba(40, 167, 69, 0.95);
+  border: 1px solid rgba(40, 167, 69, 0.5);
+  color: white;
+}
+
+.toast-info {
+  background: rgba(30, 30, 50, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.toast-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.toast-text {
+  flex: 1;
+  word-break: break-word;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.toast-close:hover {
+  opacity: 1;
+}
+
+.toast-fade-enter-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.toast-fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.toast-fade-enter-from {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.toast-fade-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
 }
 </style>
