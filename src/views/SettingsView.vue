@@ -204,6 +204,9 @@
           <span :class="['status-value', mqttConnected ? 'connected' : 'disconnected']">
             {{ mqttConnected ? '已连接' : '未连接' }}
           </span>
+          <span v-if="mqttConnected" :class="['status-value', 'agent-status', agentOnline ? 'connected' : 'disconnected']">
+            {{ agentOnline ? 'Agent 在线' : 'Agent 离线' }}
+          </span>
           <button @click="testMqttConnection" class="btn btn-secondary btn-sm" :disabled="testingConnection">
             {{ testingConnection ? '测试中...' : '测试连接' }}
           </button>
@@ -562,7 +565,7 @@ if (ctx.trendJudgment === 'trend_up') {
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import mqttConditionService, { PRESET_SERVERS } from '../services/MQTTConditionService'
 import { webdavImportService } from '../services/WebDAVImportService'
 import WEBDAV_PATHS from '../config/WebDAVPaths'
@@ -819,6 +822,7 @@ const mqttConfigForm = reactive({
   password: ''
 })
 const mqttConnected = ref(false)
+const agentOnline = ref(false)
 const testingConnection = ref(false)
 const syncingConfig = ref(false)
 
@@ -866,6 +870,28 @@ const loadMQTTConfig = () => {
   mqttConfigForm.topic = config.topic || ''
   mqttConfigForm.password = config.password || ''
   mqttConnected.value = mqttConditionService.connected
+  agentOnline.value = mqttConditionService.agentOnline
+}
+
+// 定时同步 MQTT 连接状态
+let mqttStatusTimer = null
+
+const startMqttStatusSync = () => {
+  // 立即同步一次
+  mqttConnected.value = mqttConditionService.connected
+  agentOnline.value = mqttConditionService.agentOnline
+  // 每 3 秒同步一次
+  mqttStatusTimer = setInterval(() => {
+    mqttConnected.value = mqttConditionService.connected
+    agentOnline.value = mqttConditionService.agentOnline
+  }, 3000)
+}
+
+const stopMqttStatusSync = () => {
+  if (mqttStatusTimer) {
+    clearInterval(mqttStatusTimer)
+    mqttStatusTimer = null
+  }
 }
 
 const saveMQTTConfig = () => {
@@ -1328,6 +1354,11 @@ onMounted(() => {
   loadGiteeConfig()
   loadMQTTConfig()
   loadTemplates()
+  startMqttStatusSync()
+})
+
+onUnmounted(() => {
+  stopMqttStatusSync()
 })
 
 // 监听 templates 变化，自动同步趋势映射
@@ -1557,6 +1588,13 @@ watch(templates, (newTemplates) => {
 
 .status-value.disconnected {
   color: #dc3545;
+}
+
+.agent-status {
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 12px;
 }
 
 .btn-sm {
