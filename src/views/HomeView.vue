@@ -44,7 +44,7 @@
               <polyline points="10 9 9 9 8 9"/>
             </svg>
           </button>
-          <button @click="refreshHoldings('founder')" class="btn btn-secondary" :class="{ active: loadingDynamicHoldings }" title="刷新持仓" :disabled="loadingDynamicHoldings">
+          <button @click="refreshAllHoldings" class="btn btn-secondary" :class="{ active: loadingDynamicHoldings }" title="刷新持仓" :disabled="loadingDynamicHoldings">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
               <path d="M3 3v5h5"/>
@@ -177,7 +177,7 @@
         @update-condition-config="handleConditionConfig"
         @update-trend-filter="(trend) => { filter.trend = trend; loadStrategies() }"
         @update-sort="(sortInfo) => { filter.sortBy = sortInfo.sortBy; filter.sortOrder = sortInfo.sortOrder; loadStrategies() }"
-        @refresh-holdings="refreshHoldings('founder')"
+        @refresh-holdings="refreshAllHoldings"
       />
     </main>
 
@@ -304,6 +304,31 @@ const refreshHoldings = async (provider = 'founder') => {
   currentRefreshProvider = provider;
   try {
     await mqttConditionService.getHoldings({ provider, forceRefresh: true });
+  } catch (e) {
+    showToast('获取持仓失败: ' + e.message, 'error');
+    loadingDynamicHoldings.value = false;
+  }
+};
+
+// 刷新所有券商持仓（ founder + pingan ）
+const refreshAllHoldings = async () => {
+  if (!mqttConditionService.connected) {
+    showToast('MQTT 未连接，无法获取持仓', 'error');
+    return;
+  }
+  const providers = ['founder', 'pingan'];
+  loadingDynamicHoldings.value = true;
+  try {
+    for (const provider of providers) {
+      currentRefreshProvider = provider;
+      await mqttConditionService.getHoldings({ provider, forceRefresh: true });
+      // 给 Agent 一点处理时间再发下一个
+      await new Promise(r => setTimeout(r, 500));
+    }
+    // 等最后一个响应回来后再关闭 loading（最多等 5 秒）
+    setTimeout(() => {
+      loadingDynamicHoldings.value = false;
+    }, 5000);
   } catch (e) {
     showToast('获取持仓失败: ' + e.message, 'error');
     loadingDynamicHoldings.value = false;
