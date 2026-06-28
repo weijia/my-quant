@@ -1260,8 +1260,11 @@ onMounted(async () => {
 
       if (status === 'success') {
         if (payload && Array.isArray(payload.holdings)) {
-          // 通过 msgId 查找对应的 provider，避免异步请求覆盖
-          const provider = holdingsMsgIdMap.get(data.msgId) || 'founder';
+          // 识别 provider：优先读响应 payload 中的 provider 字段（平安返回 "pingan"）
+          // 其次用 msgId 查找（方正），最后回退到 'founder'
+          const provider = payload.provider
+            || holdingsMsgIdMap.get(data.msgId)
+            || 'founder';
           holdingsMsgIdMap.delete(data.msgId); // 用完清理
           const newMap = new Map(holdingsMap.value);
 
