@@ -1271,8 +1271,11 @@ onMounted(async () => {
       console.log('HomeView: WebDAV 同步成功:', result.message);
       // 如果 WebDAV 上有 MQTT 配置，加载并应用
       if (result.mqttConfig) {
-        mqttConditionService.updateConfig(result.mqttConfig);
-        console.log('已从 WebDAV 加载 MQTT 配置');
+        // WebDAV 配置可能不包含 encryptMessages 等新字段，保留本地已有的值
+        const currentConfig = mqttConditionService.getConfig()
+        const safeMqttConfig = { ...currentConfig, ...result.mqttConfig }
+        mqttConditionService.updateConfig(safeMqttConfig)
+        console.log('已从 WebDAV 加载 MQTT 配置')
       }
     } else {
       console.warn('HomeView: WebDAV 同步失败:', result.message);
