@@ -1269,11 +1269,10 @@ onMounted(async () => {
           const newMap = new Map(holdingsMap.value);
 
           // 按 accountType 分组存储，避免不同账户类型互相覆盖
+          // accountType 依据文档：normal（普通）/ credit（信用），默认 normal
           for (const h of payload.holdings) {
             if (!h.stockCode) continue;
-            // 平安 provider 默认 accountType 为 'pingan'，方正默认 'normal'
-            const defaultAccountType = provider === 'pingan' ? 'pingan' : 'normal';
-            const accountType = h.accountType || defaultAccountType;
+            const accountType = h.accountType || 'normal';
             const key = `${provider}:${accountType}`;
             if (!newMap.has(key)) {
               newMap.set(key, new Map());
