@@ -293,7 +293,8 @@ const showToast = (message, type = 'info', duration = 5000) => {
 // key 格式: `${provider}:${accountType}`，如 'founder:credit'
 const holdingsMap = ref(new Map());
 const loadingDynamicHoldings = ref(false);
-let currentRefreshProvider = 'founder';
+// 用 msgId 追踪哪个响应对应哪个 provider，避免异步覆盖
+const holdingsMsgIdMap = new Map();
 
 const refreshHoldings = async (provider = 'founder') => {
   if (!mqttConditionService.connected) {
@@ -301,9 +302,11 @@ const refreshHoldings = async (provider = 'founder') => {
     return;
   }
   loadingDynamicHoldings.value = true;
-  currentRefreshProvider = provider;
   try {
-    await mqttConditionService.getHoldings({ provider, forceRefresh: true });
+    const result = await mqttConditionService.getHoldings({ provider, forceRefresh: true });
+    if (result && result.msgId) {
+      holdingsMsgIdMap.set(result.msgId, provider);
+    }
   } catch (e) {
     showToast('获取持仓失败: ' + e.message, 'error');
     loadingDynamicHoldings.value = false;
@@ -320,8 +323,10 @@ const refreshAllHoldings = async () => {
   loadingDynamicHoldings.value = true;
   try {
     for (const provider of providers) {
-      currentRefreshProvider = provider;
-      await mqttConditionService.getHoldings({ provider, forceRefresh: true });
+      const result = await mqttConditionService.getHoldings({ provider, forceRefresh: true });
+      if (result && result.msgId) {
+        holdingsMsgIdMap.set(result.msgId, provider);
+      }
       // 给 Agent 一点处理时间再发下一个
       await new Promise(r => setTimeout(r, 500));
     }
@@ -1255,7 +1260,9 @@ onMounted(async () => {
 
       if (status === 'success') {
         if (payload && Array.isArray(payload.holdings)) {
-          const provider = currentRefreshProvider;
+          // 通过 msgId 查找对应的 provider，避免异步请求覆盖
+          const provider = holdingsMsgIdMap.get(data.msgId) || 'founder';
+          holdingsMsgIdMap.delete(data.msgId); // 用完清理
           const newMap = new Map(holdingsMap.value);
 
           // 按 accountType 分组存储，避免不同账户类型互相覆盖
