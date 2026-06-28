@@ -13,6 +13,7 @@ const DEFAULT_CONFIG = {
     serverName: 'EMQX 公共集群',
     topic: 'test/myquant/orders',
     password: 'testpass',
+    encryptMessages: true,
     clientId: 'myquant_' + Math.random().toString(16).slice(2, 8)
   },
   window: {

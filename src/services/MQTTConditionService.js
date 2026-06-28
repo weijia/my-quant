@@ -31,6 +31,7 @@ const DEFAULT_MQTT_CONFIG = {
   serverName: 'EMQX 公共集群',
   topic: 'test/myquant/orders',
   password: 'testpass',
+  encryptMessages: true,        // 是否加密消息（AES）
   clientId: 'myquant_' + Math.random().toString(16).slice(2, 8)
 };
 
@@ -139,15 +140,22 @@ class MQTTConditionOrderService {
     });
   }
 
-  handleMessage(encryptedData) {
+  handleMessage(rawData) {
     try {
       const config = loadConfig();
-      const bytes = CryptoJS.AES.decrypt(encryptedData, config.password);
-      const raw = bytes.toString(CryptoJS.enc.Utf8);
-      
-      if (!raw) {
-        console.error('[MQTT] Decryption failed');
-        return;
+      let raw;
+
+      if (config.encryptMessages !== false) {
+        // 加密模式：解密数据
+        const bytes = CryptoJS.AES.decrypt(rawData, config.password);
+        raw = bytes.toString(CryptoJS.enc.Utf8);
+        if (!raw) {
+          console.error('[MQTT] Decryption failed');
+          return;
+        }
+      } else {
+        // 明文模式：直接解析
+        raw = rawData;
       }
 
       const data = JSON.parse(raw);
@@ -206,9 +214,11 @@ class MQTTConditionOrderService {
       };
 
       const payloadStr = JSON.stringify(payload);
-      const cipher = CryptoJS.AES.encrypt(payloadStr, config.password).toString();
+      const messageBody = config.encryptMessages !== false
+        ? CryptoJS.AES.encrypt(payloadStr, config.password).toString()
+        : payloadStr;
 
-      this.client.publish(config.topic, cipher, { qos: 1 }, (err) => {
+      this.client.publish(config.topic, messageBody, { qos: 1 }, (err) => {
         if (err) {
           console.error('[MQTT] Publish error:', err);
           reject(err);
@@ -381,9 +391,11 @@ class MQTTConditionOrderService {
     };
 
     const payloadStr = JSON.stringify(payload);
-    const cipher = CryptoJS.AES.encrypt(payloadStr, config.password).toString();
+    const messageBody = config.encryptMessages !== false
+      ? CryptoJS.AES.encrypt(payloadStr, config.password).toString()
+      : payloadStr;
 
-    this.client.publish(config.topic, cipher, { qos: 1 }, (err) => {
+    this.client.publish(config.topic, messageBody, { qos: 1 }, (err) => {
       if (err) {
         console.error('[MQTT] Ping publish error:', err);
       } else {

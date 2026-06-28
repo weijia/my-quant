@@ -199,6 +199,14 @@
           </div>
         </div>
 
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input v-model="mqttConfigForm.encryptMessages" type="checkbox" />
+            <span>加密消息（AES）</span>
+          </label>
+          <p class="form-hint">开启后 MQTT 消息将通过 AES 加密传输，Agent 端需使用相同密码解密</p>
+        </div>
+
         <div class="mqtt-status">
           <span class="status-label">连接状态:</span>
           <span :class="['status-value', mqttConnected ? 'connected' : 'disconnected']">
@@ -819,7 +827,8 @@ const mqttConfigForm = reactive({
   serverType: 'emqx',
   serverUrl: '',
   topic: '',
-  password: ''
+  password: '',
+  encryptMessages: true
 })
 const mqttConnected = ref(false)
 const agentOnline = ref(false)
@@ -869,6 +878,7 @@ const loadMQTTConfig = () => {
   mqttConfigForm.serverUrl = config.serverUrl || ''
   mqttConfigForm.topic = config.topic || ''
   mqttConfigForm.password = config.password || ''
+  mqttConfigForm.encryptMessages = config.encryptMessages !== false
   mqttConnected.value = mqttConditionService.connected
   agentOnline.value = mqttConditionService.agentOnline
 }
@@ -900,7 +910,8 @@ const saveMQTTConfig = () => {
     serverType: mqttConfigForm.serverType,
     serverUrl: selectedServer ? selectedServer.url : mqttConfigForm.serverUrl,
     topic: mqttConfigForm.topic,
-    password: mqttConfigForm.password
+    password: mqttConfigForm.password,
+    encryptMessages: mqttConfigForm.encryptMessages
   }
   mqttConditionService.updateConfig(config)
   webdavImportService.saveMQTTConfig(config)
@@ -1693,6 +1704,12 @@ watch(templates, (newTemplates) => {
   width: 16px;
   height: 16px;
   accent-color: #4ecdc4;
+}
+
+.form-hint {
+  margin: 4px 0 0 24px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .preview-section {
