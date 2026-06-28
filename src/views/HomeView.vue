@@ -288,9 +288,12 @@ const showToast = (message, type = 'info', duration = 5000) => {
   }
 };
 
-// 动态持仓数据
+// 动态持仓数据：按 provider:accountType 分组，避免不同券商/账户类型互相覆盖
+// holdingsMap.value = Map<string, Map<string, Holding>>
+// key 格式: `${provider}:${accountType}`，如 'founder:credit'
 const holdingsMap = ref(new Map());
 const loadingDynamicHoldings = ref(false);
+let currentRefreshProvider = 'founder';
 
 const refreshHoldings = async (provider = 'founder') => {
   if (!mqttConditionService.connected) {
@@ -298,6 +301,7 @@ const refreshHoldings = async (provider = 'founder') => {
     return;
   }
   loadingDynamicHoldings.value = true;
+  currentRefreshProvider = provider;
   try {
     await mqttConditionService.getHoldings({ provider, forceRefresh: true });
   } catch (e) {
@@ -1226,17 +1230,32 @@ onMounted(async () => {
 
       if (status === 'success') {
         if (payload && Array.isArray(payload.holdings)) {
+          const provider = currentRefreshProvider;
           const newMap = new Map(holdingsMap.value);
+
+          // 按 accountType 分组存储，避免不同账户类型互相覆盖
           for (const h of payload.holdings) {
-            if (h.stockCode) {
-              newMap.set(h.stockCode, h);
+            if (!h.stockCode) continue;
+            const accountType = h.accountType || 'normal';
+            const key = `${provider}:${accountType}`;
+            if (!newMap.has(key)) {
+              newMap.set(key, new Map());
             }
+            newMap.get(key).set(h.stockCode, h);
           }
+
           holdingsMap.value = newMap;
-          if (payload.holdings.length === 0) {
+
+          // 统计本次更新的分组数量
+          let totalCount = 0;
+          for (const h of payload.holdings) {
+            if (h.stockCode) totalCount++;
+          }
+
+          if (totalCount === 0) {
             showToast('该账户当前无持仓', 'info', 3000);
           } else {
-            showToast(`已更新 ${payload.holdings.length} 只持仓`, 'success', 3000);
+            showToast(`已更新 ${totalCount} 只持仓 (${provider})`, 'success', 3000);
           }
         } else {
           console.error('[HomeView] get_holdings 响应格式异常:', msgData);

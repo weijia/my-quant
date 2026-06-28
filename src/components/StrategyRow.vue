@@ -734,9 +734,16 @@ const effectivePrice = computed(() => {
 })
 
 // 动态持仓数据（从 MQTT 获取）
+// holdingsMap 按 provider:accountType 分组，需要根据策略属性定位到正确的分组
 const dynamicHolding = computed(() => {
   if (!props.strategy.stockCode || !props.holdingsMap) return null
-  return props.holdingsMap.get(props.strategy.stockCode) || null
+  const provider = props.strategy.provider || 'founder'
+  // 平安策略统一用 'pingan' 作为 accountType；方正策略用 strategy.accountType 或默认 'normal'
+  const accountType = provider === 'pingan' ? 'pingan' : (props.strategy.accountType || 'normal')
+  const key = `${provider}:${accountType}`
+  const groupMap = props.holdingsMap.get(key)
+  if (!groupMap) return null
+  return groupMap.get(props.strategy.stockCode) || null
 })
 
 const formatDynamicProfit = (profit) => {
