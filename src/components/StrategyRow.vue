@@ -738,8 +738,16 @@ const effectivePrice = computed(() => {
 const dynamicHolding = computed(() => {
   if (!props.strategy.stockCode || !props.holdingsMap) return null
   const provider = props.strategy.provider || 'founder'
-  // 平安策略统一用 'pingan' 作为 accountType；方正策略用 strategy.accountType 或默认 'normal'
-  const accountType = provider === 'pingan' ? 'pingan' : (props.strategy.accountType || 'normal')
+  // 方正策略的 accountType：'default' 和 undefined 都映射为 'normal'，'credit' 保持
+  // 平安策略统一用 'pingan'
+  let accountType
+  if (provider === 'pingan') {
+    accountType = 'pingan'
+  } else {
+    accountType = (props.strategy.accountType === 'default' || !props.strategy.accountType)
+      ? 'normal'
+      : props.strategy.accountType
+  }
   const key = `${provider}:${accountType}`
   const groupMap = props.holdingsMap.get(key)
   if (!groupMap) return null
