@@ -1214,30 +1214,37 @@ onMounted(async () => {
     console.log('[HomeView] MQTT消息:', data, msgData);
 
     // 处理持仓响应
+    // Agent 返回的响应嵌套了一层：msgData.data = { action, status, data: { holdings } }
     if (msgData?.action === 'get_holdings') {
       loadingDynamicHoldings.value = false;
       console.log('[HomeView] get_holdings 响应:', JSON.stringify(msgData));
 
-      if (msgData.status === 'success') {
-        if (msgData.data && Array.isArray(msgData.data.holdings)) {
+      // 兼容两种格式：扁平格式 或 嵌套格式（msgData.data.status + msgData.data.data.holdings）
+      const responseBody = msgData.data || {};
+      const status = responseBody.status || msgData.status;
+      const payload = responseBody.data || msgData.data;
+
+      if (status === 'success') {
+        if (payload && Array.isArray(payload.holdings)) {
           const newMap = new Map(holdingsMap.value);
-          for (const h of msgData.data.holdings) {
+          for (const h of payload.holdings) {
             if (h.stockCode) {
               newMap.set(h.stockCode, h);
             }
           }
           holdingsMap.value = newMap;
-          if (msgData.data.holdings.length === 0) {
+          if (payload.holdings.length === 0) {
             showToast('该账户当前无持仓', 'info', 3000);
           } else {
-            showToast(`已更新 ${msgData.data.holdings.length} 只持仓`, 'success', 3000);
+            showToast(`已更新 ${payload.holdings.length} 只持仓`, 'success', 3000);
           }
         } else {
           console.error('[HomeView] get_holdings 响应格式异常:', msgData);
           showToast('获取持仓失败: 响应格式异常（缺少 holdings 字段）', 'error');
         }
       } else {
-        showToast('获取持仓失败: ' + (msgData.message || '未知错误'), 'error');
+        const errorMsg = responseBody.message || msgData.message || '未知错误';
+        showToast('获取持仓失败: ' + errorMsg, 'error');
       }
       return;
     }

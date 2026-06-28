@@ -790,16 +790,21 @@ const loadHoldings = async (provider) => {
         removeListener()
         console.log('[Settings] get_holdings 响应:', JSON.stringify(msgData))
 
-        if (msgData.status === 'success') {
-          if (msgData.data && Array.isArray(msgData.data.holdings)) {
-            holdingsData.value = msgData.data.holdings
+        // 兼容两种格式：扁平格式 或 嵌套格式（msgData.data.status + msgData.data.data.holdings）
+        const responseBody = msgData.data || {}
+        const status = responseBody.status || msgData.status
+        const payload = responseBody.data || msgData.data
+
+        if (status === 'success') {
+          if (payload && Array.isArray(payload.holdings)) {
+            holdingsData.value = payload.holdings
             loadingHoldings.value = false
           } else {
             holdingsError.value = '响应格式异常：缺少 holdings 字段'
             loadingHoldings.value = false
           }
         } else {
-          holdingsError.value = msgData.message || '获取持仓失败'
+          holdingsError.value = responseBody.message || msgData.message || '获取持仓失败'
           loadingHoldings.value = false
         }
       }
