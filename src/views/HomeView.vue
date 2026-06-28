@@ -177,6 +177,7 @@
         @update-condition-config="handleConditionConfig"
         @update-trend-filter="(trend) => { filter.trend = trend; loadStrategies() }"
         @update-sort="(sortInfo) => { filter.sortBy = sortInfo.sortBy; filter.sortOrder = sortInfo.sortOrder; loadStrategies() }"
+        @refresh-holdings="refreshHoldings('founder')"
       />
     </main>
 

@@ -43,6 +43,22 @@
             </th>
             <th v-if="visibleColumns.includes('dynamicHoldings')" class="dynamic-holdings-header" title="从 MQTT 获取的实时持仓">
               <span>动态持仓</span>
+              <button
+                class="holdings-refresh-btn"
+                :class="{ 'is-loading': loadingHoldings }"
+                :disabled="loadingHoldings"
+                @click.stop="$emit('refresh-holdings')"
+                title="刷新持仓"
+              >
+                <svg v-if="!loadingHoldings" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                </svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin">
+                  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                </svg>
+              </button>
               <span v-if="loadingHoldings" class="loading-dot">·</span>
             </th>
             <th v-if="visibleColumns.includes('marketValue')" class="sortable-header market-value-header" @click="handleSort('marketValue')">
@@ -314,7 +330,8 @@ const emit = defineEmits([
   'update-trade-settings',
   'update-condition-config',
   'update-trend-filter',
-  'update-sort'
+  'update-sort',
+  'refresh-holdings'
 ])
 
 const showColumnSelectDialog = ref(false)
@@ -592,6 +609,42 @@ const resetColumns = () => {
   text-align: center;
   font-size: 11px;
   cursor: default;
+}
+
+.holdings-refresh-btn {
+  margin-left: 4px;
+  padding: 2px;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  transition: all 0.2s;
+}
+
+.holdings-refresh-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #4ecdc4;
+}
+
+.holdings-refresh-btn.is-loading {
+  color: #4ecdc4;
+  cursor: not-allowed;
+}
+
+.holdings-refresh-btn .spin {
+  animation: spin-refresh 1s linear infinite;
+}
+
+@keyframes spin-refresh {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .loading-dot {
