@@ -44,6 +44,14 @@
               <polyline points="10 9 9 9 8 9"/>
             </svg>
           </button>
+          <button @click="refreshHoldings('founder')" class="btn btn-secondary" :class="{ active: loadingDynamicHoldings }" title="刷新持仓" :disabled="loadingDynamicHoldings">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+              <path d="M16 16h5v5"/>
+            </svg>
+          </button>
           <button @click="showAddDialog" class="btn btn-primary" title="添加策略">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 5v14"/>
@@ -152,6 +160,8 @@
         :trend-filter="filter.trend"
         :mqtt-connected="mqttConnected"
         :agent-online="agentOnline"
+        :holdings-map="holdingsMap"
+        :loading-holdings="loadingDynamicHoldings"
         @edit-strategy="editStrategy"
         @delete-strategy="deleteStrategy"
         @update-trend-judgment="updateTrendJudgment"
@@ -274,6 +284,24 @@ const showToast = (message, type = 'info', duration = 5000) => {
     toastTimer = setTimeout(() => {
       toastVisible.value = false;
     }, duration);
+  }
+};
+
+// 动态持仓数据
+const holdingsMap = ref(new Map());
+const loadingDynamicHoldings = ref(false);
+
+const refreshHoldings = async (provider = 'founder') => {
+  if (!mqttConditionService.connected) {
+    showToast('MQTT 未连接，无法获取持仓', 'error');
+    return;
+  }
+  loadingDynamicHoldings.value = true;
+  try {
+    await mqttConditionService.getHoldings({ provider, forceRefresh: true });
+  } catch (e) {
+    showToast('获取持仓失败: ' + e.message, 'error');
+    loadingDynamicHoldings.value = false;
   }
 };
 
@@ -1183,6 +1211,24 @@ onMounted(async () => {
   // 监听 MQTT 消息
   mqttConditionService.onMessage((data, msgData) => {
     console.log('[HomeView] MQTT消息:', data, msgData);
+
+    // 处理持仓响应
+    if (msgData?.action === 'get_holdings') {
+      loadingDynamicHoldings.value = false;
+      if (msgData.status === 'success' && msgData.data?.holdings) {
+        const newMap = new Map(holdingsMap.value);
+        for (const h of msgData.data.holdings) {
+          if (h.stockCode) {
+            newMap.set(h.stockCode, h);
+          }
+        }
+        holdingsMap.value = newMap;
+        showToast(`已更新 ${msgData.data.holdings.length} 只持仓`, 'success', 3000);
+      } else {
+        showToast('获取持仓失败: ' + (msgData.message || '未知错误'), 'error');
+      }
+      return;
+    }
 
     // 处理错误状态
     if (msgData && msgData.status === 'error') {

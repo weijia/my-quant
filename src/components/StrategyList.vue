@@ -41,6 +41,10 @@
                 </label>
               </div>
             </th>
+            <th v-if="visibleColumns.includes('dynamicHoldings')" class="dynamic-holdings-header" title="从 MQTT 获取的实时持仓">
+              <span>动态持仓</span>
+              <span v-if="loadingHoldings" class="loading-dot">·</span>
+            </th>
             <th v-if="visibleColumns.includes('marketValue')" class="sortable-header market-value-header" @click="handleSort('marketValue')">
               <div class="sort-header-content">
                 <span class="header-text">市值</span>
@@ -136,6 +140,7 @@
             :strategy="strategy"
             :visible-columns="visibleColumns"
             :use-margin-trade="useMarginTrade"
+            :holdings-map="holdingsMap"
             @edit="$emit('edit-strategy', strategy)"
             @delete="$emit('delete-strategy', strategy.id)"
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
@@ -160,6 +165,7 @@
             :strategy="strategy"
             :visible-columns="visibleColumns"
             :use-margin-trade="useMarginTrade"
+            :holdings-map="holdingsMap"
             @edit="$emit('edit-strategy', strategy)"
             @delete="$emit('delete-strategy', strategy.id)"
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
@@ -184,6 +190,7 @@
             :strategy="strategy"
             :visible-columns="visibleColumns"
             :use-margin-trade="useMarginTrade"
+            :holdings-map="holdingsMap"
             @edit="$emit('edit-strategy', strategy)"
             @delete="$emit('delete-strategy', strategy.id)"
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
@@ -263,6 +270,14 @@ const props = defineProps({
   agentOnline: {
     type: Boolean,
     default: false
+  },
+  holdingsMap: {
+    type: Map,
+    default: () => new Map()
+  },
+  loadingHoldings: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -333,6 +348,7 @@ onUnmounted(() => {
 const allColumns = [
   { key: 'name', label: '策略名称' },
   { key: 'quantity', label: '股数' },
+  { key: 'dynamicHoldings', label: '动态持仓' },
   { key: 'marketValue', label: '市值' },
   { key: 'profitLoss', label: '盈亏%' },
   { key: 'dividendYield', label: '5年平均股息率' },
@@ -568,6 +584,24 @@ const resetColumns = () => {
 .quantity-header {
   width: 88px;
   min-width: 88px;
+}
+
+.dynamic-holdings-header {
+  width: 90px;
+  min-width: 90px;
+  text-align: center;
+  font-size: 11px;
+  cursor: default;
+}
+
+.loading-dot {
+  animation: blink 1s infinite;
+  color: #4ecdc4;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 .decrease-pct-header {
@@ -833,7 +867,14 @@ const resetColumns = () => {
     width: 28px;
     min-width: 28px;
   }
-  
+
+  .dynamic-holdings-header,
+  .dynamic-holdings-cell {
+    width: 40px;
+    min-width: 40px;
+    font-size: 9px;
+  }
+
   .decrease-pct-header,
   .decrease-pct-cell {
     width: 28px;

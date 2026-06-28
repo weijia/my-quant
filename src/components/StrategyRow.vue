@@ -10,7 +10,17 @@
     <td v-if="visibleColumns.includes('quantity')" class="quantity-cell">
       {{ strategy.netPosition || 0 }}
     </td>
-    
+
+    <td v-if="visibleColumns.includes('dynamicHoldings')" class="dynamic-holdings-cell">
+      <div v-if="dynamicHolding" class="holding-info">
+        <div class="holding-quantity">{{ dynamicHolding.quantity }}</div>
+        <div class="holding-profit" :class="dynamicHolding.profit >= 0 ? 'text-profit' : 'text-loss'">
+          {{ formatDynamicProfit(dynamicHolding.profit) }}
+        </div>
+      </div>
+      <span v-else class="no-holding">-</span>
+    </td>
+
     <td v-if="visibleColumns.includes('marketValue')" class="market-value-cell">
       {{ strategy.marketValue || '-' }}
     </td>
@@ -497,6 +507,10 @@ const props = defineProps({
   useMarginTrade: {
     type: Boolean,
     default: true
+  },
+  holdingsMap: {
+    type: Map,
+    default: () => new Map()
   }
 })
 
@@ -718,6 +732,18 @@ const updateStrategySelection = () => {
 const effectivePrice = computed(() => {
   return props.strategy.currentPrice || manualPrice.value || null
 })
+
+// 动态持仓数据（从 MQTT 获取）
+const dynamicHolding = computed(() => {
+  if (!props.strategy.stockCode || !props.holdingsMap) return null
+  return props.holdingsMap.get(props.strategy.stockCode) || null
+})
+
+const formatDynamicProfit = (profit) => {
+  if (profit == null) return '-'
+  const prefix = profit >= 0 ? '+' : ''
+  return prefix + profit.toFixed(0)
+}
 
 // 交易总额 = 量 × 价
 const totalTradeAmount = computed(() => {
@@ -1913,6 +1939,32 @@ const getTrendClass = (trend) => {
   width: 88px;
   max-width: 88px;
   text-align: right;
+}
+
+.dynamic-holdings-cell {
+  width: 90px;
+  min-width: 90px;
+  text-align: center;
+  font-size: 11px;
+}
+
+.holding-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.holding-quantity {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.holding-profit {
+  font-size: 10px;
+}
+
+.no-holding {
+  color: rgba(255, 255, 255, 0.3);
 }
 
 .decrease-pct-cell {
