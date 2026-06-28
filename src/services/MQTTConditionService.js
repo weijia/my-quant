@@ -63,6 +63,7 @@ class MQTTConditionOrderService {
     this.connected = false;
     this.agentOnline = false;
     this.pendingMessages = new Map();
+    this._messageCallbacks = [];
     this.onMessageCallback = null;
     this.onConnectCallback = null;
     this.onAgentStatusCallback = null;
@@ -176,6 +177,10 @@ class MQTTConditionOrderService {
 
       if (this.onMessageCallback) {
         this.onMessageCallback(data, msgData);
+      }
+      // 同时调用额外注册的回调
+      for (const cb of this._messageCallbacks) {
+        try { cb(data, msgData); } catch (e) { console.error('[MQTT] callback error:', e); }
       }
     } catch (e) {
       console.error('[MQTT] Error handling message:', e);
@@ -334,6 +339,19 @@ class MQTTConditionOrderService {
     this.onMessageCallback = callback;
   }
 
+  /**
+   * 添加额外的消息回调（不会覆盖主回调）
+   * @param {Function} callback
+   * @returns {Function} 取消注册函数
+   */
+  addMessageListener(callback) {
+    this._messageCallbacks.push(callback);
+    return () => {
+      const idx = this._messageCallbacks.indexOf(callback);
+      if (idx >= 0) this._messageCallbacks.splice(idx, 1);
+    };
+  }
+
   onConnect(callback) {
     this.onConnectCallback = callback;
   }
@@ -407,6 +425,20 @@ class MQTTConditionOrderService {
 
   onAgentStatus(callback) {
     this.onAgentStatusCallback = callback;
+  }
+
+  /**
+   * 获取持仓列表
+   * @param {Object} params
+   * @param {string} params.provider - 券商类型：'pingan'（平安）或 'founder'（方正）
+   * @param {string} params.accountType - 账户类型：'normal'/'credit'，不传返回全部
+   * @param {boolean} params.forceRefresh - 是否强制刷新，默认 false
+   * @returns {Promise<Object>} 返回持仓数据
+   */
+  async getHoldings({ provider = 'founder', accountType, forceRefresh = false }) {
+    const data = { provider, forceRefresh };
+    if (accountType) data.accountType = accountType;
+    return this.sendCommand('get_holdings', data);
   }
 }
 

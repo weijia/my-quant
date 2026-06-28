@@ -214,6 +214,70 @@
         </div>
       </section>
 
+      <!-- 持仓查询区块 -->
+      <section class="settings-section">
+        <h2 class="section-title">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ecdc4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="14" x="2" y="3" rx="2"/>
+            <line x1="8" x2="16" y1="21" y2="21"/>
+            <line x1="12" x2="12" y1="17" y2="21"/>
+          </svg>
+          持仓查询
+        </h2>
+        <p class="config-hint">
+          通过 MQTT 向 Agent 发送 get_holdings 命令，获取券商持仓数据。需要 MQTT 已连接且 Agent 在线。
+        </p>
+        <div class="section-actions">
+          <button @click="loadHoldings('pingan')" class="btn btn-primary" :disabled="loadingHoldings">
+            {{ loadingHoldings === 'pingan' ? '加载中...' : '加载平安持仓' }}
+          </button>
+          <button @click="loadHoldings('founder')" class="btn btn-secondary" :disabled="loadingHoldings">
+            {{ loadingHoldings === 'founder' ? '加载中...' : '加载方正常仓' }}
+          </button>
+        </div>
+
+        <!-- 持仓结果 -->
+        <div v-if="holdingsData.length > 0" class="holdings-result">
+          <div class="holdings-header">
+            <span>{{ holdingsProvider === 'pingan' ? '平安证券' : '方正证券' }}持仓（{{ holdingsData.length }} 只）</span>
+            <button @click="clearHoldings" class="btn btn-secondary btn-sm">清除</button>
+          </div>
+          <div class="holdings-table-wrap">
+            <table class="holdings-table">
+              <thead>
+                <tr>
+                  <th>代码</th>
+                  <th>名称</th>
+                  <th>持仓</th>
+                  <th>可用</th>
+                  <th>成本价</th>
+                  <th>现价</th>
+                  <th>市值</th>
+                  <th>盈亏</th>
+                  <th>盈亏%</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="h in holdingsData" :key="h.stockCode">
+                  <td>{{ h.stockCode }}</td>
+                  <td>{{ h.stockName }}</td>
+                  <td>{{ h.quantity }}</td>
+                  <td>{{ h.availableQuantity || '-' }}</td>
+                  <td>{{ h.costPrice?.toFixed(2) || '-' }}</td>
+                  <td>{{ h.currentPrice?.toFixed(2) || '-' }}</td>
+                  <td>{{ formatHoldingsValue(h.marketValue) }}</td>
+                  <td :class="h.profit >= 0 ? 'text-profit' : 'text-loss'">{{ formatProfit(h.profit) }}</td>
+                  <td :class="h.profitPercent >= 0 ? 'text-profit' : 'text-loss'">{{ h.profitPercent?.toFixed(2) || '-' }}%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div v-if="holdingsError" class="holdings-error">
+          {{ holdingsError }}
+        </div>
+      </section>
+
       <!-- 策略管理器区块 -->
       <section class="settings-section">
         <h2 class="section-title">
@@ -680,6 +744,69 @@ const downloadGiteeConfig = async () => {
   } finally {
     giteeSyncing.value = false
   }
+}
+
+// 持仓查询
+const holdingsData = ref([])
+const holdingsProvider = ref('')
+const holdingsError = ref('')
+const loadingHoldings = ref(false)
+
+const loadHoldings = async (provider) => {
+  if (!mqttConditionService.connected) {
+    alert('MQTT 未连接，请先配置并连接 MQTT')
+    return
+  }
+
+  loadingHoldings.value = provider
+  holdingsError.value = ''
+  holdingsProvider.value = provider
+
+  try {
+    // 发送命令
+    await mqttConditionService.getHoldings({ provider, forceRefresh: true })
+
+    // 监听响应（通过 addMessageListener，不覆盖主回调）
+    const timeout = setTimeout(() => {
+      holdingsError.value = '请求超时（15秒），未收到 Agent 响应'
+      loadingHoldings.value = false
+      removeListener()
+    }, 15000)
+
+    const removeListener = mqttConditionService.addMessageListener((data, msgData) => {
+      if (msgData?.action === 'get_holdings') {
+        clearTimeout(timeout)
+        removeListener()
+        if (msgData.status === 'success' && msgData.data?.holdings) {
+          holdingsData.value = msgData.data.holdings
+          loadingHoldings.value = false
+        } else {
+          holdingsError.value = msgData.message || '获取持仓失败'
+          loadingHoldings.value = false
+        }
+      }
+    })
+  } catch (e) {
+    holdingsError.value = '发送请求失败: ' + e.message
+    loadingHoldings.value = false
+  }
+}
+
+const clearHoldings = () => {
+  holdingsData.value = []
+  holdingsError.value = ''
+}
+
+const formatHoldingsValue = (val) => {
+  if (!val) return '-'
+  if (val >= 10000) return (val / 10000).toFixed(2) + '万'
+  return val.toFixed(2)
+}
+
+const formatProfit = (val) => {
+  if (val == null) return '-'
+  const prefix = val >= 0 ? '+' : ''
+  return prefix + val.toFixed(2)
 }
 
 // MQTT 配置
@@ -1916,5 +2043,78 @@ watch(templates, (newTemplates) => {
 
 .form-group-half {
   flex: 1;
+}
+
+/* 持仓查询 */
+.holdings-result {
+  margin-top: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.holdings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.holdings-table-wrap {
+  overflow-x: auto;
+}
+
+.holdings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.holdings-table th {
+  padding: 8px 12px;
+  text-align: right;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+.holdings-table th:first-child {
+  text-align: left;
+}
+
+.holdings-table td {
+  padding: 8px 12px;
+  text-align: right;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.holdings-table td:first-child,
+.holdings-table td:nth-child(2) {
+  text-align: left;
+}
+
+.text-profit {
+  color: #ff6b6b;
+}
+
+.text-loss {
+  color: #51cf66;
+}
+
+.holdings-error {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(220, 53, 69, 0.1);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  border-radius: 6px;
+  font-size: 13px;
+  color: #ff6b6b;
 }
 </style>
