@@ -29,8 +29,8 @@ const DEFAULT_MQTT_CONFIG = {
   serverType: 'emqx',           // 预置服务器 ID 或 'custom'
   serverUrl: 'wss://broker.emqx.io:8084/mqtt',
   serverName: 'EMQX 公共集群',
-  topic: 'user/myquant/orders',
-  password: 'stock_condition_order_Secret',
+  topic: 'test/myquant/orders',
+  password: 'testpass',
   clientId: 'myquant_' + Math.random().toString(16).slice(2, 8)
 };
 
