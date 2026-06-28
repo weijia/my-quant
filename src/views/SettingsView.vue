@@ -788,9 +788,16 @@ const loadHoldings = async (provider) => {
       if (msgData?.action === 'get_holdings') {
         clearTimeout(timeout)
         removeListener()
-        if (msgData.status === 'success' && msgData.data?.holdings) {
-          holdingsData.value = msgData.data.holdings
-          loadingHoldings.value = false
+        console.log('[Settings] get_holdings 响应:', JSON.stringify(msgData))
+
+        if (msgData.status === 'success') {
+          if (msgData.data && Array.isArray(msgData.data.holdings)) {
+            holdingsData.value = msgData.data.holdings
+            loadingHoldings.value = false
+          } else {
+            holdingsError.value = '响应格式异常：缺少 holdings 字段'
+            loadingHoldings.value = false
+          }
         } else {
           holdingsError.value = msgData.message || '获取持仓失败'
           loadingHoldings.value = false

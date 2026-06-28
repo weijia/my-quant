@@ -1216,15 +1216,26 @@ onMounted(async () => {
     // 处理持仓响应
     if (msgData?.action === 'get_holdings') {
       loadingDynamicHoldings.value = false;
-      if (msgData.status === 'success' && msgData.data?.holdings) {
-        const newMap = new Map(holdingsMap.value);
-        for (const h of msgData.data.holdings) {
-          if (h.stockCode) {
-            newMap.set(h.stockCode, h);
+      console.log('[HomeView] get_holdings 响应:', JSON.stringify(msgData));
+
+      if (msgData.status === 'success') {
+        if (msgData.data && Array.isArray(msgData.data.holdings)) {
+          const newMap = new Map(holdingsMap.value);
+          for (const h of msgData.data.holdings) {
+            if (h.stockCode) {
+              newMap.set(h.stockCode, h);
+            }
           }
+          holdingsMap.value = newMap;
+          if (msgData.data.holdings.length === 0) {
+            showToast('该账户当前无持仓', 'info', 3000);
+          } else {
+            showToast(`已更新 ${msgData.data.holdings.length} 只持仓`, 'success', 3000);
+          }
+        } else {
+          console.error('[HomeView] get_holdings 响应格式异常:', msgData);
+          showToast('获取持仓失败: 响应格式异常（缺少 holdings 字段）', 'error');
         }
-        holdingsMap.value = newMap;
-        showToast(`已更新 ${msgData.data.holdings.length} 只持仓`, 'success', 3000);
       } else {
         showToast('获取持仓失败: ' + (msgData.message || '未知错误'), 'error');
       }
