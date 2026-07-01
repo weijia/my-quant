@@ -785,15 +785,19 @@ const loadHoldings = async (provider) => {
     }, 15000)
 
     const removeListener = mqttConditionService.addMessageListener((data, msgData) => {
-      if (msgData?.action === 'get_holdings') {
+      // Agent 统一响应格式: { action: "response", data: { action: "get_holdings", status, data, message } }
+      // 兼容扁平格式: { action: "get_holdings", status, data, ... }
+      const isResponse = msgData?.action === 'response';
+      const resp = isResponse ? (msgData.data || {}) : (msgData || {});
+      const commandAction = resp.action || msgData?.action;
+
+      if (commandAction === 'get_holdings') {
         clearTimeout(timeout)
         removeListener()
         console.log('[Settings] get_holdings 响应:', JSON.stringify(msgData))
 
-        // 兼容两种格式：扁平格式 或 嵌套格式（msgData.data.status + msgData.data.data.holdings）
-        const responseBody = msgData.data || {}
-        const status = responseBody.status || msgData.status
-        const payload = responseBody.data || msgData.data
+        const status = resp.status || msgData.status;
+        const payload = resp.data;
 
         if (status === 'success') {
           if (payload && Array.isArray(payload.holdings)) {
@@ -804,7 +808,7 @@ const loadHoldings = async (provider) => {
             loadingHoldings.value = false
           }
         } else {
-          holdingsError.value = responseBody.message || msgData.message || '获取持仓失败'
+          holdingsError.value = resp.message || msgData.message || '获取持仓失败'
           loadingHoldings.value = false
         }
       }

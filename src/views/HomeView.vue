@@ -1247,16 +1247,21 @@ onMounted(async () => {
   mqttConditionService.onMessage((data, msgData) => {
     console.log('[HomeView] MQTT消息:', data, msgData);
 
-    // 处理持仓响应
-    // Agent 返回的响应嵌套了一层：msgData.data = { action, status, data: { holdings } }
-    if (msgData?.action === 'get_holdings') {
+    // 解析 Agent 响应格式
+    // Agent 采用统一响应格式: { action: "response", data: { action: "原命令", status, data, stockCode, message } }
+    // 兼容扁平格式: { action: "get_holdings", status, data, ... }
+    const isResponse = msgData?.action === 'response';
+    const resp = isResponse ? (msgData.data || {}) : (msgData || {});
+    const commandAction = resp.action || msgData?.action;
+    const status = resp.status || msgData?.status;
+    const payload = resp.data;
+    const stockCode = resp.stockCode;
+    const errorMessage = resp.message;
+
+    // ========== 处理持仓响应 ==========
+    if (commandAction === 'get_holdings') {
       loadingDynamicHoldings.value = false;
       console.log('[HomeView] get_holdings 响应:', JSON.stringify(msgData));
-
-      // 兼容两种格式：扁平格式 或 嵌套格式（msgData.data.status + msgData.data.data.holdings）
-      const responseBody = msgData.data || {};
-      const status = responseBody.status || msgData.status;
-      const payload = responseBody.data || msgData.data;
 
       if (status === 'success') {
         if (payload && Array.isArray(payload.holdings)) {
@@ -1295,32 +1300,49 @@ onMounted(async () => {
           }
         } else {
           console.error('[HomeView] get_holdings 响应格式异常:', msgData);
-          showToast('获取持仓失败: 响应格式异常（缺少 holdings 字段）', 'error');
+          showToast('获取持仓失败: 响应格式异常（缺少 holdings 字段）', 'error', 0);
         }
-      } else {
-        const errorMsg = responseBody.message || msgData.message || '未知错误';
-        showToast('获取持仓失败: ' + errorMsg, 'error');
+      } else if (status === 'error') {
+        showToast('获取持仓失败: ' + (errorMessage || '未知错误'), 'error', 0);
       }
       return;
     }
 
-    // 处理错误状态
-    if (msgData && msgData.status === 'error') {
-      const errorMsg = msgData.message || '未知错误'
-      const stockCode = msgData.stockCode || msgData.orderId || ''
-      const errorDetail = stockCode ? `【${stockCode}】${errorMsg}` : errorMsg
+    // ========== 处理条件单操作响应 ==========
+    const ORDER_ACTIONS = ['buy', 'sell', 'create', 'add', 'remove', 'stop', 'cancel', 'create_grid', 'remove_grid'];
+    if (ORDER_ACTIONS.includes(commandAction) && status) {
+      const actionLabels = {
+        buy: '买入条件单', sell: '卖出条件单', create: '创建条件单',
+        add: '添加股票', remove: '移除', stop: '停止条件单',
+        cancel: '取消条件单', create_grid: '创建网格', remove_grid: '删除网格'
+      };
+      const label = actionLabels[commandAction] || commandAction;
+      const stockInfo = stockCode ? `【${stockCode}】` : '';
 
-      // 显示在 Banner 中
-      bannerText.value = `⚠ ${errorDetail}`
-
-      // 如果登录态过期，标记 agent 离线
-      if (msgData.loginExpired) {
-        agentOnline.value = false
-        console.error('[HomeView] Agent 登录态已过期:', msgData)
+      if (status === 'success') {
+        showToast(`${label} ${stockInfo}执行成功`, 'success', 3000);
+      } else if (status === 'error') {
+        const errMsg = stockInfo + (errorMessage || '未知错误');
+        showToast(`${label} 失败: ${errMsg}`, 'error', 0);
+        bannerText.value = `⚠ ${label} 失败: ${errMsg}`;
+        // 登录态过期
+        if (resp.loginExpired) {
+          agentOnline.value = false;
+          console.error('[HomeView] Agent 登录态已过期:', msgData);
+        }
       }
+      return;
+    }
 
-      // 同时弹出一个 toast 提示
-      showToast(`MQTT 错误: ${errorDetail}`, 'error')
+    // ========== 兜底：扁平格式错误（兼容旧版 Agent） ==========
+    if (msgData && msgData.action && msgData.status === 'error') {
+      const errStockCode = msgData.stockCode || msgData.orderId || '';
+      const errDetail = errStockCode ? `【${errStockCode}】${msgData.message || '未知错误'}` : (msgData.message || '未知错误');
+      bannerText.value = `⚠ ${errDetail}`;
+      if (msgData.loginExpired) {
+        agentOnline.value = false;
+      }
+      showToast('MQTT 错误: ' + errDetail, 'error', 0);
     }
   });
 
