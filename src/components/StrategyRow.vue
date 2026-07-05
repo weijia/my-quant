@@ -124,7 +124,15 @@
     </td>
 
     <td v-if="visibleColumns.includes('oscillationGrid')">
-      <div v-if="strategy.oscillationGridSize" class="grid-info">
+      <!-- 远程网格策略 -->
+      <div v-if="remoteGridData.length > 0">
+        <div v-for="(g, gi) in remoteGridData" :key="'rg-' + gi" class="grid-info remote-grid">
+          <span>网格: {{ g.gridSpacing }}元</span>
+          <span class="trade-amount">× {{ g.tradeVolume }}股</span>
+        </div>
+      </div>
+      <!-- 本地网格配置（fallback） -->
+      <div v-else-if="strategy.oscillationGridSize" class="grid-info">
         <span>网格: {{ strategy.oscillationGridSize }}元</span>
         <span class="trade-amount">× {{ strategy.oscillationTradeAmount }}股</span>
       </div>
@@ -132,7 +140,14 @@
     </td>
     
     <td v-if="visibleColumns.includes('decreaseStrategy')">
-      <div v-if="strategy.decreaseStrategies && strategy.decreaseStrategies.length > 0">
+      <!-- 远程下跌条件单 -->
+      <div v-if="remoteDecreaseData.length > 0">
+        <div v-for="(d, di) in remoteDecreaseData" :key="'rd-' + di" class="strategy-tag remote-condition">
+          {{ d.deltaPercentage }}%/{{ d.tradeVolume }}股
+        </div>
+      </div>
+      <!-- 本地下跌策略（fallback） -->
+      <div v-else-if="strategy.decreaseStrategies && strategy.decreaseStrategies.length > 0">
         <div 
           v-for="(decrease, index) in strategy.decreaseStrategies.slice(0, 3)" 
           :key="index"
@@ -148,7 +163,14 @@
     </td>
     
     <td v-if="visibleColumns.includes('increaseStrategy')">
-      <div v-if="strategy.increaseStrategies && strategy.increaseStrategies.length > 0">
+      <!-- 远程上涨条件单 -->
+      <div v-if="remoteIncreaseData.length > 0">
+        <div v-for="(d, di) in remoteIncreaseData" :key="'ri-' + di" class="strategy-tag remote-condition">
+          {{ d.deltaPercentage }}%/{{ d.tradeVolume }}股
+        </div>
+      </div>
+      <!-- 本地加仓策略（fallback） -->
+      <div v-else-if="strategy.increaseStrategies && strategy.increaseStrategies.length > 0">
         <div 
           v-for="(increase, index) in strategy.increaseStrategies.slice(0, 3)" 
           :key="index"
@@ -511,6 +533,10 @@ const props = defineProps({
   holdingsMap: {
     type: Map,
     default: () => new Map()
+  },
+  remoteStrategies: {
+    type: Object,
+    default: () => ({ founder: { default: null, credit: null }, pingan: null })
   }
 })
 
@@ -731,6 +757,58 @@ const updateStrategySelection = () => {
 // 获取有效价格：优先使用策略中的 currentPrice，其次使用手动输入
 const effectivePrice = computed(() => {
   return props.strategy.currentPrice || manualPrice.value || null
+})
+
+// ========== 合并远程策略数据（MQTT list_strategies）到表格列 ==========
+
+// 当前行对应 provider 的远程策略账户类型
+const remoteAccountType = computed(() => {
+  const at = props.strategy.accountType || 'default';
+  return at === 'default' ? 'default' : 'credit';
+})
+
+// 获取远程策略数据（统一按 provider 返回）
+const getRemoteStrategies = () => {
+  const provider = props.strategy.provider || 'founder';
+  if (provider === 'pingan') {
+    const pa = props.remoteStrategies?.pingan;
+    return pa?.strategies || [];
+  }
+  const acct = remoteAccountType.value;
+  const fd = props.remoteStrategies?.founder;
+  return fd?.[acct]?.strategies || [];
+};
+
+// 远程网格策略（震荡时网格）
+const remoteGridData = computed(() => {
+  const stock = props.strategy.stockCode;
+  if (!stock || !props.remoteStrategies) return [];
+  const strategies = getRemoteStrategies();
+  return strategies.filter(s =>
+    s.stockCode === stock && s.strategyType === 'grid' && s.status === 'running'
+  );
+})
+
+// 远程下跌条件单（下跌减仓）
+const remoteDecreaseData = computed(() => {
+  const stock = props.strategy.stockCode;
+  if (!stock || !props.remoteStrategies) return [];
+  const strategies = getRemoteStrategies();
+  return strategies.filter(s =>
+    s.stockCode === stock && s.strategyType === 'condition'
+      && s.side === 'SELL' && s.status === 'running'
+  );
+})
+
+// 远程上涨条件单（上涨加仓）
+const remoteIncreaseData = computed(() => {
+  const stock = props.strategy.stockCode;
+  if (!stock || !props.remoteStrategies) return [];
+  const strategies = getRemoteStrategies();
+  return strategies.filter(s =>
+    s.stockCode === stock && s.strategyType === 'condition'
+      && s.side === 'BUY' && s.status === 'running'
+  );
 })
 
 // 动态持仓数据（从 MQTT 获取）

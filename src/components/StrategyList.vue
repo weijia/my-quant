@@ -157,6 +157,7 @@
             :visible-columns="visibleColumns"
             :use-margin-trade="useMarginTrade"
             :holdings-map="holdingsMap"
+            :remote-strategies="remoteStrategies"
             @edit="$emit('edit-strategy', strategy)"
             @delete="$emit('delete-strategy', strategy.id)"
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
@@ -182,6 +183,7 @@
             :visible-columns="visibleColumns"
             :use-margin-trade="useMarginTrade"
             :holdings-map="holdingsMap"
+            :remote-strategies="remoteStrategies"
             @edit="$emit('edit-strategy', strategy)"
             @delete="$emit('delete-strategy', strategy.id)"
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
@@ -207,6 +209,7 @@
             :visible-columns="visibleColumns"
             :use-margin-trade="useMarginTrade"
             :holdings-map="holdingsMap"
+            :remote-strategies="remoteStrategies"
             @edit="$emit('edit-strategy', strategy)"
             @delete="$emit('delete-strategy', strategy.id)"
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
@@ -272,7 +275,7 @@
                   <tr v-for="s in account.grids" :key="'fg-' + account.key + '-' + s.strategyId">
                     <td class="remote-code">{{ s.stockCode }}</td>
                     <td class="remote-name">{{ s.stockName }}</td>
-                    <td><span class="remote-status" :class="s.status === '运行中' ? 'status-running' : 'status-idle'">{{ s.status }}</span></td>
+                    <td><span class="remote-status" :class="getStatusClass(s.status)">{{ statusLabel(s.status) }}</span></td>
                     <td>{{ s.basicPrice }}</td>
                     <td>{{ s.nowPrice }}</td>
                     <td>{{ s.gridSpacing }}</td>
@@ -308,7 +311,7 @@
                     <td class="remote-code">{{ s.stockCode }}</td>
                     <td class="remote-name">{{ s.stockName }}</td>
                     <td>{{ s.strategyTypeName || '-' }}</td>
-                    <td><span class="remote-status" :class="s.status === 'active' ? 'status-running' : 'status-idle'">{{ s.status }}</span></td>
+                    <td><span class="remote-status" :class="getStatusClass(s.status)">{{ statusLabel(s.status) }}</span></td>
                     <td>{{ s.deltaPercentage }}</td>
                     <td>{{ s.tradeVolume }}</td>
                     <td>{{ s.side }}</td>
@@ -351,19 +354,19 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="s in remoteStrategies.pingan.strategies" :key="'pa-' + (s.ymdId || s.strategyId)">
+            <tr v-for="s in remoteStrategies.pingan.strategies" :key="'pa-' + (s._raw?.ymdId || s.strategyId)">
               <td class="remote-code">{{ s.stockCode }}</td>
               <td class="remote-name">{{ s.stockName }}</td>
-              <td>{{ getPinganStrategyName(s.strategyId) }}</td>
-              <td><span class="remote-status" :class="s.status === '1' ? 'status-running' : 'status-idle'">{{ s.status === '1' ? '运行中' : s.status }}</span></td>
-              <td>{{ s.basePrice }}</td>
-              <td>{{ s.triggerPrice }}</td>
-              <td>{{ s.increase }}</td>
-              <td>{{ s.decrease }}</td>
-              <td>{{ s.buyAmount }}</td>
-              <td>{{ s.saleAmount }}</td>
-              <td>{{ s.createDatetime ? s.createDatetime.slice(0, 10) : '-' }}</td>
-              <td>{{ s.expiryDatetime ? s.expiryDatetime.slice(0, 10) : '-' }}</td>
+              <td>{{ s.strategyTypeName }}</td>
+              <td><span class="remote-status" :class="getStatusClass(s.status)">{{ statusLabel(s.status) }}</span></td>
+              <td>{{ s.basicPrice || '-' }}</td>
+              <td>{{ s._raw?.triggerPrice || '-' }}</td>
+              <td>{{ s.strategyType === 'condition' && s.side === 'BUY' ? s.deltaPercentage : '-' }}</td>
+              <td>{{ s.strategyType === 'condition' && s.side === 'SELL' ? s.deltaPercentage : '-' }}</td>
+              <td>{{ s.tradeVolume || '-' }}</td>
+              <td>{{ s.tradeVolume || '-' }}</td>
+              <td>{{ s._raw?.createDatetime ? s._raw.createDatetime.slice(0, 10) : '-' }}</td>
+              <td>{{ s._raw?.expiryDatetime ? s._raw.expiryDatetime.slice(0, 10) : '-' }}</td>
             </tr>
           </tbody>
         </table>
@@ -678,16 +681,17 @@ const hasAnyRemoteData = computed(() => {
   return hasFounderData || hasPinganData;
 });
 
-// 平安策略类型名称映射
-const pinganStrategyNames = {
-  7: '回落卖出', 8: '反弹买入', 9: '开板卖出',
-  12: '网格交易', 15: '定期定投', 21: '价格条件单',
-  22: '涨跌幅条件单', 23: '止盈止损', 34: 'ETF网格',
-  35: '可转债网格', 38: '均线条件单', 39: '国债逆回购'
+// ========== 统一 status 显示 ==========
+// 标准化后的 status: 'running' | 'paused' | 'expired' | 其他原值
+const statusLabel = (status) => {
+  const map = { running: '运行中', paused: '已暂停', expired: '已过期' }
+  return map[status] || status || '-'
 }
-
-const getPinganStrategyName = (strategyId) => {
-  return pinganStrategyNames[strategyId] || `类型${strategyId}` || '-'
+const getStatusClass = (status) => {
+  if (status === 'running') return 'status-running'
+  if (status === 'paused') return 'status-paused'
+  if (status === 'expired') return 'status-expired'
+  return 'status-idle'
 }
 
 const formatUpdateTime = (ts) => {
@@ -1337,6 +1341,16 @@ const formatUpdateTime = (ts) => {
 .remote-status.status-running {
   background: rgba(40, 167, 69, 0.2);
   color: #28a745;
+}
+
+.remote-status.status-paused {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}
+
+.remote-status.status-expired {
+  background: rgba(220, 53, 69, 0.2);
+  color: #dc3545;
 }
 
 .remote-status.status-idle {
