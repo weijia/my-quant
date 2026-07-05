@@ -14,8 +14,11 @@
     <td v-if="visibleColumns.includes('dynamicHoldings')" class="dynamic-holdings-cell">
       <div v-if="dynamicHolding" class="holding-info">
         <div class="holding-quantity">{{ dynamicHolding.quantity }}</div>
-        <div class="holding-profit" :class="dynamicHolding.profit >= 0 ? 'text-profit' : 'text-loss'">
-          {{ formatDynamicProfit(dynamicHolding.profit) }}
+        <div class="holding-bottom">
+          <span class="holding-value">{{ formatMarketValue(dynamicHolding.marketValue) }}</span>
+          <span class="holding-profit" :class="dynamicHolding.profit >= 0 ? 'text-profit' : 'text-loss'">
+            {{ formatDynamicProfit(dynamicHolding.profit) }}
+          </span>
         </div>
       </div>
       <span v-else class="no-holding">-</span>
@@ -813,14 +816,16 @@ const remoteIncreaseData = computed(() => {
 
 // 动态持仓数据（从 MQTT 获取）
 // holdingsMap 按 provider:accountType 分组，需要根据策略属性定位到正确的分组
-// accountType 依据文档：normal（普通）/ credit（信用）
+// 注意：平安的 holdingsMap key 是 pingan:normal，方正才是 founder:default / founder:credit
 const dynamicHolding = computed(() => {
   if (!props.strategy.stockCode || !props.holdingsMap) return null
   const provider = props.strategy.provider || 'founder'
-  // 策略的 'default' 和 undefined 都映射为 'normal'，'credit' 保持
-  const accountType = (props.strategy.accountType === 'default' || !props.strategy.accountType)
+  // 平安始终用 'normal'，方正用策略的 accountType
+  const accountType = provider === 'pingan'
     ? 'normal'
-    : props.strategy.accountType
+    : ((props.strategy.accountType === 'default' || !props.strategy.accountType)
+      ? 'default'
+      : props.strategy.accountType)
   const key = `${provider}:${accountType}`
   const groupMap = props.holdingsMap.get(key)
   if (!groupMap) return null
@@ -831,6 +836,16 @@ const formatDynamicProfit = (profit) => {
   if (profit == null) return '-'
   const prefix = profit >= 0 ? '+' : ''
   return prefix + profit.toFixed(0)
+}
+
+const formatMarketValue = (value) => {
+  if (value == null || value === '') return '-'
+  const num = typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : value
+  if (isNaN(num)) return '-'
+  if (num >= 10000) {
+    return (num / 10000).toFixed(1) + '万'
+  }
+  return num.toFixed(0)
 }
 
 // 交易总额 = 量 × 价
@@ -2047,8 +2062,27 @@ const getTrendClass = (trend) => {
   color: rgba(255, 255, 255, 0.9);
 }
 
+.holding-bottom {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
 .holding-profit {
   font-size: 10px;
+}
+
+.holding-value {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.text-profit {
+  color: #ff6b6b;
+}
+
+.text-loss {
+  color: #51cf66;
 }
 
 .no-holding {

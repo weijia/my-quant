@@ -400,40 +400,6 @@ const fetchRemoteStrategies = async () => {
   }
 };
 
-// 持仓更新后自动拉取该账户的策略列表
-// holdings accountType ('normal'/'credit') → strategy accountType ('default'/'credit')
-const fetchStrategiesAfterHoldings = async (provider, holdingsAccountTypes) => {
-  if (!mqttConditionService.connected) return;
-
-  // 去重并映射 accountType
-  const strategyAccountTypes = [...new Set(
-    holdingsAccountTypes.map(at => at === 'normal' ? 'default' : at)
-  )];
-
-  console.log(`[HomeView] 持仓已更新，自动拉取策略: provider=${provider}, accountTypes=${strategyAccountTypes}`);
-
-  if (provider === 'founder') {
-    for (const accountType of strategyAccountTypes) {
-      try {
-        await mqttConditionService.refreshGrid({ accountType });
-        await new Promise(r => setTimeout(r, 1500));
-      } catch (e) {
-        console.warn('[fetchStrategiesAfterHoldings] refreshGrid 失败:', e.message);
-      }
-      const result = await mqttConditionService.listStrategies({ provider: 'founder', accountType });
-      if (result && result.msgId) {
-        listStrategiesMsgIdMap.set(result.msgId, { provider: 'founder', accountType });
-      }
-      await new Promise(r => setTimeout(r, 1000));
-    }
-  } else if (provider === 'pingan') {
-    const result = await mqttConditionService.listStrategies({ provider: 'pingan' });
-    if (result && result.msgId) {
-      listStrategiesMsgIdMap.set(result.msgId, { provider: 'pingan', accountType: null });
-    }
-  }
-};
-
 // 浮动笔记
 const noteConfig = appConfigService.getNoteConfig();
 const noteVisible = ref(noteConfig.visible);
@@ -1421,27 +1387,30 @@ onMounted(async () => {
             || holdingsMsgIdMap.get(data.msgId)
             || 'founder';
           holdingsMsgIdMap.delete(data.msgId); // 用完清理
+          // 从旧 Map 浅拷贝外层，保留其他 provider 的数据
           const newMap = new Map(holdingsMap.value);
 
-          // 按 accountType 分组存储，避免不同账户类型互相覆盖
-          // accountType 依据文档：normal（普通）/ credit（信用），默认 normal
+          // 清空该 provider 下所有已知账户类型的旧数据
+          // 不能只清响应中出现的类型，否则某类型为空时会残留旧数据
+          const providerAccountTypes = {
+            founder: ['default', 'credit'],
+            pingan: ['normal']
+          };
+          const knownTypes = providerAccountTypes[provider] || ['normal'];
+          for (const at of knownTypes) {
+            newMap.set(`${provider}:${at}`, new Map());
+          }
+
+          // 再写入最新持仓数据
           for (const h of payload.holdings) {
             if (!h.stockCode) continue;
             const accountType = h.accountType || 'normal';
             const key = `${provider}:${accountType}`;
-            if (!newMap.has(key)) {
-              newMap.set(key, new Map());
-            }
             newMap.get(key).set(h.stockCode, h);
           }
 
           holdingsMap.value = newMap;
 
-          // 收集本次持仓涉及的 accountType，用于后续拉取策略
-          const accountTypesForStrategy = new Set();
-          for (const h of payload.holdings) {
-            if (h.stockCode) accountTypesForStrategy.add(h.accountType || 'normal');
-          }
 
           // 统计本次更新的分组数量
           let totalCount = 0;
@@ -1449,61 +1418,88 @@ onMounted(async () => {
             if (h.stockCode) totalCount++;
           }
 
-          // 【核心】将持仓数据同步到策略表格行
-          // 每个持仓 stockCode 对应一个策略行，更新 netPosition/marketValue/currentPrice
-          if (totalCount > 0) {
-            const existingStrategies = strategies.value;
-            const existingStockMap = new Map();
-            for (const s of existingStrategies) {
-              existingStockMap.set(s.stockCode, s);
+          // 以持仓为准同步策略行：有持仓则建，无持仓则删
+          const strategyProvider = provider === 'pingan' ? 'pingan' : 'founder';
+          const holdingsAccountToStrategy = (at) =>
+            at === 'normal' || !at ? 'default' : at;
+
+          // 收集持仓 stockCode 集合
+          const holdingsStockCodeSet = new Set();
+          for (const h of (payload.holdings || [])) {
+            if (h.stockCode) holdingsStockCodeSet.add(h.stockCode);
+          }
+
+          // 判断策略是否属于本次 provider（始终覆盖该 provider 的所有已知 accountType，避免漏删）
+          const allAccountTypes = provider === 'founder' ? ['default', 'credit'] : ['normal'];
+          const targetAccountTypes = new Set(allAccountTypes.map(at => holdingsAccountToStrategy(at)));
+
+          const shouldMatch = (s) => {
+            // provider 缺失的视为 founder（兼容老数据）
+            const sp = s.provider || 'founder';
+            if (sp !== strategyProvider) return false;
+            const sAt = (s.accountType === 'default' || !s.accountType) ? 'default' : s.accountType;
+            return targetAccountTypes.has(holdingsAccountToStrategy(sAt));
+          };
+
+          // Step 1: 删除不在持仓中的策略（DB操作）
+          let deletedCount = 0;
+          for (const s of strategies.value) {
+            if (shouldMatch(s) && !holdingsStockCodeSet.has(s.stockCode)) {
+              await strategyService.deleteStrategy(s._id);
+              deletedCount++;
             }
+          }
 
-            const holdingsAccountToStrategy = (at) =>
-              at === 'normal' || !at ? 'default' : at;
+          // Step 2: 新增持仓中有但策略中没有的股票（DB操作）
+          let createdCount = 0;
+          for (const h of (payload.holdings || [])) {
+            if (!h.stockCode) continue;
+            const exists = strategies.value.some(s =>
+              s.stockCode === h.stockCode && (s.provider || 'founder') === strategyProvider
+            );
+            if (!exists) {
+              await strategyService.addStrategy({
+                name: h.stockName || h.stockCode,
+                stockCode: h.stockCode,
+                accountType: holdingsAccountToStrategy(h.accountType),
+                isMarginAccount: h.accountType === 'credit',
+                provider: strategyProvider,
+                netPosition: 0,
+                marketValue: '',
+                currentPrice: null
+              });
+              createdCount++;
+            }
+          }
 
-            const strategyProvider = provider === 'pingan' ? 'pingan' : 'founder';
-            let syncedCount = 0;
-            let newCount = 0;
+          // Step 3: DB有变更则 reload，拿到带计算属性的最新列表
+          if (deletedCount > 0 || createdCount > 0) {
+            await loadStrategies();
+          }
 
-            for (const h of payload.holdings) {
-              if (!h.stockCode) continue;
-              const strategyAccountType = holdingsAccountToStrategy(h.accountType);
-              const existing = existingStockMap.get(h.stockCode);
-
-              if (existing) {
-                // 更新已有策略行的持仓数据
-                existing.netPosition = h.quantity ?? 0;
-                if (h.marketValue != null) existing.marketValue = h.marketValue;
-                if (h.currentPrice != null) existing.currentPrice = h.currentPrice;
-                if (h.stockName) existing.name = h.stockName;
-                existing.provider = existing.provider || strategyProvider;
-                if (existing.accountType === 'default' && h.accountType === 'credit') {
-                  existing.accountType = 'credit';
-                }
-                syncedCount++;
-              } else {
-                // 持仓中有但策略中没有 → 自动创建策略行
-                const newStrategy = {
-                  name: h.stockName || h.stockCode,
-                  stockCode: h.stockCode,
-                  accountType: strategyAccountType,
-                  isMarginAccount: h.accountType === 'credit',
-                  provider: strategyProvider,
-                  netPosition: h.quantity ?? 0,
-                  marketValue: h.marketValue ?? '',
-                  currentPrice: h.currentPrice ?? null
-                };
-                await strategyService.addStrategy(newStrategy);
-                newCount++;
+          // Step 4: 在最终 strategies.value 上写入持仓数据（纯内存，不会被覆盖）
+          let syncedCount = 0;
+          for (const h of (payload.holdings || [])) {
+            if (!h.stockCode) continue;
+            const s = strategies.value.find(
+              s => s.stockCode === h.stockCode && (s.provider || 'founder') === strategyProvider
+            );
+            if (s) {
+              s.netPosition = h.quantity ?? 0;
+              if (h.marketValue != null) s.marketValue = h.marketValue;
+              if (h.currentPrice != null) s.currentPrice = h.currentPrice;
+              if (h.stockName) s.name = h.stockName;
+              if (s.accountType === 'default' && h.accountType === 'credit') {
+                s.accountType = 'credit';
               }
+              syncedCount++;
             }
+          }
 
-            // 重新加载策略列表（包含新增的行）
-            if (newCount > 0) {
-              await loadStrategies();
-            }
-
-            console.log(`[HomeView] 持仓同步完成: 更新 ${syncedCount} 行, 新增 ${newCount} 行`);
+          if (totalCount > 0) {
+            console.log(`[HomeView] 持仓同步完成: 删除 ${deletedCount} 行, 新增 ${createdCount} 行, 更新 ${syncedCount} 行`);
+          } else {
+            console.log(`[HomeView] 持仓同步完成: 删除 ${deletedCount} 行 (无持仓)`);
           }
 
           if (totalCount === 0) {
@@ -1512,10 +1508,7 @@ onMounted(async () => {
             showToast(`已更新 ${totalCount} 只持仓 (${provider})`, 'success', 3000);
           }
 
-          // 持仓更新后，自动拉取对应账户的策略列表
-          if (totalCount > 0 && accountTypesForStrategy.size > 0) {
-            fetchStrategiesAfterHoldings(provider, [...accountTypesForStrategy]);
-          }
+
         } else {
           console.error('[HomeView] get_holdings 响应格式异常:', msgData);
           showToast('获取持仓失败: 响应格式异常（缺少 holdings 字段）', 'error', 0);
