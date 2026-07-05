@@ -102,7 +102,8 @@ class AppConfigService {
     const localUI = this.config?.ui ? JSON.parse(JSON.stringify(this.config.ui)) : null
     const localMarketCloseBuy = this.config?.marketCloseBuy ? JSON.parse(JSON.stringify(this.config.marketCloseBuy)) : null
     const localMarketCloseSell = this.config?.marketCloseSell ? JSON.parse(JSON.stringify(this.config.marketCloseSell)) : null
-    const localMqtt = this.config?.mqtt ? JSON.parse(JSON.stringify(this.config.mqtt)) : null
+    // 保留本地 MQTT clientId（每个客户端必须唯一）
+    const localMqttClientId = this.config?.mqtt?.clientId || null
     this.config = this.mergeWithDefaults(remoteConfig)
     // 恢复本地 UI 配置（如果存在）
     if (localUI) {
@@ -115,9 +116,9 @@ class AppConfigService {
     if (localMarketCloseSell) {
       this.config.marketCloseSell = localMarketCloseSell
     }
-    // 恢复本地 MQTT 配置（如果本地有、远程没有或更旧）
-    if (localMqtt) {
-      this.config.mqtt = { ...this.config.mqtt, ...localMqtt }
+    // 恢复本地 MQTT clientId（每个客户端必须唯一，其余配置以远程为准）
+    if (localMqttClientId) {
+      this.config.mqtt.clientId = localMqttClientId
     }
     this.saveToLocalStorage()
     console.log('[AppConfig] 已从远程合并配置:', JSON.stringify(this.config.trendStrategyMapping))

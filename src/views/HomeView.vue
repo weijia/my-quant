@@ -52,6 +52,16 @@
               <path d="M16 16h5v5"/>
             </svg>
           </button>
+          <button @click="fetchRemoteStrategies" class="btn btn-secondary" :class="{ active: loadingRemoteStrategies }" title="通过 MQTT 获取条件单和网格策略" :disabled="loadingRemoteStrategies">
+            <svg v-if="!loadingRemoteStrategies" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin-icon">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+            获取策略
+          </button>
           <button @click="showAddDialog" class="btn btn-primary" title="添加策略">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 5v14"/>
@@ -162,6 +172,7 @@
         :agent-online="agentOnline"
         :holdings-map="holdingsMap"
         :loading-holdings="loadingDynamicHoldings"
+        :remote-strategies="remoteStrategies"
         @edit-strategy="editStrategy"
         @delete-strategy="deleteStrategy"
         @update-trend-judgment="updateTrendJudgment"
@@ -241,7 +252,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { strategyService } from '../services/StrategyService'
 import { trendService } from '../services/TrendService'
@@ -269,6 +280,14 @@ const agentOnline = ref(false);
 const searchQuery = ref('');
 const searchInput = ref(null);
 const bannerText = ref(appConfigService.getBannerText());
+
+// 远程策略数据（通过 MQTT 获取的条件单和网格策略）
+// founder: { default: { total, strategies, updatedAt }, credit: { total, strategies, updatedAt } }
+// pingan:  { total, strategies, updatedAt }
+const remoteStrategies = ref({ founder: { default: null, credit: null }, pingan: null });
+const loadingRemoteStrategies = ref(false);
+// 用 msgId 追踪 list_strategies 响应对应的 provider 和 accountType
+const listStrategiesMsgIdMap = new Map(); // msgId → { provider, accountType }
 
 // Toast 提示
 const toastMessage = ref('');
@@ -337,6 +356,47 @@ const refreshAllHoldings = async () => {
   } catch (e) {
     showToast('获取持仓失败: ' + e.message, 'error');
     loadingDynamicHoldings.value = false;
+  }
+};
+
+// 通过 MQTT 获取条件单和网格策略
+const fetchRemoteStrategies = async () => {
+  if (!mqttConditionService.connected) {
+    showToast('MQTT 未连接，无法获取策略数据', 'error');
+    return;
+  }
+  loadingRemoteStrategies.value = true;
+
+  // 方正：按账户类型分别刷新网格数据 + 获取策略列表
+  const founderAccountTypes = ['default', 'credit'];
+  try {
+    for (const accountType of founderAccountTypes) {
+      await mqttConditionService.refreshGrid({ accountType });
+      await new Promise(r => setTimeout(r, 1500));
+    }
+  } catch (e) {
+    console.warn('[fetchRemoteStrategies] refresh_grid 失败:', e.message);
+  }
+  try {
+    for (const accountType of founderAccountTypes) {
+      const result = await mqttConditionService.listStrategies({ provider: 'founder', accountType });
+      if (result && result.msgId) {
+        listStrategiesMsgIdMap.set(result.msgId, { provider: 'founder', accountType });
+      }
+      await new Promise(r => setTimeout(r, 1000));
+    }
+    // 平安
+    const paResult = await mqttConditionService.listStrategies({ provider: 'pingan' });
+    if (paResult && paResult.msgId) {
+      listStrategiesMsgIdMap.set(paResult.msgId, { provider: 'pingan', accountType: null });
+    }
+    // 等响应回来后再关闭 loading（最多等 15 秒）
+    setTimeout(() => {
+      loadingRemoteStrategies.value = false;
+    }, 15000);
+  } catch (e) {
+    showToast('获取策略失败: ' + e.message, 'error');
+    loadingRemoteStrategies.value = false;
   }
 };
 
@@ -428,6 +488,20 @@ const stopResize = () => {
     appConfigService.setNoteSize(noteWidth.value, noteHeight.value);
   }
 };
+
+// 用于存储组件生命周期内注册的 document 事件监听器引用
+let _onFullscreenChange = null;
+
+// 组件卸载时清理 document 事件监听器，防止 HMR 时出现 __vnode 错误
+onBeforeUnmount(() => {
+  document.removeEventListener('mousemove', onDrag);
+  document.removeEventListener('mouseup', stopDrag);
+  document.removeEventListener('mousemove', onResize);
+  document.removeEventListener('mouseup', stopResize);
+  if (_onFullscreenChange) {
+    document.removeEventListener('fullscreenchange', _onFullscreenChange);
+  }
+});
 
 const isFullscreen = ref(false);
 
@@ -1226,9 +1300,10 @@ onMounted(async () => {
   console.log('HomeView: 开始初始化...');
 
   // 监听全屏状态变化
-  document.addEventListener('fullscreenchange', () => {
+  _onFullscreenChange = () => {
     isFullscreen.value = !!document.fullscreenElement;
-  });
+  };
+  document.addEventListener('fullscreenchange', _onFullscreenChange);
 
   // 尝试连接 MQTT
   try {
@@ -1257,6 +1332,46 @@ onMounted(async () => {
     const payload = resp.data;
     const stockCode = resp.stockCode;
     const errorMessage = resp.message;
+
+    // ========== 处理策略列表响应（条件单 + 网格） ==========
+    if (commandAction === 'list_strategies') {
+      if (status === 'success') {
+        const tracked = listStrategiesMsgIdMap.get(data.msgId);
+        const provider = (payload && payload.provider)
+          || (tracked && tracked.provider)
+          || 'founder';
+        const accountType = (tracked && tracked.accountType) || null;
+        listStrategiesMsgIdMap.delete(data.msgId);
+
+        const strategies = (payload && payload.strategies) || [];
+        const total = (payload && payload.total) || strategies.length;
+
+        if (provider === 'founder' && accountType) {
+          // 方正按账户类型分别存储
+          remoteStrategies.value = {
+            ...remoteStrategies.value,
+            founder: {
+              ...remoteStrategies.value.founder,
+              [accountType]: { total, strategies, updatedAt: Date.now() }
+            }
+          };
+          const label = accountType === 'credit' ? '信用账户' : '普通账户';
+          showToast(`已获取 方正-${label} 策略：共 ${total} 条`, 'success', 3000);
+        } else {
+          // 平安直接存储
+          remoteStrategies.value = {
+            ...remoteStrategies.value,
+            [provider]: { total, strategies, updatedAt: Date.now() }
+          };
+          showToast(`已获取 ${provider === 'pingan' ? '平安' : '方正'} 策略：共 ${total} 条`, 'success', 3000);
+        }
+        loadingRemoteStrategies.value = false;
+      } else if (status === 'error') {
+        showToast('获取策略失败: ' + (errorMessage || '未知错误'), 'error', 0);
+        loadingRemoteStrategies.value = false;
+      }
+      return;
+    }
 
     // ========== 处理持仓响应 ==========
     if (commandAction === 'get_holdings') {
@@ -1309,12 +1424,13 @@ onMounted(async () => {
     }
 
     // ========== 处理条件单操作响应 ==========
-    const ORDER_ACTIONS = ['buy', 'sell', 'create', 'add', 'remove', 'stop', 'cancel', 'create_grid', 'remove_grid'];
+    const ORDER_ACTIONS = ['buy', 'sell', 'create', 'add', 'remove', 'stop', 'cancel', 'create_grid', 'remove_grid', 'list_strategies', 'refresh_grid'];
     if (ORDER_ACTIONS.includes(commandAction) && status) {
       const actionLabels = {
         buy: '买入条件单', sell: '卖出条件单', create: '创建条件单',
         add: '添加股票', remove: '移除', stop: '停止条件单',
-        cancel: '取消条件单', create_grid: '创建网格', remove_grid: '删除网格'
+        cancel: '取消条件单', create_grid: '创建网格', remove_grid: '删除网格',
+        list_strategies: '获取策略列表', refresh_grid: '刷新网格数据'
       };
       const label = actionLabels[commandAction] || commandAction;
       const stockInfo = stockCode ? `【${stockCode}】` : '';
@@ -1960,6 +2076,16 @@ onMounted(async () => {
   background: rgba(78, 205, 196, 0.2);
   border-color: rgba(78, 205, 196, 0.4);
   color: #4ecdc4;
+}
+
+/* 旋转动画 */
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* Toast 提示 */

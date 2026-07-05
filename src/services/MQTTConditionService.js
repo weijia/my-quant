@@ -452,6 +452,37 @@ class MQTTConditionOrderService {
     if (accountType) data.accountType = accountType;
     return this.sendCommand('get_holdings', data);
   }
+
+  /**
+   * 获取策略单列表（条件单 + 网格策略）
+   * @param {Object} params
+   * @param {string} params.provider - 券商类型：'pingan'（平安）或 'founder'（方正，缺省）
+   * @param {string} params.stockCode - 按股票代码筛选，空=全部
+   * @param {string} params.status - 按状态筛选，空=全部
+   * @param {string} params.type - 仅 founder：策略类型 'grid'/'condition'，空=全部
+   * @param {string} params.accountType - 仅 founder：账户类型 'default'/'credit'，空=全部
+   * @returns {Promise<Object>} 返回策略单数据
+   */
+  async listStrategies({ provider = 'founder', stockCode = '', status = '', type = '', accountType = '' }) {
+    const data = { provider };
+    if (stockCode) data.stockCode = stockCode;
+    if (status) data.status = status;
+    if (type) data.type = type;
+    if (accountType) data.accountType = accountType;
+    return this.sendCommand('list_strategies', data);
+  }
+
+  /**
+   * 刷新网格策略（仅 founder，从 DOM 解析刷新）
+   * @param {Object} params
+   * @param {string} params.accountType - 账户类型
+   * @returns {Promise<Object>}
+   */
+  async refreshGrid({ accountType } = {}) {
+    const data = {};
+    if (accountType) data.accountType = accountType;
+    return this.sendCommand('refresh_grid', data);
+  }
 }
 
 // 导出单例

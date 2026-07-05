@@ -230,6 +230,146 @@
       </table>
     </div>
     
+    <!-- 远程策略数据（通过 MQTT list_strategies 获取的条件单和网格策略） -->
+    <div v-if="hasAnyRemoteData" class="remote-strategies-section">
+      <div class="section-divider">
+        <span class="section-divider-text">📡 MQTT 远程策略数据</span>
+      </div>
+
+      <!-- 方正证券远程策略 — 按账户类型分组 -->
+      <template v-for="account in founderAccounts" :key="'fa-' + account.key">
+        <div v-if="account.data && account.data.strategies.length > 0" class="remote-provider-section">
+          <div class="remote-provider-header" @click="toggleFounderAccount(account.key)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :style="{ transform: showFounderAccounts[account.key] ? 'rotate(90deg)' : 'rotate(0deg)' }">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+            <span class="provider-badge founder">方正证券</span>
+            <span class="account-type-badge" :class="'account-' + account.key">{{ account.label }}</span>
+            <span class="provider-count">{{ account.data.total }} 条策略</span>
+            <span class="update-time">{{ formatUpdateTime(account.data.updatedAt) }}</span>
+          </div>
+          <template v-if="showFounderAccounts[account.key]">
+            <!-- 网格策略 -->
+            <div v-if="account.grids.length > 0" class="remote-subsection">
+              <div class="remote-subsection-header">网格策略 ({{ account.grids.length }})</div>
+              <table class="remote-table">
+                <thead>
+                  <tr>
+                    <th>股票</th>
+                    <th>名称</th>
+                    <th>状态</th>
+                    <th>基准价</th>
+                    <th>现价</th>
+                    <th>间距</th>
+                    <th>区间</th>
+                    <th>盈亏</th>
+                    <th>净持仓</th>
+                    <th>已用资金</th>
+                    <th>过期</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="s in account.grids" :key="'fg-' + account.key + '-' + s.strategyId">
+                    <td class="remote-code">{{ s.stockCode }}</td>
+                    <td class="remote-name">{{ s.stockName }}</td>
+                    <td><span class="remote-status" :class="s.status === '运行中' ? 'status-running' : 'status-idle'">{{ s.status }}</span></td>
+                    <td>{{ s.basicPrice }}</td>
+                    <td>{{ s.nowPrice }}</td>
+                    <td>{{ s.gridSpacing }}</td>
+                    <td>{{ s.priceRange }}</td>
+                    <td :class="parseFloat(s.profit) >= 0 ? 'profit-positive' : 'profit-negative'">{{ s.profit }}</td>
+                    <td>{{ s.netPosition }}</td>
+                    <td>{{ s.costFunds }}</td>
+                    <td :class="s.expireStatus === 'expiring' ? 'expiring' : ''">{{ s.expiredTime ? s.expiredTime.slice(0, 10) : '-' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <!-- 条件单 -->
+            <div v-if="account.conditions.length > 0" class="remote-subsection">
+              <div class="remote-subsection-header">条件单 ({{ account.conditions.length }})</div>
+              <table class="remote-table">
+                <thead>
+                  <tr>
+                    <th>股票</th>
+                    <th>名称</th>
+                    <th>类型</th>
+                    <th>状态</th>
+                    <th>涨跌%</th>
+                    <th>交易量</th>
+                    <th>方向</th>
+                    <th>账户</th>
+                    <th>创建</th>
+                    <th>结束</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="s in account.conditions" :key="'fc-' + account.key + '-' + s.strategyId">
+                    <td class="remote-code">{{ s.stockCode }}</td>
+                    <td class="remote-name">{{ s.stockName }}</td>
+                    <td>{{ s.strategyTypeName || '-' }}</td>
+                    <td><span class="remote-status" :class="s.status === 'active' ? 'status-running' : 'status-idle'">{{ s.status }}</span></td>
+                    <td>{{ s.deltaPercentage }}</td>
+                    <td>{{ s.tradeVolume }}</td>
+                    <td>{{ s.side }}</td>
+                    <td>{{ s.accountType }}</td>
+                    <td>{{ s.createDate }}</td>
+                    <td>{{ s.endDate || '-' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- 平安证券远程策略 -->
+      <div v-if="remoteStrategies.pingan && remoteStrategies.pingan.strategies.length > 0" class="remote-provider-section">
+        <div class="remote-provider-header pingan-header" @click="showRemotePingan = !showRemotePingan">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :style="{ transform: showRemotePingan ? 'rotate(90deg)' : 'rotate(0deg)' }">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+          <span class="provider-badge pingan">平安证券</span>
+          <span class="provider-count">{{ remoteStrategies.pingan.total }} 条策略</span>
+          <span class="update-time">{{ formatUpdateTime(remoteStrategies.pingan.updatedAt) }}</span>
+        </div>
+        <table v-if="showRemotePingan" class="remote-table">
+          <thead>
+            <tr>
+              <th>股票</th>
+              <th>名称</th>
+              <th>类型</th>
+              <th>状态</th>
+              <th>基准价</th>
+              <th>触发价</th>
+              <th>涨幅</th>
+              <th>跌幅</th>
+              <th>买入额</th>
+              <th>卖出额</th>
+              <th>创建</th>
+              <th>过期</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="s in remoteStrategies.pingan.strategies" :key="'pa-' + (s.ymdId || s.strategyId)">
+              <td class="remote-code">{{ s.stockCode }}</td>
+              <td class="remote-name">{{ s.stockName }}</td>
+              <td>{{ getPinganStrategyName(s.strategyId) }}</td>
+              <td><span class="remote-status" :class="s.status === '1' ? 'status-running' : 'status-idle'">{{ s.status === '1' ? '运行中' : s.status }}</span></td>
+              <td>{{ s.basePrice }}</td>
+              <td>{{ s.triggerPrice }}</td>
+              <td>{{ s.increase }}</td>
+              <td>{{ s.decrease }}</td>
+              <td>{{ s.buyAmount }}</td>
+              <td>{{ s.saleAmount }}</td>
+              <td>{{ s.createDatetime ? s.createDatetime.slice(0, 10) : '-' }}</td>
+              <td>{{ s.expiryDatetime ? s.expiryDatetime.slice(0, 10) : '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="dialog-overlay" v-if="showColumnSelectDialog" @click="showColumnSelectDialog = false">
       <div class="dialog-content" @click.stop>
         <div class="dialog-header">
@@ -258,7 +398,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import StrategyRow from './StrategyRow.vue'
 import appConfigService from '../services/AppConfigService.js'
 
@@ -294,6 +434,10 @@ const props = defineProps({
   loadingHoldings: {
     type: Boolean,
     default: false
+  },
+  remoteStrategies: {
+    type: Object,
+    default: () => ({ founder: { default: null, credit: null }, pingan: null })
   }
 })
 
@@ -495,6 +639,61 @@ const resetColumns = () => {
   visibleColumns.value = [...getDefaultVisibleColumns()]
   const storageKey = isMobileDevice() ? 'mobileVisibleColumns' : 'desktopVisibleColumns'
   localStorage.setItem(storageKey, JSON.stringify(visibleColumns.value))
+}
+
+// ========== 远程策略数据相关 ==========
+const showFounderAccounts = reactive({ default: false, credit: false });
+const showRemotePingan = ref(false);
+
+const toggleFounderAccount = (key) => {
+  showFounderAccounts[key] = !showFounderAccounts[key];
+};
+
+// 账户类型配置
+const ACCOUNT_TYPES = [
+  { key: 'default', label: '普通账户' },
+  { key: 'credit', label: '信用账户' }
+];
+
+// 方正：按账户类型组织数据（grids + conditions）
+const founderAccounts = computed(() => {
+  return ACCOUNT_TYPES.map(acc => {
+    const data = props.remoteStrategies?.founder?.[acc.key];
+    if (!data || !data.strategies) {
+      return { ...acc, data: null, grids: [], conditions: [] };
+    }
+    const grids = data.strategies.filter(s => s.strategyType === 'grid');
+    const conditions = data.strategies.filter(s => s.strategyType === 'condition');
+    return { ...acc, data, grids, conditions };
+  });
+});
+
+const hasAnyRemoteData = computed(() => {
+  const founder = props.remoteStrategies?.founder;
+  const hasFounderData = founder && (
+    (founder.default && founder.default.strategies?.length > 0)
+    || (founder.credit && founder.credit.strategies?.length > 0)
+  );
+  const hasPinganData = props.remoteStrategies?.pingan?.strategies?.length > 0;
+  return hasFounderData || hasPinganData;
+});
+
+// 平安策略类型名称映射
+const pinganStrategyNames = {
+  7: '回落卖出', 8: '反弹买入', 9: '开板卖出',
+  12: '网格交易', 15: '定期定投', 21: '价格条件单',
+  22: '涨跌幅条件单', 23: '止盈止损', 34: 'ETF网格',
+  35: '可转债网格', 38: '均线条件单', 39: '国债逆回购'
+}
+
+const getPinganStrategyName = (strategyId) => {
+  return pinganStrategyNames[strategyId] || `类型${strategyId}` || '-'
+}
+
+const formatUpdateTime = (ts) => {
+  if (!ts) return ''
+  const d = new Date(ts)
+  return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 </script>
 
@@ -985,5 +1184,175 @@ const resetColumns = () => {
   .strategy-table {
     width: 100%;
   }
+}
+
+/* ========== 远程策略数据样式 ========== */
+.remote-strategies-section {
+  margin-top: 16px;
+  padding: 8px 0;
+}
+
+.section-divider {
+  display: flex;
+  align-items: center;
+  padding: 6px 15px;
+  background: rgba(78, 205, 196, 0.1);
+  border-bottom: 1px solid rgba(78, 205, 196, 0.3);
+}
+
+.section-divider-text {
+  font-size: 13px;
+  font-weight: bold;
+  color: #4ecdc4;
+}
+
+.remote-provider-section {
+  margin: 8px 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.remote-provider-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 15px;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+}
+
+.remote-provider-header:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.remote-provider-header svg {
+  transition: transform 0.2s ease;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.remote-provider-header.pingan-header {
+  background: rgba(78, 205, 196, 0.08);
+}
+
+.provider-badge {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.provider-badge.founder {
+  background: rgba(253, 126, 20, 0.2);
+  color: #fd7e14;
+}
+
+.provider-badge.pingan {
+  background: rgba(78, 205, 196, 0.2);
+  color: #4ecdc4;
+}
+
+.account-type-badge {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: normal;
+}
+
+.account-type-badge.account-default {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.account-type-badge.account-credit {
+  background: rgba(0, 123, 255, 0.15);
+  color: #4da6ff;
+}
+
+.provider-count {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.update-time {
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 11px;
+}
+
+.remote-subsection {
+  padding: 0 8px 8px;
+}
+
+.remote-subsection-header {
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 4px;
+}
+
+.remote-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.remote-table th,
+.remote-table td {
+  padding: 4px 8px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  white-space: nowrap;
+}
+
+.remote-table th {
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: normal;
+  font-size: 10px;
+}
+
+.remote-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.remote-code {
+  color: rgba(255, 255, 255, 0.5);
+  font-family: monospace;
+}
+
+.remote-name {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.remote-status {
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.remote-status.status-running {
+  background: rgba(40, 167, 69, 0.2);
+  color: #28a745;
+}
+
+.remote-status.status-idle {
+  background: rgba(108, 117, 125, 0.2);
+  color: #6c757d;
+}
+
+.profit-positive {
+  color: #e74c3c;
+}
+
+.profit-negative {
+  color: #28a745;
+}
+
+.expiring {
+  color: #fd7e14;
 }
 </style>
