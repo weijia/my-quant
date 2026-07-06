@@ -1331,7 +1331,8 @@ onMounted(async () => {
     const status = resp.status || msgData?.status;
     const payload = resp.data;
     const stockCode = resp.stockCode;
-    const errorMessage = resp.message;
+    const errorMessage = resp.message || (payload && typeof payload === 'object' && payload.message);
+    console.log('[HomeView] 响应解析:', { isResponse, commandAction, status, stockCode, errorMessage, respKeys: Object.keys(resp||{}) });
 
     // ========== 处理策略列表响应（条件单 + 网格） ==========
     if (commandAction === 'list_strategies') {
@@ -1460,12 +1461,6 @@ onMounted(async () => {
             );
             if (s) {
               s.netPosition = h.quantity ?? 0;
-              if (h.marketValue != null) s.marketValue = h.marketValue;
-              if (h.currentPrice != null) s.currentPrice = h.currentPrice;
-              if (h.stockName) s.name = h.stockName;
-              if (s.accountType === 'default' && h.accountType === 'credit') {
-                s.accountType = 'credit';
-              }
               syncedCount++;
             }
           }
