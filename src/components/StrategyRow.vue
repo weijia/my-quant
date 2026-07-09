@@ -484,6 +484,22 @@
       <span v-else class="stock-analysis-empty">-</span>
     </td>
 
+    <td v-if="visibleColumns.includes('adx')" class="adx-cell">
+      <div v-if="strategy.adx != null" class="adx-content" @click="showAdxTip = !showAdxTip">
+        <span class="adx-value" :class="getAdxClass(strategy.adx)" :title="getAdxTooltip(strategy.adx)">
+          {{ strategy.adx.toFixed(1) }}
+        </span>
+        <span class="adx-hint" :class="getAdxClass(strategy.adx)">{{ getAdxHint(strategy.adx) }}</span>
+        <span v-if="showAdxTip" class="trend-tip adx-tip" @click.stop="showAdxTip = false">
+          ADX: {{ strategy.adx.toFixed(1) }} · {{ getAdxTooltip(strategy.adx) }}
+          <template v-if="strategy.plusDi != null || strategy.minusDi != null">
+            <br>+DI: {{ strategy.plusDi != null ? strategy.plusDi.toFixed(1) : '-' }} · -DI: {{ strategy.minusDi != null ? strategy.minusDi.toFixed(1) : '-' }}
+          </template>
+        </span>
+      </div>
+      <span v-else class="adx-empty">-</span>
+    </td>
+
     <td v-if="visibleColumns.includes('actions')" class="actions-cell">
       <button class="action-btn edit-btn" @click="$emit('edit', strategy)" title="编辑">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -882,6 +898,7 @@ const sendingBuy = ref(false)
 const sendingSell = ref(false)
 const sendingBoth = ref(false)
 const showTrendTip = ref(false)
+const showAdxTip = ref(false)
 
 // 高级快捷下单设置
 const defaultTradeAmount = ref(26000)  // 缺省下单金额
@@ -1601,6 +1618,34 @@ const getTrendTooltip = (trend) => {
     'unset': '未设置'
   }
   return tooltips[trend] || '未设置'
+}
+
+// ADX 趋势强度分级（依据 my-data 文档 trendStrengthMetrics.adx）
+// <20 震荡, 20–25 趋势初现, 25–50 强趋势, >50 极强趋势
+const getAdxHint = (adx) => {
+  if (adx == null) return '数据不足'
+  if (adx < 20) return '震荡'
+  if (adx < 25) return '趋势初现'
+  if (adx <= 50) return '强趋势'
+  return '极强趋势'
+}
+
+// ADX 趋势提示详情
+const getAdxTooltip = (adx) => {
+  if (adx == null) return '数据不足：趋势文件未提供 ADX 值'
+  if (adx < 20) return '震荡行情：趋势不明显，建议以网格策略为主'
+  if (adx < 25) return '趋势初现：方向开始清晰，但仍较弱'
+  if (adx <= 50) return '强趋势：趋势明显，可顺势而为'
+  return '极强趋势：趋势非常强劲，注意顺势持仓'
+}
+
+// ADX 颜色样式类
+const getAdxClass = (adx) => {
+  if (adx == null) return 'adx-none'
+  if (adx < 20) return 'adx-oscillation'
+  if (adx < 25) return 'adx-emerging'
+  if (adx <= 50) return 'adx-strong'
+  return 'adx-extreme'
 }
 
 // 获取账户类型
@@ -3118,6 +3163,49 @@ const getTrendClass = (trend) => {
 
 .stock-analysis-empty {
   color: rgba(255, 255, 255, 0.3);
+}
+
+/* ADX 趋势强度列 */
+.adx-cell {
+  padding: 8px 6px;
+  text-align: center;
+  position: relative;
+}
+
+.adx-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.adx-value {
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.adx-hint {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.adx-empty {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* ADX 分级配色 */
+.adx-none { color: rgba(255, 255, 255, 0.3); }
+.adx-oscillation { color: #ffc107; }
+.adx-emerging { color: #17a2b8; }
+.adx-strong { color: #28a745; }
+.adx-extreme { color: #dc3545; }
+
+.adx-tip {
+  max-width: 220px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.4;
 }
 
 @media (max-width: 768px) {

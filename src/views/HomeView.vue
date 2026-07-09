@@ -653,6 +653,17 @@ const loadStrategies = async () => {
               console.log(`[调试-stockAnalysis] 策略: ${strategy.name}(${strategy.stockCode}), 注入 stockAnalysis:`, trend.stockAnalysis);
             }
 
+            // 注入 ADX 趋势强度指标
+            if (trend.adx != null) {
+              strategy.adx = trend.adx;
+            }
+            if (trend.plusDi != null) {
+              strategy.plusDi = trend.plusDi;
+            }
+            if (trend.minusDi != null) {
+              strategy.minusDi = trend.minusDi;
+            }
+
             matchedCount++;
           } else {
             // 【调试】trend 匹配失败
@@ -1307,6 +1318,10 @@ const getTrendByStockCode = (stockCode, trendData) => {
       // 添加当前价格和15日波动率
       currentPrice: trendInfo.currentPrice != null ? trendInfo.currentPrice : null,
       volatility15d: trendInfo.volatility15d != null ? trendInfo.volatility15d : null,
+      // ADX 趋势强度指标
+      adx: trendInfo.adx != null ? trendInfo.adx : null,
+      plusDi: trendInfo.plusDi != null ? trendInfo.plusDi : null,
+      minusDi: trendInfo.minusDi != null ? trendInfo.minusDi : null,
       // 买卖建议
       stockAnalysis: trendInfo.stockAnalysis || null
     };

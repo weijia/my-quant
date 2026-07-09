@@ -143,6 +143,7 @@
               </div>
             </th>
             <th v-if="visibleColumns.includes('stockAnalysis')" style="width: 120px;">买卖建议</th>
+            <th v-if="visibleColumns.includes('adx')" style="width: 100px;">ADX趋势强度</th>
             <th v-if="visibleColumns.includes('actions')" style="width: 80px;">操作</th>
           </tr>
         </thead>
@@ -531,6 +532,7 @@ const allColumns = [
   { key: 'advancedOrderSettings', label: '高级设置' },
   { key: 'advancedOrder', label: '高级快捷' },
   { key: 'stockAnalysis', label: '买卖建议' },
+  { key: 'adx', label: 'ADX趋势强度' },
   { key: 'actions', label: '操作' }
 ]
 
@@ -582,6 +584,18 @@ const getInitialVisibleColumns = () => {
         // 保存更新后的配置
         localStorage.setItem(storageKey, JSON.stringify(parsed))
         console.log('[StrategyList] 自动添加 stockAnalysis 到可见列')
+      }
+      // 检查是否包含 adx，如果不包含则添加（新列自动显示）
+      if (!parsed.includes('adx')) {
+        // 在 'stockAnalysis' 后面插入 'adx'
+        const stockAnalysisIndex = parsed.indexOf('stockAnalysis')
+        if (stockAnalysisIndex !== -1) {
+          parsed.splice(stockAnalysisIndex + 1, 0, 'adx')
+        } else {
+          parsed.push('adx')
+        }
+        localStorage.setItem(storageKey, JSON.stringify(parsed))
+        console.log('[StrategyList] 自动添加 adx 到可见列')
       }
       return parsed
     }
