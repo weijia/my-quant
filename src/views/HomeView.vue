@@ -410,13 +410,32 @@ let isDragging = false;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 
-// 防抖保存笔记内容
+// 防抖保存笔记内容（localStorage + WebDAV）
 let noteSaveTimer = null;
+let noteWebdavTimer = null;
 const saveNoteContent = () => {
   if (noteSaveTimer) clearTimeout(noteSaveTimer);
   noteSaveTimer = setTimeout(() => {
     appConfigService.setNoteContent(noteContent.value);
+    // WebDAV 同步使用更长的防抖（2秒），避免频繁请求
+    uploadNoteToWebDAV();
   }, 500);
+};
+
+// 上传笔记到 WebDAV
+const uploadNoteToWebDAV = () => {
+  if (noteWebdavTimer) clearTimeout(noteWebdavTimer);
+  noteWebdavTimer = setTimeout(async () => {
+    const noteConfig = appConfigService.getNoteConfig();
+    await webdavImportService.uploadNotes({
+      content: noteContent.value,
+      visible: noteConfig.visible,
+      x: noteConfig.x,
+      y: noteConfig.y,
+      width: noteConfig.width,
+      height: noteConfig.height
+    });
+  }, 2000);
 };
 
 // 笔记内容变化时自动保存
@@ -425,6 +444,7 @@ watch(noteContent, saveNoteContent);
 const toggleNote = () => {
   noteVisible.value = !noteVisible.value;
   appConfigService.setNoteVisible(noteVisible.value);
+  uploadNoteToWebDAV();
 };
 
 const startDrag = (e) => {
@@ -448,6 +468,7 @@ const stopDrag = () => {
     document.removeEventListener('mouseup', stopDrag);
     // 保存位置
     appConfigService.setNotePosition(noteX.value, noteY.value);
+    uploadNoteToWebDAV();
   }
 };
 
@@ -486,6 +507,7 @@ const stopResize = () => {
     document.removeEventListener('mousemove', onResize);
     document.removeEventListener('mouseup', stopResize);
     appConfigService.setNoteSize(noteWidth.value, noteHeight.value);
+    uploadNoteToWebDAV();
   }
 };
 
@@ -1586,6 +1608,29 @@ onMounted(async () => {
     // 使用 nextTick 延迟加载策略，避免在 Vue flush 周期中同步修改响应式数据
     await nextTick();
     await loadStrategies();
+  });
+
+  // 从 WebDAV 加载笔记
+  webdavImportService.downloadNotes().then(noteData => {
+    if (noteData) {
+      console.log('[HomeView] 从 WebDAV 加载笔记成功');
+      // 合并到本地配置（WebDAV 内容为准）
+      if (noteData.content != null) {
+        noteContent.value = noteData.content;
+        appConfigService.setNoteContent(noteData.content);
+      }
+      if (noteData.visible != null) {
+        noteVisible.value = noteData.visible;
+        appConfigService.setNoteVisible(noteData.visible);
+      }
+      if (noteData.x != null) noteX.value = noteData.x;
+      if (noteData.y != null) noteY.value = noteData.y;
+      if (noteData.width != null) noteWidth.value = noteData.width;
+      if (noteData.height != null) noteHeight.value = noteData.height;
+      // 保存位置和尺寸
+      appConfigService.setNotePosition(noteX.value, noteY.value);
+      appConfigService.setNoteSize(noteWidth.value, noteHeight.value);
+    }
   });
 
   console.log('HomeView: 初始化完成（界面已可交互）');

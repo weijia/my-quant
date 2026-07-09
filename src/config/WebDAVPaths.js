@@ -19,6 +19,9 @@ const WEBDAV_PATHS = {
   // 应用统一配置文件
   APP_CONFIG: '/app_data/my-quant/config.json',
 
+  // 笔记文件
+  NOTES: '/app_data/my-quant/notes.json',
+
   // 策略数据文件名
   STRATEGIES_FILE: 'all_strategies.json',
 }

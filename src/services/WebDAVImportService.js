@@ -788,6 +788,104 @@ class WebDAVImportService {
     }
   }
 
+  // ========== 笔记文件（notes.json）上传/下载 ==========
+
+  /**
+   * 上传笔记到 WebDAV
+   * @param {Object} noteData - 笔记数据对象 { content, visible, x, y, width, height }
+   */
+  async uploadNotes(noteData) {
+    if (!this.isConfigured()) {
+      console.warn('[WebDAV] 未配置 WebDAV，跳过上传笔记')
+      return false
+    }
+
+    try {
+      const configStr = localStorage.getItem('webDAVConfig')
+      if (!configStr) {
+        console.warn('[WebDAV] 未找到 WebDAV 配置，跳过上传笔记')
+        return false
+      }
+
+      const webdavConfig = JSON.parse(configStr)
+      const baseUrl = (webdavConfig.url || '').replace(/\/+$/, '')
+      const url = baseUrl + WEBDAV_PATHS.NOTES
+
+      // 确保目录存在
+      const dirUrl = baseUrl + '/app_data/my-quant/'
+      await this.ensureDirectoryExists(dirUrl)
+
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...this.getAuthHeaders()
+        },
+        body: JSON.stringify({
+          ...noteData,
+          updatedAt: new Date().toISOString()
+        }, null, 2)
+      })
+
+      if (response.ok) {
+        console.log('[WebDAV] 笔记上传成功')
+        return true
+      } else {
+        console.warn('[WebDAV] 笔记上传失败:', response.status)
+        return false
+      }
+    } catch (error) {
+      console.warn('[WebDAV] 笔记上传失败:', error)
+      return false
+    }
+  }
+
+  /**
+   * 从 WebDAV 下载笔记
+   * @returns {Object|null} 笔记数据对象
+   */
+  async downloadNotes() {
+    if (!this.isConfigured()) {
+      console.log('[WebDAV] 未配置 WebDAV，跳过下载笔记')
+      return null
+    }
+
+    try {
+      const configStr = localStorage.getItem('webDAVConfig')
+      if (!configStr) {
+        console.warn('[WebDAV] 未找到 WebDAV 配置，跳过下载笔记')
+        return null
+      }
+
+      const webdavConfig = JSON.parse(configStr)
+      const baseUrl = (webdavConfig.url || '').replace(/\/+$/, '')
+      const url = baseUrl + WEBDAV_PATHS.NOTES
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          ...this.getAuthHeaders()
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        console.log('[WebDAV] 笔记下载成功')
+        return data
+      } else if (response.status === 404) {
+        console.log('[WebDAV] 远程不存在笔记文件')
+        return null
+      } else {
+        console.warn('[WebDAV] 笔记下载失败:', response.status)
+        return null
+      }
+    } catch (error) {
+      console.warn('[WebDAV] 笔记下载失败:', error)
+      return null
+    }
+  }
+
   // ========== 应用配置文件（config.json）上传/下载 ==========
 
   /**
