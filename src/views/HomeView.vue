@@ -427,14 +427,28 @@ const uploadNoteToWebDAV = () => {
   if (noteWebdavTimer) clearTimeout(noteWebdavTimer);
   noteWebdavTimer = setTimeout(async () => {
     const noteConfig = appConfigService.getNoteConfig();
-    await webdavImportService.uploadNotes({
+    const result = await webdavImportService.uploadNotes({
       content: noteContent.value,
       visible: noteConfig.visible,
       x: noteConfig.x,
       y: noteConfig.y,
       width: noteConfig.width,
-      height: noteConfig.height
+      height: noteConfig.height,
+      // 传递本地内容修改时间用于冲突检测
+      updatedAt: noteConfig.updatedAt || new Date().toISOString()
     });
+    // 远端更新则采用远端内容，避免双向覆盖
+    if (result && result.skipped && result.remote) {
+      console.log('[HomeView] 远端笔记较新，采用远端内容');
+      if (result.remote.content != null) {
+        noteContent.value = result.remote.content;
+        appConfigService.setNoteContent(result.remote.content, result.remote.updatedAt);
+      }
+      if (result.remote.visible != null) {
+        noteVisible.value = result.remote.visible;
+        appConfigService.setNoteVisible(result.remote.visible);
+      }
+    }
   }, 2000);
 };
 
@@ -1632,7 +1646,8 @@ onMounted(async () => {
       // 合并到本地配置（WebDAV 内容为准）
       if (noteData.content != null) {
         noteContent.value = noteData.content;
-        appConfigService.setNoteContent(noteData.content);
+        // 采用远端时间戳，避免下载后立即被本地旧时间戳覆盖上传
+        appConfigService.setNoteContent(noteData.content, noteData.updatedAt);
       }
       if (noteData.visible != null) {
         noteVisible.value = noteData.visible;

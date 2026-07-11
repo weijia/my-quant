@@ -801,19 +801,42 @@ class WebDAVImportService {
   async uploadNotes(noteData) {
     if (!this.isConfigured()) {
       console.warn('[WebDAV] 未配置 WebDAV，跳过上传笔记')
-      return false
+      return { ok: false, skipped: false, remote: null }
     }
 
     try {
       const configStr = localStorage.getItem('webDAVConfig')
       if (!configStr) {
         console.warn('[WebDAV] 未找到 WebDAV 配置，跳过上传笔记')
-        return false
+        return { ok: false, skipped: false, remote: null }
       }
 
       const webdavConfig = JSON.parse(configStr)
       const baseUrl = (webdavConfig.url || '').replace(/\/+$/, '')
       const url = baseUrl + WEBDAV_PATHS.NOTES
+
+      // 冲突检测：先读取远端，比较 updatedAt
+      try {
+        const getResp = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            ...this.getAuthHeaders()
+          }
+        })
+        if (getResp.ok) {
+          const remote = await getResp.json()
+          const remoteTime = remote.updatedAt ? new Date(remote.updatedAt).getTime() : 0
+          const localTime = noteData.updatedAt ? new Date(noteData.updatedAt).getTime() : 0
+          // 远端更新时间更新 → 不覆盖，返回远端数据供调用方采用
+          if (remoteTime > localTime) {
+            console.log('[WebDAV] 远端笔记更新(updatedAt 较新)，跳过上传以免覆盖本地内容')
+            return { ok: false, skipped: true, remote }
+          }
+        }
+      } catch (e) {
+        // 远端不存在(404)或无内容：继续上传
+      }
 
       // 确保目录存在
       const dirUrl = baseUrl + '/app_data/my-quant/'
@@ -827,20 +850,20 @@ class WebDAVImportService {
         },
         body: JSON.stringify({
           ...noteData,
-          updatedAt: new Date().toISOString()
+          updatedAt: noteData.updatedAt || new Date().toISOString()
         }, null, 2)
       })
 
       if (response.ok) {
         console.log('[WebDAV] 笔记上传成功')
-        return true
+        return { ok: true, skipped: false, remote: null }
       } else {
         console.warn('[WebDAV] 笔记上传失败:', response.status)
-        return false
+        return { ok: false, skipped: false, remote: null }
       }
     } catch (error) {
       console.warn('[WebDAV] 笔记上传失败:', error)
-      return false
+      return { ok: false, skipped: false, remote: null }
     }
   }
 

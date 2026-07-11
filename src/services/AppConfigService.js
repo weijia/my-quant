@@ -57,7 +57,9 @@ const DEFAULT_CONFIG = {
     x: 20,
     y: 80,
     width: 280,
-    height: 200
+    height: 200,
+    // 本地内容最后修改时间，用于 WebDAV 同步冲突检测
+    updatedAt: ''
   }
 }
 
@@ -447,11 +449,13 @@ class AppConfigService {
     return this.config.note?.content || ''
   }
 
-  setNoteContent(content) {
+  setNoteContent(content, updatedAt) {
     if (!this.config.note) {
       this.config.note = { ...DEFAULT_CONFIG.note }
     }
     this.config.note.content = content
+    // 记录内容最后修改时间；未显式传入时取当前时间（本地编辑）
+    this.config.note.updatedAt = updatedAt || new Date().toISOString()
     this.saveToLocalStorage()
   }
 
