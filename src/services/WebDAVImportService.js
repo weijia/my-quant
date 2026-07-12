@@ -1,4 +1,5 @@
 import { database } from '../utils/Database'
+import { request } from '../utils/http.js'
 import WEBDAV_PATHS from '../config/WebDAVPaths'
 import appConfigService from './AppConfigService.js'
 
@@ -379,7 +380,7 @@ class WebDAVImportService {
     
     try {
       console.log('正在获取 WebDAV 数据:', url)
-      const response = await fetch(url, {
+      const response = await request(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -410,7 +411,7 @@ class WebDAVImportService {
       const timestamp = new Date().getTime()
       const propfindUrl = this.holdingsBaseUrl + '?_t=' + timestamp
       console.log('正在获取持仓目录文件列表:', propfindUrl)
-      const propfindResponse = await fetch(propfindUrl, {
+      const propfindResponse = await request(propfindUrl, {
         method: 'PROPFIND',
         headers: {
           'Depth': '1',
@@ -463,7 +464,7 @@ class WebDAVImportService {
       const fileUrl = this.holdingsBaseUrl + jsonFileName + '?_t=' + timestamp
       console.log('最终 URL:', fileUrl)
       
-      const response = await fetch(fileUrl, {
+      const response = await request(fileUrl, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -492,7 +493,7 @@ class WebDAVImportService {
   async fetchTrendJudgments() {
     try {
       console.log('正在获取趋势判断目录文件列表:', this.trendBaseUrl)
-      const propfindResponse = await fetch(this.trendBaseUrl, {
+      const propfindResponse = await request(this.trendBaseUrl, {
         method: 'PROPFIND',
         headers: {
           'Depth': '1',
@@ -549,7 +550,7 @@ class WebDAVImportService {
         const fileUrl = this.trendBaseUrl + fileName
 
         try {
-          const response = await fetch(fileUrl, {
+          const response = await request(fileUrl, {
             method: 'GET',
             headers: {
               'Accept': 'application/json',
@@ -674,7 +675,7 @@ class WebDAVImportService {
       const baseUrl = (webdavConfig.url || '').replace(/\/+$/, '');
       const url = baseUrl + WEBDAV_PATHS.MQTT_CONFIG
 
-      const response = await fetch(url, {
+      const response = await request(url, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -708,7 +709,7 @@ class WebDAVImportService {
       const baseUrl = (webdavConfig.url || '').replace(/\/+$/, '');
       const url = baseUrl + WEBDAV_PATHS.MQTT_CONFIG
 
-      const response = await fetch(url, {
+      const response = await request(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -817,7 +818,7 @@ class WebDAVImportService {
 
       // 冲突检测：先读取远端，比较 updatedAt
       try {
-        const getResp = await fetch(url, {
+        const getResp = await request(url, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
@@ -842,7 +843,7 @@ class WebDAVImportService {
       const dirUrl = baseUrl + '/app_data/my-quant/'
       await this.ensureDirectoryExists(dirUrl)
 
-      const response = await fetch(url, {
+      const response = await request(url, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -888,7 +889,7 @@ class WebDAVImportService {
       const baseUrl = (webdavConfig.url || '').replace(/\/+$/, '')
       const url = baseUrl + WEBDAV_PATHS.NOTES
 
-      const response = await fetch(url, {
+      const response = await request(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -972,7 +973,7 @@ class WebDAVImportService {
       }
       console.log('[WebDAV] 最终上传 body 包含 orderStrategyTemplates:', !!bodyData.orderStrategyTemplates)
 
-      const response = await fetch(url, {
+      const response = await request(url, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1000,7 +1001,7 @@ class WebDAVImportService {
   async ensureDirectoryExists(dirUrl) {
     try {
       // 检查目录是否存在
-      const checkResponse = await fetch(dirUrl, {
+      const checkResponse = await request(dirUrl, {
         method: 'PROPFIND',
         headers: {
           'Depth': '0',
@@ -1015,7 +1016,7 @@ class WebDAVImportService {
 
       // 目录不存在，创建它
       console.log('[WebDAV] 目录不存在，正在创建:', dirUrl)
-      const createResponse = await fetch(dirUrl, {
+      const createResponse = await request(dirUrl, {
         method: 'MKCOL',
         headers: this.getAuthHeaders()
       })
@@ -1053,7 +1054,7 @@ class WebDAVImportService {
       const baseUrl = (webdavConfig.url || '').replace(/\/+$/, '')
       const url = baseUrl + WEBDAV_PATHS.APP_CONFIG
 
-      const response = await fetch(url, {
+      const response = await request(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',

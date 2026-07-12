@@ -5,6 +5,7 @@
  */
 
 import appConfigService from './AppConfigService.js'
+import { request } from '../utils/http.js'
 
 const GITEE_CONFIG_KEY = 'giteeSyncConfig'
 
@@ -96,7 +97,7 @@ class GiteeService {
     const encodedPath = encodeURIComponent(path).replace(/%2F/g, '/')
     const url = `${this.getApiBaseUrl()}/contents/${encodedPath}?access_token=${this.token}&ref=${this.branch}`
 
-    const response = await fetch(url, {
+    const response = await request(url, {
       method: 'GET',
       headers: { 'Accept': 'application/json' }
     })
@@ -134,7 +135,7 @@ class GiteeService {
       branch: this.branch
     }
 
-    const response = await fetch(url, {
+    const response = await request(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
@@ -164,7 +165,7 @@ class GiteeService {
       sha: sha
     }
 
-    const response = await fetch(url, {
+    const response = await request(url, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
@@ -381,7 +382,7 @@ class GiteeService {
 
     try {
       const url = `${this.getApiBaseUrl()}?access_token=${this.token}`
-      const response = await fetch(url, {
+      const response = await request(url, {
         method: 'GET',
         headers: { 'Accept': 'application/json' }
       })
