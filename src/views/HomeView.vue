@@ -1444,19 +1444,21 @@ onMounted(async () => {
 
           // 清空该 provider 下所有已知账户类型的旧数据
           // 不能只清响应中出现的类型，否则某类型为空时会残留旧数据
+          // 注意：策略 accountType 用 'default' 表示普通，Agent holdings 用 'normal'，统一映射为 'default'
           const providerAccountTypes = {
             founder: ['default', 'credit'],
-            pingan: ['normal']
+            pingan: ['default']
           };
-          const knownTypes = providerAccountTypes[provider] || ['normal'];
+          const knownTypes = providerAccountTypes[provider] || ['default'];
           for (const at of knownTypes) {
             newMap.set(`${provider}:${at}`, new Map());
           }
 
           // 再写入最新持仓数据
+          // Agent 的 'normal' 统一映射为 'default'，与策略的 accountType 一致
           for (const h of payload.holdings) {
             if (!h.stockCode) continue;
-            const accountType = h.accountType || 'normal';
+            const accountType = h.accountType === 'credit' ? 'credit' : 'default';
             const key = `${provider}:${accountType}`;
             newMap.get(key).set(h.stockCode, h);
           }
