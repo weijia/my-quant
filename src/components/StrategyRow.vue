@@ -832,14 +832,14 @@ const remoteIncreaseData = computed(() => {
 
 // 动态持仓数据（从 MQTT 获取）
 // holdingsMap 按 provider:accountType 分组，需要根据策略属性定位到正确的分组
-// 注意：平安的 holdingsMap key 是 pingan:normal，方正才是 founder:default / founder:credit
-const dynamicHolding = computed(() => {
-  if (!props.strategy.stockCode || !props.holdingsMap) return null
-  const provider = props.strategy.provider || 'founder'
-  // 平安始终用 'normal'，方正用策略的 accountType
-  const accountType = provider === 'pingan'
-    ? 'normal'
-    : ((props.strategy.accountType === 'default' || !props.strategy.accountType)
+  // 注意：平安的 holdingsMap key 是 pingan:default，方正才是 founder:default / founder:credit
+  const dynamicHolding = computed(() => {
+    if (!props.strategy.stockCode || !props.holdingsMap) return null
+    const provider = props.strategy.provider || 'founder'
+    // 平安与方正统一用 'default' 表示普通账户
+    const accountType = provider === 'pingan'
+      ? 'default'
+      : ((props.strategy.accountType === 'default' || !props.strategy.accountType)
       ? 'default'
       : props.strategy.accountType)
   const key = `${provider}:${accountType}`

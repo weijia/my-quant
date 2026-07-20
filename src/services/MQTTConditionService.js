@@ -443,7 +443,7 @@ class MQTTConditionOrderService {
    * 获取持仓列表
    * @param {Object} params
    * @param {string} params.provider - 券商类型：'pingan'（平安）或 'founder'（方正）
-   * @param {string} params.accountType - 账户类型：'normal'/'credit'，不传返回全部
+   * @param {string} params.accountType - 账户类型：'default'/'credit'，不传返回全部
    * @param {boolean} params.forceRefresh - 是否强制刷新，默认 false
    * @returns {Promise<Object>} 返回持仓数据
    */

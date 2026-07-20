@@ -1446,9 +1446,9 @@ onMounted(async () => {
           // 不能只清响应中出现的类型，否则某类型为空时会残留旧数据
           const providerAccountTypes = {
             founder: ['default', 'credit'],
-            pingan: ['normal']
+            pingan: ['default']
           };
-          const knownTypes = providerAccountTypes[provider] || ['normal'];
+          const knownTypes = providerAccountTypes[provider] || ['default'];
           for (const at of knownTypes) {
             newMap.set(`${provider}:${at}`, new Map());
           }
@@ -1456,7 +1456,7 @@ onMounted(async () => {
           // 再写入最新持仓数据
           for (const h of payload.holdings) {
             if (!h.stockCode) continue;
-            const accountType = h.accountType || 'normal';
+            const accountType = h.accountType || 'default';
             const key = `${provider}:${accountType}`;
             newMap.get(key).set(h.stockCode, h);
           }
@@ -1473,7 +1473,7 @@ onMounted(async () => {
           // 以持仓为准同步策略行：有持仓则建，不自动删除（保留用户手动添加的行）
           const strategyProvider = provider === 'pingan' ? 'pingan' : 'founder';
           const holdingsAccountToStrategy = (at) =>
-            at === 'normal' || !at ? 'default' : at;
+            !at ? 'default' : at;
 
           // Step 1: 不再自动删除不在持仓中的策略，保留用户手动添加的股票行
           // Step 2: 新增持仓中有但策略中没有的股票（DB操作）
