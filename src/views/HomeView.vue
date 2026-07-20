@@ -1506,16 +1506,45 @@ onMounted(async () => {
           }
 
           // Step 4: 在最终 strategies.value 上写入持仓数据（纯内存，不会被覆盖）
+          // 持仓的 accountType 才是权威来源：信用(credit)持仓必须归到信用账户分组，
+          // 即使该策略行此前被错标为 default（如 WebDAV 导入成 default），也要在此修正。
           let syncedCount = 0;
+          const accountTypeUpdates = [];
           for (const h of (payload.holdings || [])) {
             if (!h.stockCode) continue;
-            const s = strategies.value.find(
-              s => s.stockCode === h.stockCode && (s.provider || 'founder') === strategyProvider
+            const holdingAccountType = h.accountType === 'credit' ? 'credit' : 'default';
+            const wantMargin = h.accountType === 'credit';
+            // 先精确匹配 stockCode + provider + accountType
+            let s = strategies.value.find(
+              s => s.stockCode === h.stockCode
+                && (s.provider || 'founder') === strategyProvider
+                && (s.accountType || 'default') === holdingAccountType
             );
+            // 否则按 stockCode + provider 匹配（修正历史错标的 accountType）
+            if (!s) {
+              s = strategies.value.find(
+                s => s.stockCode === h.stockCode && (s.provider || 'founder') === strategyProvider
+              );
+            }
             if (s) {
               s.netPosition = h.quantity ?? 0;
+              // 持仓账户类型与策略行不一致时，以持仓为准覆盖，并持久化避免刷新复现
+              if ((s.accountType || 'default') !== holdingAccountType || !!s.isMarginAccount !== wantMargin) {
+                s.accountType = holdingAccountType;
+                s.isMarginAccount = wantMargin;
+                accountTypeUpdates.push(
+                  strategyService.updateStrategy(s.id, {
+                    accountType: holdingAccountType,
+                    isMarginAccount: wantMargin
+                  })
+                );
+              }
               syncedCount++;
             }
+          }
+          // 持久化账户类型修正
+          if (accountTypeUpdates.length) {
+            await Promise.all(accountTypeUpdates);
           }
 
           if (totalCount > 0) {
