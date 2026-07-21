@@ -1480,11 +1480,15 @@ onMounted(async () => {
           // Step 1: 不再自动删除不在持仓中的策略，保留用户手动添加的股票行
           // Step 2: 新增持仓中有但策略中没有的股票（DB操作）
           let createdCount = 0;
+          const DEBUG_CODES = ['603085', '300390'];
           for (const h of (payload.holdings || [])) {
             if (!h.stockCode) continue;
             const exists = strategies.value.some(s =>
               s.stockCode === h.stockCode && (s.provider || 'founder') === strategyProvider
             );
+            if (DEBUG_CODES.includes(h.stockCode)) {
+              console.log(`[调试-动态持仓-Step2] ${h.stockCode} provider=${provider} strategyProvider=${strategyProvider} holding.accountType=`, h.accountType, '已存在同类策略(exists)=', exists);
+            }
             if (!exists) {
               await strategyService.addStrategy({
                 name: h.stockName || h.stockCode,
@@ -1536,6 +1540,9 @@ onMounted(async () => {
               s.netPosition = h.quantity ?? 0;
               // 持仓账户类型与策略行不一致时，以持仓为准覆盖，并持久化避免刷新复现
               if ((s.accountType || 'default') !== holdingAccountType || !!s.isMarginAccount !== wantMargin) {
+                if (DEBUG_CODES.includes(h.stockCode)) {
+                  console.log(`[调试-动态持仓-Step4] ${h.stockCode} 修正账户类型: ${s.accountType} -> ${holdingAccountType} (isMargin ${s.isMarginAccount} -> ${wantMargin}), id=${s.id}`);
+                }
                 s.accountType = holdingAccountType;
                 s.isMarginAccount = wantMargin;
                 accountTypeUpdates.push(
@@ -1546,6 +1553,8 @@ onMounted(async () => {
                 );
               }
               syncedCount++;
+            } else if (DEBUG_CODES.includes(h.stockCode)) {
+              console.log(`[调试-动态持仓-Step4] ${h.stockCode} 未匹配到任何策略(holdingAccountType=${holdingAccountType}, provider=${strategyProvider})`);
             }
           }
           // 持久化账户类型修正

@@ -7,6 +7,18 @@ class DataConverter {
   static convertStockData(webdavData) {
     const convertedStrategies = []
     const processedKeys = new Set()
+    // 预先收集“存在信用高级策略”的股票（stockCode-provider），用于把同股票的普通
+    // stockData 合并进信用策略，避免信用持仓被重复归到普通账户
+    const creditAdvancedStockCodes = new Set(
+      (webdavData.advancedStrategies || [])
+        .filter(a => this.normalizeAccountType(a.accountType) === 'credit')
+        .map(a => `${a.stockCode}-${a.provider || ''}`)
+    )
+    // 普通持仓“孤儿”暂存：stockData 中作为普通(default)出现的条目，
+    // 若同股票存在信用高级策略，则待信用高级策略处理时合并并剔除，
+    // 避免信用持仓被重复归到普通账户（如 603085 / 300390）
+    const pendingOrphans = new Map()
+    const DEBUG_CODES = ['603085', '300390']
     const trendJudgments = webdavData.trendJudgments || {}
 
     console.log('开始转换数据，原始数据结构:', Object.keys(webdavData))
@@ -19,6 +31,21 @@ class DataConverter {
         if (strategy && strategy.stockCode) {
           const key = `${strategy.stockCode}-${strategy.accountType}-${strategy.provider || ''}`
           if (!processedKeys.has(key)) {
+            if (DEBUG_CODES.includes(strategy.stockCode)) {
+              console.log(`[调试-导入] stockData ${strategy.stockCode} raw.accountType=`, stock.accountType,
+                '-> strategy.accountType=', strategy.accountType, 'provider=', strategy.provider,
+                'decreasePercentage=', strategy.decreasePercentage, 'hasCreditSibling=', creditAdvancedStockCodes.has(`${strategy.stockCode}-${strategy.provider || ''}`))
+            }
+            // 重复/遗留普通持仓：若同一股票存在“信用”高级策略，则把该普通 stockData 暂存，
+            // 待信用高级策略处理时合并并剔除，避免信用持仓被错误并入普通账户
+            // （如 603085 / 300390：stockData 标成 default + 高级策略标成 credit 时只保留信用一份）
+            const hasCreditSibling = creditAdvancedStockCodes.has(`${strategy.stockCode}-${strategy.provider || ''}`)
+            const isOrphan = (strategy.accountType || 'default') !== 'credit' && hasCreditSibling
+            if (isOrphan) {
+              console.log(`[调试-导入] ${strategy.stockCode} 判定为孤儿(普通)→等待合并进信用高级策略`)
+              pendingOrphans.set(`${strategy.stockCode}-${strategy.provider || ''}`, strategy)
+              continue
+            }
             processedKeys.add(key)
             convertedStrategies.push(strategy)
             console.log('添加策略:', strategy.name, strategy.accountType)
@@ -32,8 +59,19 @@ class DataConverter {
       for (const advanced of webdavData.advancedStrategies) {
         const strategy = this.convertAdvancedStrategy(advanced, trendJudgments)
         if (strategy && strategy.stockCode) {
+          if (DEBUG_CODES.includes(strategy.stockCode)) {
+            console.log(`[调试-导入] advancedStrategies ${strategy.stockCode} accountType=`, strategy.accountType, 'provider=', strategy.provider, 'decreasePercentage=', strategy.decreasePercentage)
+          }
           const key = `${strategy.stockCode}-${strategy.accountType}-${strategy.provider || ''}`
           if (!processedKeys.has(key)) {
+            // 合并同股票的普通孤儿字段（如下跌百分比），再剔除孤儿，避免信用持仓信息丢失
+            const orphanKey = `${strategy.stockCode}-${strategy.provider || ''}`
+            const orphan = pendingOrphans.get(orphanKey)
+            if (orphan) {
+              this.mergeStrategyFields(strategy, orphan)
+              pendingOrphans.delete(orphanKey)
+              console.log(`[调试-导入] ${strategy.stockCode} 合并普通孤儿字段(如下跌百分比=${orphan.decreasePercentage})到信用策略`)
+            }
             processedKeys.add(key)
             convertedStrategies.push(strategy)
             console.log('添加高级策略:', strategy.name, strategy.accountType)
@@ -135,6 +173,28 @@ class DataConverter {
       }
     }
     
+    // 未被信用高级策略合并的普通孤儿，作为普通策略保留（如确实只在普通账户持有的股票）
+    for (const [, orphan] of pendingOrphans) {
+      if (DEBUG_CODES.includes(orphan.stockCode)) {
+        console.log(`[调试-导入] ${orphan.stockCode} 孤儿未被合并→保留为普通策略(可能数据里确无信用高级策略)`)
+      }
+      const key = `${orphan.stockCode}-${orphan.accountType}-${orphan.provider || ''}`
+      if (!processedKeys.has(key)) {
+        processedKeys.add(key)
+        convertedStrategies.push(orphan)
+      }
+    }
+
+    // 调试：打印问题股票最终落库的 accountType / provider
+    for (const code of DEBUG_CODES) {
+      const matches = convertedStrategies.filter(s => s.stockCode === code)
+      if (matches.length) {
+        console.log(`[调试-导入-结果] ${code} 最终策略数=`, matches.length, JSON.stringify(matches.map(m => ({ accountType: m.accountType, provider: m.provider, decreasePercentage: m.decreasePercentage }))))
+      } else {
+        console.log(`[调试-导入-结果] ${code} 未出现在最终策略中`)
+      }
+    }
+
     console.log('转换完成，共获得策略数量:', convertedStrategies.length)
     return convertedStrategies
   }
@@ -298,6 +358,23 @@ class DataConverter {
     }
     
     return 'default'
+  }
+
+  // 将 donor 中的有效字段合并到 keeper（仅当 keeper 对应字段为空时覆盖），
+  // 用于把“普通孤儿”策略的信息并入同股票的信用策略，避免去重时丢失数据
+  static mergeStrategyFields(keeper, donor) {
+    if (!keeper || !donor) return
+    const fields = [
+      'decreasePercentage', 'decreaseAmount', 'increasePercentage', 'increaseAmount',
+      'fiveYearAvgDividendYield', 'profitLoss', 'changePercent', 'marketValue',
+      'manualNotes', 'notes', 'currentPrice'
+    ]
+    for (const f of fields) {
+      if (donor[f] !== '' && donor[f] != null && (keeper[f] === '' || keeper[f] == null)) {
+        keeper[f] = donor[f]
+      }
+    }
+    if (!keeper.name && donor.name) keeper.name = donor.name
   }
   
   static parseNumber(value) {
