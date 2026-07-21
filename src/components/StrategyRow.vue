@@ -460,7 +460,7 @@
           class="advanced-order-btn amount-buy-btn"
           @click="handleAdvancedUpTrendBuy"
           :disabled="!strategy.stockCode || sendingAdvancedUpTrendBuy || !effectivePrice"
-          :title="effectivePrice ? `上涨${upTrendBuyPct || 0.1}%买入 + 下跌${upTrendSellPct || 0.5}%卖出\n数量: ${getAdvancedOrderVolume()}股\n金额: ${defaultTradeAmount || 26000}元` : '请先输入价格'"
+          :title="effectivePrice ? `上涨${upTrendBuyPct || 0.01}%买入 + 下跌${upTrendSellPct || 0.5}%卖出\n数量: ${getAdvancedOrderVolume()}股\n金额: ${defaultTradeAmount || 26000}元` : '请先输入价格'"
         >
           {{ sendingAdvancedUpTrendBuy ? '...' : `↑买${getAdvancedOrderVolume()}` }}
         </button>
@@ -468,7 +468,7 @@
           class="advanced-order-btn amount-sell-btn"
           @click="handleAdvancedDownTrendSell"
           :disabled="!strategy.stockCode || sendingAdvancedDownTrendSell || !effectivePrice"
-          :title="effectivePrice ? `下跌${downTrendSellPct || 0.1}%卖出 + 上涨${downTrendBuyPct || 0.5}%买入\n数量: ${getAdvancedOrderVolume()}股\n金额: ${defaultTradeAmount || 26000}元` : '请先输入价格'"
+          :title="effectivePrice ? `下跌${downTrendSellPct || 0.01}%卖出 + 上涨${downTrendBuyPct || 0.5}%买入\n数量: ${getAdvancedOrderVolume()}股\n金额: ${defaultTradeAmount || 26000}元` : '请先输入价格'"
         >
           {{ sendingAdvancedDownTrendSell ? '...' : `↓卖${getAdvancedOrderVolume()}` }}
         </button>
@@ -589,9 +589,9 @@ const manualPrice = ref(null)
 const localStrategyName = ref(props.strategy.selectedStrategyName || 'auto')
 
 // 条件配置（上涨趋势/下跌趋势的买卖百分比）
-const upTrendBuyPct = ref(props.strategy.upTrendBuyPct ?? 0.1)
+const upTrendBuyPct = ref(props.strategy.upTrendBuyPct ?? 0.01)
 const upTrendSellPct = ref(props.strategy.upTrendSellPct ?? 0.5)
-const downTrendSellPct = ref(props.strategy.downTrendSellPct ?? 0.1)
+const downTrendSellPct = ref(props.strategy.downTrendSellPct ?? 0.01)
 const downTrendBuyPct = ref(props.strategy.downTrendBuyPct ?? 0.5)
 
 // 条件单按钮发送状态（6个按钮）
@@ -1099,7 +1099,7 @@ const handleUpTrendBuy = async () => {
   }
   sendingUpTrendBuy.value = true
   const tradeVolume = getEffectiveTradeVolume()
-  const buyPct = upTrendBuyPct.value || 0.1
+  const buyPct = upTrendBuyPct.value || 0.01
   const sellPct = upTrendSellPct.value || 0.5
 
   try {
@@ -1140,7 +1140,7 @@ const handleDownTrendSell = async () => {
   }
   sendingDownTrendSell.value = true
   const tradeVolume = getEffectiveTradeVolume()
-  const sellPct = downTrendSellPct.value || 0.1
+  const sellPct = downTrendSellPct.value || 0.01
   const buyPct = downTrendBuyPct.value || 0.5
 
   try {
