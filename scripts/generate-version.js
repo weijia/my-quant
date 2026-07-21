@@ -1,12 +1,10 @@
 /**
- * 构建前自动生成版本信息
- * 输出到 stdout，由 vite.config.js 读取并注入为全局变量
- * 
- * 使用方式：
- *   node scripts/generate-version.js  →  输出 JSON 到 stdout
+ * 构建前自动生成版本信息 JS 模块（CJS 格式，可被 require）
+ * 输出到 src/version.gen.js，供 vite.config.js 使用
  */
 
 const { execSync } = require('child_process');
+const { writeFileSync } = require('fs');
 const path = require('path');
 
 function run(cmd) {
@@ -17,24 +15,18 @@ function run(cmd) {
   }
 }
 
-// 读取 package.json 版本
 let pkgVersion = '1.0.0';
 try {
   pkgVersion = require(path.resolve(__dirname, '..', 'package.json')).version || '1.0.0';
 } catch { /* fallback */ }
 
-// Git 信息
 const sha = run('git rev-parse --short HEAD') || 'unknown';
 const branch = run('git rev-parse --abbrev-ref HEAD') || 'unknown';
 const tag = run('git describe --tags --exact-match 2>/dev/null') || '';
 const commitCount = run('git rev-list --count HEAD') || '0';
 
-// 版本号优先级：git tag > package.json version + commitCount
-const version = tag
-  ? tag
-  : `${pkgVersion}-dev.${commitCount}`;
+const version = tag ? tag : `${pkgVersion}-dev.${commitCount}`;
 
-// 构建时间（北京时间）
 const buildTime = new Date().toLocaleString('zh-CN', {
   timeZone: 'Asia/Shanghai',
   year: 'numeric',
@@ -45,9 +37,19 @@ const buildTime = new Date().toLocaleString('zh-CN', {
   second: '2-digit'
 });
 
-// 输出 JSON 供 vite.config.js 捕获
-const payload = JSON.stringify({ version, buildTime, sha, branch, tag, pkgVersion });
-process.stdout.write(payload);
+// 输出 CJS 格式，供 vite.config.js 的 require() 使用
+const content = `// 自动生成，请勿手动修改
+module.exports = {
+  VERSION: ${JSON.stringify(version)},
+  BUILD_TIME: ${JSON.stringify(buildTime)},
+  COMMIT_SHA: ${JSON.stringify(sha)},
+  BRANCH: ${JSON.stringify(branch)},
+  TAG: ${JSON.stringify(tag)},
+  PKG_VERSION: ${JSON.stringify(pkgVersion)}
+}
+`;
 
-// 同时打印人类可读信息到 stderr
-console.error(`[generate-version] ${version} (${sha}) @ ${buildTime}`);
+const outPath = path.resolve(__dirname, '..', 'src', 'version.gen.js');
+writeFileSync(outPath, content);
+
+console.log(`[generate-version] ${version} (${sha}) @ ${buildTime}`);

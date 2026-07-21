@@ -1,17 +1,30 @@
 const { execSync } = require('child_process')
 const vue = require('@vitejs/plugin-vue')
+const path = require('path')
 
-// 构建时运行 generate-version.js，捕获 stdout 的 JSON
-let versionData = {}
+// 构建前自动生成版本信息
+// 生成 src/version.gen.js，包含 VERSION / BUILD_TIME / COMMIT_SHA
 try {
-  const raw = execSync('node scripts/generate-version.js', {
-    encoding: 'utf-8',
+  execSync('node scripts/generate-version.js', {
     cwd: __dirname,
-    stdio: ['pipe', 'pipe', 'inherit'] // stderr 直接输出日志
+    stdio: 'inherit',
+    timeout: 10000
   })
-  versionData = JSON.parse(raw)
+} catch (err) {
+  console.warn('[vite.config] 版本生成失败，使用默认值')
+}
+
+// 读取生成的版本信息（如果没有则使用默认值）
+let versionData = { version: 'dev', buildTime: '', sha: 'unknown' }
+try {
+  const gen = require(path.resolve(__dirname, 'src', 'version.gen.js'))
+  versionData = {
+    version: gen.VERSION || 'dev',
+    buildTime: gen.BUILD_TIME || '',
+    sha: gen.COMMIT_SHA || 'unknown'
+  }
 } catch {
-  // fallback 静默处理
+  // fallback
 }
 
 module.exports = require('vite').defineConfig({
@@ -27,9 +40,8 @@ module.exports = require('vite').defineConfig({
     emptyOutDir: true
   },
   define: {
-    __APP_VERSION__: JSON.stringify(versionData.version || 'dev'),
-    __APP_BUILD_TIME__: JSON.stringify(versionData.buildTime || ''),
-    __APP_COMMIT_SHA__: JSON.stringify(versionData.sha || 'unknown'),
-    __APP_VERSION_FULL__: JSON.stringify(versionData)
+    __APP_VERSION__: JSON.stringify(versionData.version),
+    __APP_BUILD_TIME__: JSON.stringify(versionData.buildTime),
+    __APP_COMMIT_SHA__: JSON.stringify(versionData.sha)
   }
 })
