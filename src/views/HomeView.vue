@@ -1514,17 +1514,23 @@ onMounted(async () => {
             if (!h.stockCode) continue;
             const holdingAccountType = h.accountType === 'credit' ? 'credit' : 'default';
             const wantMargin = h.accountType === 'credit';
-            // 先精确匹配 stockCode + provider + accountType
+            // 1) 精确匹配：stockCode + provider + accountType 完全一致
             let s = strategies.value.find(
               s => s.stockCode === h.stockCode
                 && (s.provider || 'founder') === strategyProvider
                 && (s.accountType || 'default') === holdingAccountType
             );
-            // 否则按 stockCode + provider 匹配（修正历史错标的 accountType）
-            if (!s) {
-              s = strategies.value.find(
+            // 2) 仅当持仓为“信用账户”时，才允许把被错标成“普通”的同一只股票策略升级为信用
+            //    用于修正 WebDAV 导入时把信用持仓标成 default 的历史问题。
+            //    注意：绝不下拉（credit -> default），否则信用持仓会被错误并入普通账户分组
+            //    （刷新动态持仓后“信用持仓莫名出现在普通持仓”的根因）。
+            if (!s && holdingAccountType === 'credit') {
+              const candidate = strategies.value.find(
                 s => s.stockCode === h.stockCode && (s.provider || 'founder') === strategyProvider
               );
+              if (candidate && (candidate.accountType || 'default') !== 'credit') {
+                s = candidate;
+              }
             }
             if (s) {
               s.netPosition = h.quantity ?? 0;
