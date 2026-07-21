@@ -14,10 +14,12 @@ try {
   console.warn('[vite.config] 版本生成失败，使用默认值')
 }
 
-// 读取生成的版本信息（如果没有则使用默认值）
+// 读取生成的版本信息（清除 require 缓存确保读到最新内容）
 let versionData = { version: 'dev', buildTime: '', sha: 'unknown' }
 try {
-  const gen = require(path.resolve(__dirname, 'src', 'version.gen.js'))
+  const genPath = path.resolve(__dirname, 'src', 'version.gen.js')
+  delete require.cache[require.resolve(genPath)]
+  const gen = require(genPath)
   versionData = {
     version: gen.VERSION || 'dev',
     buildTime: gen.BUILD_TIME || '',
