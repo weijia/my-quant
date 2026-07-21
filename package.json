@@ -15,6 +15,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "packageManager": "pnpm@9.15.9",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/weijia/my-quant/issues"
