@@ -1,9 +1,19 @@
 // 版本信息模块
-// 从环境变量读取构建时注入的版本信息
+// 优先读取构建时生成的 version.json，其次 fallback 到环境变量
 
-export const VERSION = import.meta.env.VITE_APP_VERSION || 'dev'
-export const BUILD_TIME = import.meta.env.VITE_APP_BUILD_TIME || new Date().toISOString()
-export const COMMIT_SHA = import.meta.env.VITE_APP_COMMIT_SHA || 'unknown'
+import versionData from './version.json'
+
+export const VERSION = versionData?.version
+  || import.meta.env.VITE_APP_VERSION
+  || 'dev'
+
+export const BUILD_TIME = versionData?.buildTime
+  || import.meta.env.VITE_APP_BUILD_TIME
+  || new Date().toISOString()
+
+export const COMMIT_SHA = versionData?.sha
+  || import.meta.env.VITE_APP_COMMIT_SHA
+  || 'unknown'
 
 // 格式化显示
 export const versionDisplay = `${VERSION} (${COMMIT_SHA})`

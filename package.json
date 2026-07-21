@@ -4,8 +4,8 @@
   "description": "高级策略监控系统",
   "main": "index.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "node scripts/generate-version.js && vite",
+    "build": "node scripts/generate-version.js && vite build",
     "preview": "vite preview"
   },
   "repository": {
