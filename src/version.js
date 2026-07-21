@@ -3,7 +3,7 @@
 
 /* eslint-disable no-undef */
 export const VERSION = __APP_VERSION__ || 'dev'
-export const BUILD_TIME = __APP_BUILD_TIME__ || new Date().toISOString()
+export const BUILD_TIME = __APP_BUILD_TIME__ || ''
 export const COMMIT_SHA = __APP_COMMIT_SHA__ || 'unknown'
 /* eslint-enable no-undef */
 
