@@ -1,15 +1,17 @@
 /**
- * 构建前自动生成版本信息 JSON
- * 读取 git tag/branch/commit 和 package.json 版本，生成 src/version.json
+ * 构建前自动生成版本信息
+ * 输出到 stdout，由 vite.config.js 读取并注入为全局变量
+ * 
+ * 使用方式：
+ *   node scripts/generate-version.js  →  输出 JSON 到 stdout
  */
 
 const { execSync } = require('child_process');
-const { writeFileSync } = require('fs');
-const { join } = require('path');
+const path = require('path');
 
 function run(cmd) {
   try {
-    return execSync(cmd, { encoding: 'utf-8', cwd: join(__dirname, '..') }).trim();
+    return execSync(cmd, { encoding: 'utf-8', cwd: path.resolve(__dirname, '..') }).trim();
   } catch {
     return '';
   }
@@ -18,10 +20,8 @@ function run(cmd) {
 // 读取 package.json 版本
 let pkgVersion = '1.0.0';
 try {
-  pkgVersion = require(join(__dirname, '..', 'package.json')).version || '1.0.0';
-} catch {
-  // fallback
-}
+  pkgVersion = require(path.resolve(__dirname, '..', 'package.json')).version || '1.0.0';
+} catch { /* fallback */ }
 
 // Git 信息
 const sha = run('git rev-parse --short HEAD') || 'unknown';
@@ -45,16 +45,9 @@ const buildTime = new Date().toLocaleString('zh-CN', {
   second: '2-digit'
 });
 
-const payload = {
-  version,
-  buildTime,
-  sha,
-  branch,
-  tag,
-  pkgVersion
-};
+// 输出 JSON 供 vite.config.js 捕获
+const payload = JSON.stringify({ version, buildTime, sha, branch, tag, pkgVersion });
+process.stdout.write(payload);
 
-const outPath = join(__dirname, '..', 'src', 'version.json');
-writeFileSync(outPath, JSON.stringify(payload, null, 2));
-
-console.log(`[generate-version] ${version} (${sha}) @ ${buildTime}`);
+// 同时打印人类可读信息到 stderr
+console.error(`[generate-version] ${version} (${sha}) @ ${buildTime}`);
