@@ -542,6 +542,7 @@
   <Teleport to="body">
     <div
       v-if="gridTipVisible"
+      ref="gridTipEl"
       class="grid-detail-tip"
       :style="gridTipStyle"
     >{{ gridTipText }}</div>
@@ -549,7 +550,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import mqttConditionService from '../services/MQTTConditionService.js'
 import clickCounterService from '../services/ClickCounterService.js'
 import appConfigService from '../services/AppConfigService.js'
@@ -836,6 +837,7 @@ const remoteGridData = computed(() => {
 const gridTipVisible = ref(false)
 const gridTipText = ref('')
 const gridTipStyle = ref({ left: '0px', top: '0px' })
+const gridTipEl = ref(null)
 
 // 构建网格详情文本（价格区间、网格间距、每格数量、基准价、现价、盈亏等）
 const buildGridTipText = (g) => {
@@ -870,13 +872,24 @@ const showGridTip = (g, e) => {
   gridTipText.value = buildGridTipText(g)
   gridTipVisible.value = true
   moveGridTip(e)
+  // 首次渲染后用真实尺寸再定位一次，避免底部/右侧超出视口
+  nextTick(() => moveGridTip(e))
 }
 
 const moveGridTip = (e) => {
-  // 偏移避免遮挡光标，并避免超出右/下边界
+  // 偏移避免遮挡光标，并在超出右/下边界时翻转到左/上方
   const offset = 14
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const el = gridTipEl.value
+  const tw = el ? el.offsetWidth : 260
+  const th = el ? el.offsetHeight : 160
   let left = e.clientX + offset
   let top = e.clientY + offset
+  if (left + tw > vw) left = e.clientX - offset - tw
+  if (top + th > vh) top = e.clientY - offset - th
+  if (left < 4) left = 4
+  if (top < 4) top = 4
   gridTipStyle.value = { left: left + 'px', top: top + 'px' }
 }
 
