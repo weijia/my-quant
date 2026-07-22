@@ -129,13 +129,28 @@
     <td v-if="visibleColumns.includes('oscillationGrid')">
       <!-- 远程网格策略 -->
       <div v-if="remoteGridData.length > 0">
-        <div v-for="(g, gi) in remoteGridData" :key="'rg-' + gi" class="grid-info remote-grid">
+        <div
+          v-for="(g, gi) in remoteGridData"
+          :key="'rg-' + gi"
+          class="grid-info remote-grid"
+          style="cursor: help;"
+          @mouseenter="showGridTip(g, $event)"
+          @mousemove="moveGridTip($event)"
+          @mouseleave="hideGridTip()"
+        >
           <span>网格: {{ g.gridSpacing }}元</span>
           <span class="trade-amount">× {{ g.tradeVolume }}股</span>
         </div>
       </div>
       <!-- 本地网格配置（fallback） -->
-      <div v-else-if="strategy.oscillationGridSize" class="grid-info">
+      <div
+        v-else-if="strategy.oscillationGridSize"
+        class="grid-info"
+        style="cursor: help;"
+        @mouseenter="showGridTip({ local: true }, $event)"
+        @mousemove="moveGridTip($event)"
+        @mouseleave="hideGridTip()"
+      >
         <span>网格: {{ strategy.oscillationGridSize }}元</span>
         <span class="trade-amount">× {{ strategy.oscillationTradeAmount }}股</span>
       </div>
@@ -522,6 +537,15 @@
       </button>
     </td>
   </tr>
+
+  <!-- 网格详情悬浮提示（Teleport 到 body，避免被表格 overflow:hidden 裁剪） -->
+  <Teleport to="body">
+    <div
+      v-if="gridTipVisible"
+      class="grid-detail-tip"
+      :style="gridTipStyle"
+    >{{ gridTipText }}</div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -807,6 +831,58 @@ const remoteGridData = computed(() => {
     s.stockCode === stock && s.strategyType === 'grid' && s.status === 'running'
   );
 })
+
+// ========== 震荡时网格列：悬浮提示网格详情 ==========
+const gridTipVisible = ref(false)
+const gridTipText = ref('')
+const gridTipStyle = ref({ left: '0px', top: '0px' })
+
+// 构建网格详情文本（价格区间、网格间距、每格数量、基准价、现价、盈亏等）
+const buildGridTipText = (g) => {
+  if (g && g.local) {
+    const lines = [
+      '震荡时网格（本地配置）',
+      `网格间距: ${props.strategy.oscillationGridSize ?? '-'} 元`,
+      `每格数量: ${props.strategy.oscillationTradeAmount ?? '-'} 股`
+    ]
+    const price = props.strategy.currentPrice || manualPrice.value
+    if (price) lines.push(`当前价: ${price}`)
+    lines.push('（远程未运行网格策略，以上为本地设置）')
+    return lines.join('\n')
+  }
+  const lines = [
+    `网格策略: ${g.stockName || g.stockCode || '-'}`,
+    `状态: ${g.status || '-'}`,
+    `网格间距: ${g.gridSpacing ?? '-'} 元`,
+    `每格数量: ${g.tradeVolume ?? '-'} 股`
+  ]
+  if (g.basicPrice != null) lines.push(`基准价: ${g.basicPrice}`)
+  if (g.nowPrice != null) lines.push(`现价: ${g.nowPrice}`)
+  if (g.priceRange != null) lines.push(`价格区间: ${g.priceRange}`)
+  if (g.profit != null) lines.push(`盈亏: ${g.profit}`)
+  if (g.netPosition != null) lines.push(`净持仓: ${g.netPosition} 股`)
+  if (g.costFunds != null) lines.push(`已用资金: ${g.costFunds}`)
+  if (g.expiredTime) lines.push(`过期时间: ${g.expiredTime}`)
+  return lines.join('\n')
+}
+
+const showGridTip = (g, e) => {
+  gridTipText.value = buildGridTipText(g)
+  gridTipVisible.value = true
+  moveGridTip(e)
+}
+
+const moveGridTip = (e) => {
+  // 偏移避免遮挡光标，并避免超出右/下边界
+  const offset = 14
+  let left = e.clientX + offset
+  let top = e.clientY + offset
+  gridTipStyle.value = { left: left + 'px', top: top + 'px' }
+}
+
+const hideGridTip = () => {
+  gridTipVisible.value = false
+}
 
 // 远程下跌条件单（下跌减仓）
 const remoteDecreaseData = computed(() => {
@@ -2164,6 +2240,23 @@ const getTrendClass = (trend) => {
   z-index: 100;
   cursor: pointer;
   pointer-events: auto;
+}
+
+/* 网格详情悬浮提示（Teleport 到 body，fixed 定位避免被表格裁剪） */
+.grid-detail-tip {
+  position: fixed;
+  z-index: 9999;
+  max-width: 320px;
+  background-color: rgba(0, 0, 0, 0.9);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  white-space: pre-line;
+  pointer-events: none;
 }
 
 .trend-icon.trend-up { color: #dc3545; }
