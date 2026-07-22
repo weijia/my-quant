@@ -244,7 +244,7 @@
             v-model.number="conditionPct" 
             type="number" 
             class="setting-input"
-            placeholder="0.1"
+            placeholder="0.01"
             min="0.01"
             step="0.1"
             @change="saveConditionPct"
@@ -273,17 +273,7 @@
         <div class="condition-group amount-group">
           <div class="condition-info">
             <span class="condition-amount amount-based">{{ formatAmount(defaultTradeAmount) || '-' }}</span>
-            <span class="condition-pct-edit">
-              ±<input
-                v-model.number="conditionPct"
-                type="number"
-                class="condition-pct-input"
-                min="0.01"
-                step="0.1"
-                @change="saveConditionPct"
-                title="条件单触发涨跌幅（%），修改后自动保存"
-              />%
-            </span>
+            <span class="condition-pct">±{{ conditionPct }}%</span>
           </div>
           <div class="condition-group-btns">
             <button 
@@ -316,17 +306,7 @@
         <div class="condition-group volume-group">
           <div class="condition-info">
             <span class="condition-amount volume-based">{{ formatAmount(totalTradeAmount) || '-' }}</span>
-            <span class="condition-pct-edit">
-              ±<input
-                v-model.number="conditionPct"
-                type="number"
-                class="condition-pct-input"
-                min="0.01"
-                step="0.1"
-                @change="saveConditionPct"
-                title="条件单触发涨跌幅（%），修改后自动保存"
-              />%
-            </span>
+            <span class="condition-pct">±{{ conditionPct }}%</span>
           </div>
           <div class="condition-group-btns">
             <button 
@@ -750,7 +730,7 @@ const loadConditionPct = () => {
     const key = `conditionPct_${props.strategy.id}`
     const saved = localStorage.getItem(key)
     if (saved) {
-      conditionPct.value = parseFloat(saved) || 0.1
+      conditionPct.value = parseFloat(saved) || 0.01
     }
   }
 }
@@ -1016,7 +996,7 @@ const saveConditionConfig = () => {
 const DEFAULT_TRADE_AMOUNT = 26000
 const DEFAULT_TRADE_VOLUME = null
 const DEFAULT_MANUAL_PRICE = null
-const DEFAULT_CONDITION_PCT = 0.1
+const DEFAULT_CONDITION_PCT = 0.01
 
 // 检查是否有自定义配置
 const hasCustomConfig = ref(false)
@@ -1205,7 +1185,7 @@ const handleConditionAmountBuy = async () => {
   sendingConditionAmountBuy.value = true
   const tradeAmount = defaultTradeAmount.value || 26000
   const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
-  const pct = conditionPct.value || 0.1
+  const pct = conditionPct.value || 0.01
 
   try {
     await mqttConditionService.sendBuyOrder({
@@ -1236,7 +1216,7 @@ const handleConditionAmountSell = async () => {
   sendingConditionAmountSell.value = true
   const tradeAmount = defaultTradeAmount.value || 26000
   const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
-  const pct = conditionPct.value || 0.1
+  const pct = conditionPct.value || 0.01
 
   try {
     await mqttConditionService.sendSellOrder({
@@ -1267,7 +1247,7 @@ const handleConditionAmountBoth = async () => {
   sendingConditionAmountBoth.value = true
   const tradeAmount = defaultTradeAmount.value || 26000
   const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
-  const pct = conditionPct.value || 0.1
+  const pct = conditionPct.value || 0.01
 
   try {
     await mqttConditionService.sendBuyOrder({
@@ -1306,7 +1286,7 @@ const handleConditionVolumeBuy = async () => {
   incrementCount('volumeBuy')
   sendingConditionVolumeBuy.value = true
   const tradeVolume = getEffectiveTradeVolume()
-  const pct = conditionPct.value || 0.1
+  const pct = conditionPct.value || 0.01
 
   try {
     await mqttConditionService.sendBuyOrder({
@@ -1336,7 +1316,7 @@ const handleConditionVolumeSell = async () => {
   incrementCount('volumeSell')
   sendingConditionVolumeSell.value = true
   const tradeVolume = getEffectiveTradeVolume()
-  const pct = conditionPct.value || 0.1
+  const pct = conditionPct.value || 0.01
 
   try {
     await mqttConditionService.sendSellOrder({
@@ -1366,7 +1346,7 @@ const handleConditionVolumeBoth = async () => {
   incrementCount('volumeBoth')
   sendingConditionVolumeBoth.value = true
   const tradeVolume = getEffectiveTradeVolume()
-  const pct = conditionPct.value || 0.1
+  const pct = conditionPct.value || 0.01
 
   try {
     await mqttConditionService.sendBuyOrder({
@@ -2609,30 +2589,9 @@ const getTrendClass = (trend) => {
   color: #888;
 }
 
-.condition-pct-edit {
+.condition-pct {
   font-size: 9px;
   color: #6a6;
-  display: inline-flex;
-  align-items: center;
-  gap: 1px;
-}
-
-.condition-pct-input {
-  width: 30px;
-  font-size: 9px;
-  line-height: 1;
-  padding: 1px 2px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 3px;
-  background: rgba(0, 0, 0, 0.35);
-  color: #6a6;
-  text-align: center;
-}
-
-.condition-pct-input:focus {
-  outline: none;
-  border-color: #6a6;
-  color: #8c8;
 }
 
 .condition-order-btns {
