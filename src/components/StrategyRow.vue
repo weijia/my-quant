@@ -273,7 +273,17 @@
         <div class="condition-group amount-group">
           <div class="condition-info">
             <span class="condition-amount amount-based">{{ formatAmount(defaultTradeAmount) || '-' }}</span>
-            <span class="condition-pct">±{{ conditionPct }}%</span>
+            <span class="condition-pct-edit">
+              ±<input
+                v-model.number="conditionPct"
+                type="number"
+                class="condition-pct-input"
+                min="0.01"
+                step="0.1"
+                @change="saveConditionPct"
+                title="条件单触发涨跌幅（%），修改后自动保存"
+              />%
+            </span>
           </div>
           <div class="condition-group-btns">
             <button 
@@ -306,7 +316,17 @@
         <div class="condition-group volume-group">
           <div class="condition-info">
             <span class="condition-amount volume-based">{{ formatAmount(totalTradeAmount) || '-' }}</span>
-            <span class="condition-pct">±{{ conditionPct }}%</span>
+            <span class="condition-pct-edit">
+              ±<input
+                v-model.number="conditionPct"
+                type="number"
+                class="condition-pct-input"
+                min="0.01"
+                step="0.1"
+                @change="saveConditionPct"
+                title="条件单触发涨跌幅（%），修改后自动保存"
+              />%
+            </span>
           </div>
           <div class="condition-group-btns">
             <button 
@@ -2589,9 +2609,30 @@ const getTrendClass = (trend) => {
   color: #888;
 }
 
-.condition-pct {
+.condition-pct-edit {
   font-size: 9px;
   color: #6a6;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.condition-pct-input {
+  width: 30px;
+  font-size: 9px;
+  line-height: 1;
+  padding: 1px 2px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #6a6;
+  text-align: center;
+}
+
+.condition-pct-input:focus {
+  outline: none;
+  border-color: #6a6;
+  color: #8c8;
 }
 
 .condition-order-btns {
