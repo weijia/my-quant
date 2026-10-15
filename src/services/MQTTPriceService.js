@@ -13,6 +13,7 @@
 
 import { reactive, ref } from 'vue'
 import appConfigService from './AppConfigService.js'
+import { normalizeCode } from '../utils/stockCode'
 
 const DEFAULT_PRICE_MQTT = {
   enabled: true,
@@ -21,13 +22,6 @@ const DEFAULT_PRICE_MQTT = {
   password: 'stock_price_mqtt_S3cret',
   clientId: 'myquant_price_' + Math.random().toString(16).slice(2, 8),
   pushInterval: 5
-}
-
-/** 股票代码归一：纯数字补零到 6 位，与 push 里的 code 对齐 */
-function normalizeCode(code) {
-  const text = String(code == null ? '' : code).trim()
-  if (!text) return ''
-  return /^\d+$/.test(text) ? text.padStart(6, '0') : text
 }
 
 function buildMsgId() {

@@ -12,6 +12,13 @@
       >
         列选择
       </button>
+      <span
+        class="quote-status"
+        :class="{ online: quoteConnected }"
+        :title="quoteConnected ? '已连接行情服务，当前价为实时值' : '未连接行情服务，当前价为非实时值'"
+      >
+        行情{{ quoteConnected ? '已连接' : '未连接' }}
+      </span>
     </div>
     
     <div class="table-wrapper">
@@ -273,13 +280,14 @@ import StrategyRow from './StrategyRow.vue'
 import StrategyTableHeader from './strategy/StrategyTableHeader.vue'
 import ColumnSelector from './ColumnSelector.vue'
 import appConfigService from '../services/AppConfigService.js'
-import { STRATEGY_COLUMNS, GROUP_ORDER } from '../config/columnCatalog'
+import { COLUMNS, GROUP_ORDER } from '../config/columnCatalog'
 import {
   loadVisibleKeys,
   saveVisibleKeys,
   getDefaultVisibleKeys,
   resolveVisibleColumns
 } from '../utils/columnVisibility'
+import { usePriceFeed } from '../composables/usePriceFeed'
 
 const props = defineProps({
   strategies: {
@@ -385,24 +393,25 @@ onUnmounted(() => {
   window.removeEventListener('appConfigUpdated', handleConfigUpdate)
 })
 
-/** 策略表的列可见性存储 scope */
-const STRATEGY_SCOPE = 'strategy'
-
 /** 列定义与分组顺序统一取自列目录，本组件不再维护本地副本 */
-const allColumns = STRATEGY_COLUMNS
-const groupOrder = GROUP_ORDER.strategy
+const allColumns = COLUMNS
+const groupOrder = GROUP_ORDER
 
-/** 可见列：优先读取本客户端存档，无存档时用列目录的默认值 */
-const visibleColumns = ref(loadVisibleKeys(STRATEGY_SCOPE))
+/** 可见列：优先读取本客户端存档，无存档或目录版本升级时用默认值 */
+const visibleColumns = ref(loadVisibleKeys())
 
-watch(visibleColumns, (value) => saveVisibleKeys(STRATEGY_SCOPE, value), { deep: true })
+watch(visibleColumns, (value) => saveVisibleKeys(value), { deep: true })
 
 /**
  * 有序的可见列对象。
  * 顺序严格跟随列目录，保证表头与 StrategyRow 的单元格一一对应；
  * 因此用户反复开关某列后，该列仍回到目录中的固定位置。
  */
-const visibleColumnObjects = computed(() => resolveVisibleColumns(STRATEGY_SCOPE, visibleColumns.value))
+const visibleColumnObjects = computed(() => resolveVisibleColumns(visibleColumns.value))
+
+// 订阅当前策略涉及股票的实时行情（策略变化会自动重新订阅）
+const strategyCodes = computed(() => props.strategies.map((item) => item.stockCode))
+const { connected: quoteConnected } = usePriceFeed(strategyCodes)
 
 const defaultStrategies = computed(() => {
   return props.strategies.filter(s => s.accountType !== 'credit' && s.provider !== 'pingan')
@@ -438,7 +447,7 @@ function handleVisibleKeysChange(keys) {
 }
 
 function resetColumns() {
-  visibleColumns.value = getDefaultVisibleKeys(STRATEGY_SCOPE)
+  visibleColumns.value = getDefaultVisibleKeys()
 }
 
 function handleTrendFilterChange(trend) {
@@ -571,6 +580,20 @@ const formatUpdateTime = (ts) => {
 
 .column-select-button:hover {
   background-color: rgba(255,255,255,0.3);
+}
+
+.quote-status {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
+  padding: 3px 6px;
+  white-space: nowrap;
+}
+
+.quote-status.online {
+  color: #4ecdc4;
+  border-color: rgba(78, 205, 196, 0.5);
 }
 
 .table-wrapper {

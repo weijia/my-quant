@@ -27,6 +27,13 @@
     <td v-if="visibleColumns.includes('marketValue')" class="market-value-cell">
       {{ strategy.marketValue || '-' }}
     </td>
+
+    <!-- 监控合并进来的列：当前价 + 网格（顺序须与列目录中 price/grid_* 一致） -->
+    <StrategyMonitorCells
+      :strategy="strategy"
+      :remote-strategies="remoteStrategies"
+      :visible-columns="visibleColumns"
+    />
     
     <td v-if="visibleColumns.includes('profitLoss')" class="text-right">
       <span :class="getProfitLossClass(strategy.profitLoss)">{{ strategy.profitLoss || '-' }}</span>
@@ -37,7 +44,7 @@
     </td>
     
     <td v-if="visibleColumns.includes('changePercent')" class="text-right">
-      <span :class="getChangeClass(strategy.changePercent)">{{ strategy.changePercent || '-' }}</span>
+      <span :class="getChangeClass(displayChangePercent)">{{ displayChangePercent || '-' }}</span>
     </td>
     
     <td v-if="visibleColumns.includes('decreasePercentage')" class="decrease-pct-cell">
@@ -527,6 +534,9 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import mqttConditionService from '../services/MQTTConditionService.js'
+import mqttPriceService from '../services/MQTTPriceService'
+import StrategyMonitorCells from './strategy/StrategyMonitorCells.vue'
+import { normalizeCode } from '../utils/stockCode'
 import clickCounterService from '../services/ClickCounterService.js'
 import appConfigService from '../services/AppConfigService.js'
 
@@ -584,6 +594,10 @@ const emit = defineEmits(['edit', 'delete', 'update-trend', 'batch-condition', '
 
 // 手动输入的价格（当 currentPrice 为空时使用）
 const manualPrice = ref(null)
+
+// 实时行情（MQTT）：涨跌幅优先取实时报价，缺失时回退策略自身携带的值
+const liveQuote = computed(() => mqttPriceService.quotes.get(normalizeCode(props.strategy.stockCode)))
+const displayChangePercent = computed(() => liveQuote.value?.changePct ?? props.strategy.changePercent)
 
 // 策略选择
 const localStrategyName = ref(props.strategy.selectedStrategyName || 'auto')
