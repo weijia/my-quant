@@ -52,6 +52,16 @@
               <path d="M16 16h5v5"/>
             </svg>
           </button>
+          <button @click="fetchRemoteStrategies" class="btn btn-secondary" :class="{ active: loadingRemoteStrategies }" title="通过 MQTT 获取条件单和网格策略" :disabled="loadingRemoteStrategies">
+            <svg v-if="!loadingRemoteStrategies" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin-icon">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+            获取策略
+          </button>
           <button @click="showAddDialog" class="btn btn-primary" title="添加策略">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 5v14"/>
@@ -162,6 +172,7 @@
         :agent-online="agentOnline"
         :holdings-map="holdingsMap"
         :loading-holdings="loadingDynamicHoldings"
+        :remote-strategies="remoteStrategies"
         @edit-strategy="editStrategy"
         @delete-strategy="deleteStrategy"
         @update-trend-judgment="updateTrendJudgment"
@@ -241,7 +252,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { strategyService } from '../services/StrategyService'
 import { trendService } from '../services/TrendService'
@@ -269,6 +280,14 @@ const agentOnline = ref(false);
 const searchQuery = ref('');
 const searchInput = ref(null);
 const bannerText = ref(appConfigService.getBannerText());
+
+// 远程策略数据（通过 MQTT 获取的条件单和网格策略）
+// founder: { default: { total, strategies, updatedAt }, credit: { total, strategies, updatedAt } }
+// pingan:  { total, strategies, updatedAt }
+const remoteStrategies = ref({ founder: { default: null, credit: null }, pingan: null });
+const loadingRemoteStrategies = ref(false);
+// 用 msgId 追踪 list_strategies 响应对应的 provider 和 accountType
+const listStrategiesMsgIdMap = new Map(); // msgId → { provider, accountType }
 
 // Toast 提示
 const toastMessage = ref('');
@@ -340,6 +359,47 @@ const refreshAllHoldings = async () => {
   }
 };
 
+// 通过 MQTT 获取条件单和网格策略
+const fetchRemoteStrategies = async () => {
+  if (!mqttConditionService.connected) {
+    showToast('MQTT 未连接，无法获取策略数据', 'error');
+    return;
+  }
+  loadingRemoteStrategies.value = true;
+
+  // 方正：按账户类型分别刷新网格数据 + 获取策略列表
+  const founderAccountTypes = ['default', 'credit'];
+  try {
+    for (const accountType of founderAccountTypes) {
+      await mqttConditionService.refreshGrid({ accountType });
+      await new Promise(r => setTimeout(r, 1500));
+    }
+  } catch (e) {
+    console.warn('[fetchRemoteStrategies] refresh_grid 失败:', e.message);
+  }
+  try {
+    for (const accountType of founderAccountTypes) {
+      const result = await mqttConditionService.listStrategies({ provider: 'founder', accountType });
+      if (result && result.msgId) {
+        listStrategiesMsgIdMap.set(result.msgId, { provider: 'founder', accountType });
+      }
+      await new Promise(r => setTimeout(r, 1000));
+    }
+    // 平安
+    const paResult = await mqttConditionService.listStrategies({ provider: 'pingan' });
+    if (paResult && paResult.msgId) {
+      listStrategiesMsgIdMap.set(paResult.msgId, { provider: 'pingan', accountType: null });
+    }
+    // 等响应回来后再关闭 loading（最多等 15 秒）
+    setTimeout(() => {
+      loadingRemoteStrategies.value = false;
+    }, 15000);
+  } catch (e) {
+    showToast('获取策略失败: ' + e.message, 'error');
+    loadingRemoteStrategies.value = false;
+  }
+};
+
 // 浮动笔记
 const noteConfig = appConfigService.getNoteConfig();
 const noteVisible = ref(noteConfig.visible);
@@ -350,13 +410,46 @@ let isDragging = false;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 
-// 防抖保存笔记内容
+// 防抖保存笔记内容（localStorage + WebDAV）
 let noteSaveTimer = null;
+let noteWebdavTimer = null;
 const saveNoteContent = () => {
   if (noteSaveTimer) clearTimeout(noteSaveTimer);
   noteSaveTimer = setTimeout(() => {
     appConfigService.setNoteContent(noteContent.value);
+    // WebDAV 同步使用更长的防抖（2秒），避免频繁请求
+    uploadNoteToWebDAV();
   }, 500);
+};
+
+// 上传笔记到 WebDAV
+const uploadNoteToWebDAV = () => {
+  if (noteWebdavTimer) clearTimeout(noteWebdavTimer);
+  noteWebdavTimer = setTimeout(async () => {
+    const noteConfig = appConfigService.getNoteConfig();
+    const result = await webdavImportService.uploadNotes({
+      content: noteContent.value,
+      visible: noteConfig.visible,
+      x: noteConfig.x,
+      y: noteConfig.y,
+      width: noteConfig.width,
+      height: noteConfig.height,
+      // 传递本地内容修改时间用于冲突检测
+      updatedAt: noteConfig.updatedAt || new Date().toISOString()
+    });
+    // 远端更新则采用远端内容，避免双向覆盖
+    if (result && result.skipped && result.remote) {
+      console.log('[HomeView] 远端笔记较新，采用远端内容');
+      if (result.remote.content != null) {
+        noteContent.value = result.remote.content;
+        appConfigService.setNoteContent(result.remote.content, result.remote.updatedAt);
+      }
+      if (result.remote.visible != null) {
+        noteVisible.value = result.remote.visible;
+        appConfigService.setNoteVisible(result.remote.visible);
+      }
+    }
+  }, 2000);
 };
 
 // 笔记内容变化时自动保存
@@ -365,6 +458,7 @@ watch(noteContent, saveNoteContent);
 const toggleNote = () => {
   noteVisible.value = !noteVisible.value;
   appConfigService.setNoteVisible(noteVisible.value);
+  uploadNoteToWebDAV();
 };
 
 const startDrag = (e) => {
@@ -388,6 +482,7 @@ const stopDrag = () => {
     document.removeEventListener('mouseup', stopDrag);
     // 保存位置
     appConfigService.setNotePosition(noteX.value, noteY.value);
+    uploadNoteToWebDAV();
   }
 };
 
@@ -426,8 +521,23 @@ const stopResize = () => {
     document.removeEventListener('mousemove', onResize);
     document.removeEventListener('mouseup', stopResize);
     appConfigService.setNoteSize(noteWidth.value, noteHeight.value);
+    uploadNoteToWebDAV();
   }
 };
+
+// 用于存储组件生命周期内注册的 document 事件监听器引用
+let _onFullscreenChange = null;
+
+// 组件卸载时清理 document 事件监听器，防止 HMR 时出现 __vnode 错误
+onBeforeUnmount(() => {
+  document.removeEventListener('mousemove', onDrag);
+  document.removeEventListener('mouseup', stopDrag);
+  document.removeEventListener('mousemove', onResize);
+  document.removeEventListener('mouseup', stopResize);
+  if (_onFullscreenChange) {
+    document.removeEventListener('fullscreenchange', _onFullscreenChange);
+  }
+});
 
 const isFullscreen = ref(false);
 
@@ -555,6 +665,17 @@ const loadStrategies = async () => {
                 _generatedAt: trend.stockAnalysisUpdatedAt || trend.trendJudgmentUpdatedAt || trend.autoTrendJudgmentUpdatedAt || null
               };
               console.log(`[调试-stockAnalysis] 策略: ${strategy.name}(${strategy.stockCode}), 注入 stockAnalysis:`, trend.stockAnalysis);
+            }
+
+            // 注入 ADX 趋势强度指标
+            if (trend.adx != null) {
+              strategy.adx = trend.adx;
+            }
+            if (trend.plusDi != null) {
+              strategy.plusDi = trend.plusDi;
+            }
+            if (trend.minusDi != null) {
+              strategy.minusDi = trend.minusDi;
             }
 
             matchedCount++;
@@ -1211,6 +1332,10 @@ const getTrendByStockCode = (stockCode, trendData) => {
       // 添加当前价格和15日波动率
       currentPrice: trendInfo.currentPrice != null ? trendInfo.currentPrice : null,
       volatility15d: trendInfo.volatility15d != null ? trendInfo.volatility15d : null,
+      // ADX 趋势强度指标
+      adx: trendInfo.adx != null ? trendInfo.adx : null,
+      plusDi: trendInfo.plusDi != null ? trendInfo.plusDi : null,
+      minusDi: trendInfo.minusDi != null ? trendInfo.minusDi : null,
       // 买卖建议
       stockAnalysis: trendInfo.stockAnalysis || null
     };
@@ -1226,9 +1351,10 @@ onMounted(async () => {
   console.log('HomeView: 开始初始化...');
 
   // 监听全屏状态变化
-  document.addEventListener('fullscreenchange', () => {
+  _onFullscreenChange = () => {
     isFullscreen.value = !!document.fullscreenElement;
-  });
+  };
+  document.addEventListener('fullscreenchange', _onFullscreenChange);
 
   // 尝试连接 MQTT
   try {
@@ -1244,7 +1370,7 @@ onMounted(async () => {
   }
 
   // 监听 MQTT 消息
-  mqttConditionService.onMessage((data, msgData) => {
+  mqttConditionService.onMessage(async (data, msgData) => {
     console.log('[HomeView] MQTT消息:', data, msgData);
 
     // 解析 Agent 响应格式
@@ -1256,7 +1382,49 @@ onMounted(async () => {
     const status = resp.status || msgData?.status;
     const payload = resp.data;
     const stockCode = resp.stockCode;
-    const errorMessage = resp.message;
+    const errorMessage = resp.message || (payload && typeof payload === 'object' && payload.message);
+    console.log('[HomeView] 响应解析:', { isResponse, commandAction, status, stockCode, errorMessage, respKeys: Object.keys(resp||{}) });
+
+    // ========== 处理策略列表响应（条件单 + 网格） ==========
+    if (commandAction === 'list_strategies') {
+      if (status === 'success') {
+        const tracked = listStrategiesMsgIdMap.get(data.msgId);
+        const provider = (payload && payload.provider)
+          || (tracked && tracked.provider)
+          || 'founder';
+        const accountType = (tracked && tracked.accountType) || null;
+        listStrategiesMsgIdMap.delete(data.msgId);
+
+        const strategies = (payload && payload.strategies) || [];
+        const total = (payload && payload.total) || strategies.length;
+
+        // status 字段已在服务端标准化，前端直接使用
+        if (provider === 'founder' && accountType) {
+          // 方正按账户类型分别存储
+          remoteStrategies.value = {
+            ...remoteStrategies.value,
+            founder: {
+              ...remoteStrategies.value.founder,
+              [accountType]: { total, strategies: strategies, updatedAt: Date.now() }
+            }
+          };
+          const label = accountType === 'credit' ? '信用账户' : '普通账户';
+          showToast(`已获取 方正-${label} 策略：共 ${total} 条`, 'success', 3000);
+        } else {
+          // 平安直接存储
+          remoteStrategies.value = {
+            ...remoteStrategies.value,
+            [provider]: { total, strategies: strategies, updatedAt: Date.now() }
+          };
+          showToast(`已获取 ${provider === 'pingan' ? '平安' : '方正'} 策略：共 ${total} 条`, 'success', 3000);
+        }
+        loadingRemoteStrategies.value = false;
+      } else if (status === 'error') {
+        showToast('获取策略失败: ' + (errorMessage || '未知错误'), 'error', 0);
+        loadingRemoteStrategies.value = false;
+      }
+      return;
+    }
 
     // ========== 处理持仓响应 ==========
     if (commandAction === 'get_holdings') {
@@ -1271,21 +1439,30 @@ onMounted(async () => {
             || holdingsMsgIdMap.get(data.msgId)
             || 'founder';
           holdingsMsgIdMap.delete(data.msgId); // 用完清理
+          // 从旧 Map 浅拷贝外层，保留其他 provider 的数据
           const newMap = new Map(holdingsMap.value);
 
-          // 按 accountType 分组存储，避免不同账户类型互相覆盖
-          // accountType 依据文档：normal（普通）/ credit（信用），默认 normal
+          // 清空该 provider 下所有已知账户类型的旧数据
+          // 不能只清响应中出现的类型，否则某类型为空时会残留旧数据
+          const providerAccountTypes = {
+            founder: ['default', 'credit'],
+            pingan: ['default']
+          };
+          const knownTypes = providerAccountTypes[provider] || ['default'];
+          for (const at of knownTypes) {
+            newMap.set(`${provider}:${at}`, new Map());
+          }
+
+          // 再写入最新持仓数据
           for (const h of payload.holdings) {
             if (!h.stockCode) continue;
-            const accountType = h.accountType || 'normal';
+            const accountType = h.accountType || 'default';
             const key = `${provider}:${accountType}`;
-            if (!newMap.has(key)) {
-              newMap.set(key, new Map());
-            }
             newMap.get(key).set(h.stockCode, h);
           }
 
           holdingsMap.value = newMap;
+
 
           // 统计本次更新的分组数量
           let totalCount = 0;
@@ -1293,11 +1470,65 @@ onMounted(async () => {
             if (h.stockCode) totalCount++;
           }
 
+          // 以持仓为准同步策略行：有持仓则建，不自动删除（保留用户手动添加的行）
+          const strategyProvider = provider === 'pingan' ? 'pingan' : 'founder';
+          const holdingsAccountToStrategy = (at) =>
+            !at ? 'default' : at;
+
+          // Step 1: 不再自动删除不在持仓中的策略，保留用户手动添加的股票行
+          // Step 2: 新增持仓中有但策略中没有的股票（DB操作）
+          let createdCount = 0;
+          for (const h of (payload.holdings || [])) {
+            if (!h.stockCode) continue;
+            const exists = strategies.value.some(s =>
+              s.stockCode === h.stockCode && (s.provider || 'founder') === strategyProvider
+            );
+            if (!exists) {
+              await strategyService.addStrategy({
+                name: h.stockName || h.stockCode,
+                stockCode: h.stockCode,
+                accountType: holdingsAccountToStrategy(h.accountType),
+                isMarginAccount: h.accountType === 'credit',
+                provider: strategyProvider,
+                netPosition: 0,
+                marketValue: '',
+                currentPrice: null
+              });
+              createdCount++;
+            }
+          }
+
+          // Step 3: DB有变更则 reload，拿到带计算属性的最新列表
+          if (createdCount > 0) {
+            await loadStrategies();
+          }
+
+          // Step 4: 在最终 strategies.value 上写入持仓数据（纯内存，不会被覆盖）
+          let syncedCount = 0;
+          for (const h of (payload.holdings || [])) {
+            if (!h.stockCode) continue;
+            const s = strategies.value.find(
+              s => s.stockCode === h.stockCode && (s.provider || 'founder') === strategyProvider
+            );
+            if (s) {
+              s.netPosition = h.quantity ?? 0;
+              syncedCount++;
+            }
+          }
+
+          if (totalCount > 0) {
+            console.log(`[HomeView] 持仓同步完成: 新增 ${createdCount} 行, 更新 ${syncedCount} 行`);
+          } else {
+            console.log(`[HomeView] 持仓同步完成: 新增 ${createdCount} 行 (无持仓)`);
+          }
+
           if (totalCount === 0) {
             showToast('该账户当前无持仓', 'info', 3000);
           } else {
             showToast(`已更新 ${totalCount} 只持仓 (${provider})`, 'success', 3000);
           }
+
+
         } else {
           console.error('[HomeView] get_holdings 响应格式异常:', msgData);
           showToast('获取持仓失败: 响应格式异常（缺少 holdings 字段）', 'error', 0);
@@ -1309,12 +1540,13 @@ onMounted(async () => {
     }
 
     // ========== 处理条件单操作响应 ==========
-    const ORDER_ACTIONS = ['buy', 'sell', 'create', 'add', 'remove', 'stop', 'cancel', 'create_grid', 'remove_grid'];
+    const ORDER_ACTIONS = ['buy', 'sell', 'create', 'add', 'remove', 'stop', 'cancel', 'create_grid', 'remove_grid', 'list_strategies', 'refresh_grid'];
     if (ORDER_ACTIONS.includes(commandAction) && status) {
       const actionLabels = {
         buy: '买入条件单', sell: '卖出条件单', create: '创建条件单',
         add: '添加股票', remove: '移除', stop: '停止条件单',
-        cancel: '取消条件单', create_grid: '创建网格', remove_grid: '删除网格'
+        cancel: '取消条件单', create_grid: '创建网格', remove_grid: '删除网格',
+        list_strategies: '获取策略列表', refresh_grid: '刷新网格数据'
       };
       const label = actionLabels[commandAction] || commandAction;
       const stockInfo = stockCode ? `【${stockCode}】` : '';
@@ -1405,6 +1637,30 @@ onMounted(async () => {
     // 使用 nextTick 延迟加载策略，避免在 Vue flush 周期中同步修改响应式数据
     await nextTick();
     await loadStrategies();
+  });
+
+  // 从 WebDAV 加载笔记
+  webdavImportService.downloadNotes().then(noteData => {
+    if (noteData) {
+      console.log('[HomeView] 从 WebDAV 加载笔记成功');
+      // 合并到本地配置（WebDAV 内容为准）
+      if (noteData.content != null) {
+        noteContent.value = noteData.content;
+        // 采用远端时间戳，避免下载后立即被本地旧时间戳覆盖上传
+        appConfigService.setNoteContent(noteData.content, noteData.updatedAt);
+      }
+      if (noteData.visible != null) {
+        noteVisible.value = noteData.visible;
+        appConfigService.setNoteVisible(noteData.visible);
+      }
+      if (noteData.x != null) noteX.value = noteData.x;
+      if (noteData.y != null) noteY.value = noteData.y;
+      if (noteData.width != null) noteWidth.value = noteData.width;
+      if (noteData.height != null) noteHeight.value = noteData.height;
+      // 保存位置和尺寸
+      appConfigService.setNotePosition(noteX.value, noteY.value);
+      appConfigService.setNoteSize(noteWidth.value, noteHeight.value);
+    }
   });
 
   console.log('HomeView: 初始化完成（界面已可交互）');
@@ -1960,6 +2216,16 @@ onMounted(async () => {
   background: rgba(78, 205, 196, 0.2);
   border-color: rgba(78, 205, 196, 0.4);
   color: #4ecdc4;
+}
+
+/* 旋转动画 */
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* Toast 提示 */

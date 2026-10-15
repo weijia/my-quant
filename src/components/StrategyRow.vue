@@ -14,8 +14,11 @@
     <td v-if="visibleColumns.includes('dynamicHoldings')" class="dynamic-holdings-cell">
       <div v-if="dynamicHolding" class="holding-info">
         <div class="holding-quantity">{{ dynamicHolding.quantity }}</div>
-        <div class="holding-profit" :class="dynamicHolding.profit >= 0 ? 'text-profit' : 'text-loss'">
-          {{ formatDynamicProfit(dynamicHolding.profit) }}
+        <div class="holding-bottom">
+          <span class="holding-value">{{ formatMarketValue(dynamicHolding.marketValue) }}</span>
+          <span class="holding-profit" :class="dynamicHolding.profit >= 0 ? 'text-profit' : 'text-loss'">
+            {{ formatDynamicProfit(dynamicHolding.profit) }}
+          </span>
         </div>
       </div>
       <span v-else class="no-holding">-</span>
@@ -124,7 +127,15 @@
     </td>
 
     <td v-if="visibleColumns.includes('oscillationGrid')">
-      <div v-if="strategy.oscillationGridSize" class="grid-info">
+      <!-- 远程网格策略 -->
+      <div v-if="remoteGridData.length > 0">
+        <div v-for="(g, gi) in remoteGridData" :key="'rg-' + gi" class="grid-info remote-grid">
+          <span>网格: {{ g.gridSpacing }}元</span>
+          <span class="trade-amount">× {{ g.tradeVolume }}股</span>
+        </div>
+      </div>
+      <!-- 本地网格配置（fallback） -->
+      <div v-else-if="strategy.oscillationGridSize" class="grid-info">
         <span>网格: {{ strategy.oscillationGridSize }}元</span>
         <span class="trade-amount">× {{ strategy.oscillationTradeAmount }}股</span>
       </div>
@@ -132,7 +143,14 @@
     </td>
     
     <td v-if="visibleColumns.includes('decreaseStrategy')">
-      <div v-if="strategy.decreaseStrategies && strategy.decreaseStrategies.length > 0">
+      <!-- 远程下跌条件单 -->
+      <div v-if="remoteDecreaseData.length > 0">
+        <div v-for="(d, di) in remoteDecreaseData" :key="'rd-' + di" class="strategy-tag remote-condition">
+          {{ d.deltaPercentage }}%/{{ d.tradeVolume }}股
+        </div>
+      </div>
+      <!-- 本地下跌策略（fallback） -->
+      <div v-else-if="strategy.decreaseStrategies && strategy.decreaseStrategies.length > 0">
         <div 
           v-for="(decrease, index) in strategy.decreaseStrategies.slice(0, 3)" 
           :key="index"
@@ -148,7 +166,14 @@
     </td>
     
     <td v-if="visibleColumns.includes('increaseStrategy')">
-      <div v-if="strategy.increaseStrategies && strategy.increaseStrategies.length > 0">
+      <!-- 远程上涨条件单 -->
+      <div v-if="remoteIncreaseData.length > 0">
+        <div v-for="(d, di) in remoteIncreaseData" :key="'ri-' + di" class="strategy-tag remote-condition">
+          {{ d.deltaPercentage }}%/{{ d.tradeVolume }}股
+        </div>
+      </div>
+      <!-- 本地加仓策略（fallback） -->
+      <div v-else-if="strategy.increaseStrategies && strategy.increaseStrategies.length > 0">
         <div 
           v-for="(increase, index) in strategy.increaseStrategies.slice(0, 3)" 
           :key="index"
@@ -459,6 +484,22 @@
       <span v-else class="stock-analysis-empty">-</span>
     </td>
 
+    <td v-if="visibleColumns.includes('adx')" class="adx-cell">
+      <div v-if="strategy.adx != null" class="adx-content" @click="showAdxTip = !showAdxTip">
+        <span class="adx-value" :class="getAdxClass(strategy.adx)" :title="getAdxTooltip(strategy.adx)">
+          {{ strategy.adx.toFixed(1) }}
+        </span>
+        <span class="adx-hint" :class="getAdxClass(strategy.adx)">{{ getAdxHint(strategy.adx) }}</span>
+        <span v-if="showAdxTip" class="trend-tip adx-tip" @click.stop="showAdxTip = false">
+          ADX: {{ strategy.adx.toFixed(1) }} · {{ getAdxTooltip(strategy.adx) }}
+          <template v-if="strategy.plusDi != null || strategy.minusDi != null">
+            <br>+DI: {{ strategy.plusDi != null ? strategy.plusDi.toFixed(1) : '-' }} · -DI: {{ strategy.minusDi != null ? strategy.minusDi.toFixed(1) : '-' }}
+          </template>
+        </span>
+      </div>
+      <span v-else class="adx-empty">-</span>
+    </td>
+
     <td v-if="visibleColumns.includes('actions')" class="actions-cell">
       <button class="action-btn edit-btn" @click="$emit('edit', strategy)" title="编辑">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -511,6 +552,10 @@ const props = defineProps({
   holdingsMap: {
     type: Map,
     default: () => new Map()
+  },
+  remoteStrategies: {
+    type: Object,
+    default: () => ({ founder: { default: null, credit: null }, pingan: null })
   }
 })
 
@@ -733,16 +778,70 @@ const effectivePrice = computed(() => {
   return props.strategy.currentPrice || manualPrice.value || null
 })
 
+// ========== 合并远程策略数据（MQTT list_strategies）到表格列 ==========
+
+// 当前行对应 provider 的远程策略账户类型
+const remoteAccountType = computed(() => {
+  const at = props.strategy.accountType || 'default';
+  return at === 'default' ? 'default' : 'credit';
+})
+
+// 获取远程策略数据（统一按 provider 返回）
+const getRemoteStrategies = () => {
+  const provider = props.strategy.provider || 'founder';
+  if (provider === 'pingan') {
+    const pa = props.remoteStrategies?.pingan;
+    return pa?.strategies || [];
+  }
+  const acct = remoteAccountType.value;
+  const fd = props.remoteStrategies?.founder;
+  return fd?.[acct]?.strategies || [];
+};
+
+// 远程网格策略（震荡时网格）
+const remoteGridData = computed(() => {
+  const stock = props.strategy.stockCode;
+  if (!stock || !props.remoteStrategies) return [];
+  const strategies = getRemoteStrategies();
+  return strategies.filter(s =>
+    s.stockCode === stock && s.strategyType === 'grid' && s.status === 'running'
+  );
+})
+
+// 远程下跌条件单（下跌减仓）
+const remoteDecreaseData = computed(() => {
+  const stock = props.strategy.stockCode;
+  if (!stock || !props.remoteStrategies) return [];
+  const strategies = getRemoteStrategies();
+  return strategies.filter(s =>
+    s.stockCode === stock && s.strategyType === 'condition'
+      && s.side === 'SELL' && s.status === 'running'
+  );
+})
+
+// 远程上涨条件单（上涨加仓）
+const remoteIncreaseData = computed(() => {
+  const stock = props.strategy.stockCode;
+  if (!stock || !props.remoteStrategies) return [];
+  const strategies = getRemoteStrategies();
+  return strategies.filter(s =>
+    s.stockCode === stock && s.strategyType === 'condition'
+      && s.side === 'BUY' && s.status === 'running'
+  );
+})
+
 // 动态持仓数据（从 MQTT 获取）
 // holdingsMap 按 provider:accountType 分组，需要根据策略属性定位到正确的分组
-// accountType 依据文档：normal（普通）/ credit（信用）
-const dynamicHolding = computed(() => {
-  if (!props.strategy.stockCode || !props.holdingsMap) return null
-  const provider = props.strategy.provider || 'founder'
-  // 策略的 'default' 和 undefined 都映射为 'normal'，'credit' 保持
-  const accountType = (props.strategy.accountType === 'default' || !props.strategy.accountType)
-    ? 'normal'
-    : props.strategy.accountType
+  // 注意：平安的 holdingsMap key 是 pingan:default，方正才是 founder:default / founder:credit
+  const dynamicHolding = computed(() => {
+    if (!props.strategy.stockCode || !props.holdingsMap) return null
+    const provider = props.strategy.provider || 'founder'
+    // 平安与方正统一用 'default' 表示普通账户
+    const accountType = provider === 'pingan'
+      ? 'default'
+      : ((props.strategy.accountType === 'default' || !props.strategy.accountType)
+      ? 'default'
+      : props.strategy.accountType)
   const key = `${provider}:${accountType}`
   const groupMap = props.holdingsMap.get(key)
   if (!groupMap) return null
@@ -753,6 +852,16 @@ const formatDynamicProfit = (profit) => {
   if (profit == null) return '-'
   const prefix = profit >= 0 ? '+' : ''
   return prefix + profit.toFixed(0)
+}
+
+const formatMarketValue = (value) => {
+  if (value == null || value === '') return '-'
+  const num = typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : value
+  if (isNaN(num)) return '-'
+  if (num >= 10000) {
+    return (num / 10000).toFixed(1) + '万'
+  }
+  return num.toFixed(0)
 }
 
 // 交易总额 = 量 × 价
@@ -789,6 +898,7 @@ const sendingBuy = ref(false)
 const sendingSell = ref(false)
 const sendingBoth = ref(false)
 const showTrendTip = ref(false)
+const showAdxTip = ref(false)
 
 // 高级快捷下单设置
 const defaultTradeAmount = ref(26000)  // 缺省下单金额
@@ -1510,6 +1620,34 @@ const getTrendTooltip = (trend) => {
   return tooltips[trend] || '未设置'
 }
 
+// ADX 趋势强度分级（依据 my-data 文档 trendStrengthMetrics.adx）
+// <20 震荡, 20–25 趋势初现, 25–50 强趋势, >50 极强趋势
+const getAdxHint = (adx) => {
+  if (adx == null) return '数据不足'
+  if (adx < 20) return '震荡'
+  if (adx < 25) return '趋势初现'
+  if (adx <= 50) return '强趋势'
+  return '极强趋势'
+}
+
+// ADX 趋势提示详情
+const getAdxTooltip = (adx) => {
+  if (adx == null) return '数据不足：趋势文件未提供 ADX 值'
+  if (adx < 20) return '震荡行情：趋势不明显，建议以网格策略为主'
+  if (adx < 25) return '趋势初现：方向开始清晰，但仍较弱'
+  if (adx <= 50) return '强趋势：趋势明显，可顺势而为'
+  return '极强趋势：趋势非常强劲，注意顺势持仓'
+}
+
+// ADX 颜色样式类
+const getAdxClass = (adx) => {
+  if (adx == null) return 'adx-none'
+  if (adx < 20) return 'adx-oscillation'
+  if (adx < 25) return 'adx-emerging'
+  if (adx <= 50) return 'adx-strong'
+  return 'adx-extreme'
+}
+
 // 获取账户类型
 const getAccountType = () => {
   if (props.strategy.provider === 'pingan' || props.strategy.provider === 'founder') {
@@ -1969,8 +2107,27 @@ const getTrendClass = (trend) => {
   color: rgba(255, 255, 255, 0.9);
 }
 
+.holding-bottom {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
 .holding-profit {
   font-size: 10px;
+}
+
+.holding-value {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.text-profit {
+  color: #ff6b6b;
+}
+
+.text-loss {
+  color: #51cf66;
 }
 
 .no-holding {
@@ -3006,6 +3163,49 @@ const getTrendClass = (trend) => {
 
 .stock-analysis-empty {
   color: rgba(255, 255, 255, 0.3);
+}
+
+/* ADX 趋势强度列 */
+.adx-cell {
+  padding: 8px 6px;
+  text-align: center;
+  position: relative;
+}
+
+.adx-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.adx-value {
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.adx-hint {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.adx-empty {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* ADX 分级配色 */
+.adx-none { color: rgba(255, 255, 255, 0.3); }
+.adx-oscillation { color: #ffc107; }
+.adx-emerging { color: #17a2b8; }
+.adx-strong { color: #28a745; }
+.adx-extreme { color: #dc3545; }
+
+.adx-tip {
+  max-width: 220px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.4;
 }
 
 @media (max-width: 768px) {

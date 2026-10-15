@@ -143,6 +143,7 @@
               </div>
             </th>
             <th v-if="visibleColumns.includes('stockAnalysis')" style="width: 120px;">买卖建议</th>
+            <th v-if="visibleColumns.includes('adx')" style="width: 100px;">ADX趋势强度</th>
             <th v-if="visibleColumns.includes('actions')" style="width: 80px;">操作</th>
           </tr>
         </thead>
@@ -157,6 +158,7 @@
             :visible-columns="visibleColumns"
             :use-margin-trade="useMarginTrade"
             :holdings-map="holdingsMap"
+            :remote-strategies="remoteStrategies"
             @edit="$emit('edit-strategy', strategy)"
             @delete="$emit('delete-strategy', strategy.id)"
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
@@ -182,6 +184,7 @@
             :visible-columns="visibleColumns"
             :use-margin-trade="useMarginTrade"
             :holdings-map="holdingsMap"
+            :remote-strategies="remoteStrategies"
             @edit="$emit('edit-strategy', strategy)"
             @delete="$emit('delete-strategy', strategy.id)"
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
@@ -207,6 +210,7 @@
             :visible-columns="visibleColumns"
             :use-margin-trade="useMarginTrade"
             :holdings-map="holdingsMap"
+            :remote-strategies="remoteStrategies"
             @edit="$emit('edit-strategy', strategy)"
             @delete="$emit('delete-strategy', strategy.id)"
             @update-trend="(trend) => $emit('update-trend-judgment', strategy.id, trend)"
@@ -230,6 +234,146 @@
       </table>
     </div>
     
+    <!-- 远程策略数据（通过 MQTT list_strategies 获取的条件单和网格策略） -->
+    <div v-if="hasAnyRemoteData" class="remote-strategies-section">
+      <div class="section-divider">
+        <span class="section-divider-text">📡 MQTT 远程策略数据</span>
+      </div>
+
+      <!-- 方正证券远程策略 — 按账户类型分组 -->
+      <template v-for="account in founderAccounts" :key="'fa-' + account.key">
+        <div v-if="account.data && account.data.strategies.length > 0" class="remote-provider-section">
+          <div class="remote-provider-header" @click="toggleFounderAccount(account.key)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :style="{ transform: showFounderAccounts[account.key] ? 'rotate(90deg)' : 'rotate(0deg)' }">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+            <span class="provider-badge founder">方正证券</span>
+            <span class="account-type-badge" :class="'account-' + account.key">{{ account.label }}</span>
+            <span class="provider-count">{{ account.data.total }} 条策略</span>
+            <span class="update-time">{{ formatUpdateTime(account.data.updatedAt) }}</span>
+          </div>
+          <template v-if="showFounderAccounts[account.key]">
+            <!-- 网格策略 -->
+            <div v-if="account.grids.length > 0" class="remote-subsection">
+              <div class="remote-subsection-header">网格策略 ({{ account.grids.length }})</div>
+              <table class="remote-table">
+                <thead>
+                  <tr>
+                    <th>股票</th>
+                    <th>名称</th>
+                    <th>状态</th>
+                    <th>基准价</th>
+                    <th>现价</th>
+                    <th>间距</th>
+                    <th>区间</th>
+                    <th>盈亏</th>
+                    <th>净持仓</th>
+                    <th>已用资金</th>
+                    <th>过期</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="s in account.grids" :key="'fg-' + account.key + '-' + s.strategyId">
+                    <td class="remote-code">{{ s.stockCode }}</td>
+                    <td class="remote-name">{{ s.stockName }}</td>
+                    <td><span class="remote-status" :class="getStatusClass(s.status)">{{ statusLabel(s.status) }}</span></td>
+                    <td>{{ s.basicPrice }}</td>
+                    <td>{{ s.nowPrice }}</td>
+                    <td>{{ s.gridSpacing }}</td>
+                    <td>{{ s.priceRange }}</td>
+                    <td :class="parseFloat(s.profit) >= 0 ? 'profit-positive' : 'profit-negative'">{{ s.profit }}</td>
+                    <td>{{ s.netPosition }}</td>
+                    <td>{{ s.costFunds }}</td>
+                    <td :class="s.expireStatus === 'expiring' ? 'expiring' : ''">{{ s.expiredTime ? s.expiredTime.slice(0, 10) : '-' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <!-- 条件单 -->
+            <div v-if="account.conditions.length > 0" class="remote-subsection">
+              <div class="remote-subsection-header">条件单 ({{ account.conditions.length }})</div>
+              <table class="remote-table">
+                <thead>
+                  <tr>
+                    <th>股票</th>
+                    <th>名称</th>
+                    <th>类型</th>
+                    <th>状态</th>
+                    <th>涨跌%</th>
+                    <th>交易量</th>
+                    <th>方向</th>
+                    <th>账户</th>
+                    <th>创建</th>
+                    <th>结束</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="s in account.conditions" :key="'fc-' + account.key + '-' + s.strategyId">
+                    <td class="remote-code">{{ s.stockCode }}</td>
+                    <td class="remote-name">{{ s.stockName }}</td>
+                    <td>{{ s.strategyTypeName || '-' }}</td>
+                    <td><span class="remote-status" :class="getStatusClass(s.status)">{{ statusLabel(s.status) }}</span></td>
+                    <td>{{ s.deltaPercentage }}</td>
+                    <td>{{ s.tradeVolume }}</td>
+                    <td>{{ s.side }}</td>
+                    <td>{{ s.accountType }}</td>
+                    <td>{{ s.createDate }}</td>
+                    <td>{{ s.endDate || '-' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- 平安证券远程策略 -->
+      <div v-if="remoteStrategies.pingan && remoteStrategies.pingan.strategies.length > 0" class="remote-provider-section">
+        <div class="remote-provider-header pingan-header" @click="showRemotePingan = !showRemotePingan">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :style="{ transform: showRemotePingan ? 'rotate(90deg)' : 'rotate(0deg)' }">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+          <span class="provider-badge pingan">平安证券</span>
+          <span class="provider-count">{{ remoteStrategies.pingan.total }} 条策略</span>
+          <span class="update-time">{{ formatUpdateTime(remoteStrategies.pingan.updatedAt) }}</span>
+        </div>
+        <table v-if="showRemotePingan" class="remote-table">
+          <thead>
+            <tr>
+              <th>股票</th>
+              <th>名称</th>
+              <th>类型</th>
+              <th>状态</th>
+              <th>基准价</th>
+              <th>触发价</th>
+              <th>涨幅</th>
+              <th>跌幅</th>
+              <th>买入额</th>
+              <th>卖出额</th>
+              <th>创建</th>
+              <th>过期</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="s in remoteStrategies.pingan.strategies" :key="'pa-' + (s._raw?.ymdId || s.strategyId)">
+              <td class="remote-code">{{ s.stockCode }}</td>
+              <td class="remote-name">{{ s.stockName }}</td>
+              <td>{{ s.strategyTypeName }}</td>
+              <td><span class="remote-status" :class="getStatusClass(s.status)">{{ statusLabel(s.status) }}</span></td>
+              <td>{{ s.basicPrice || '-' }}</td>
+              <td>{{ s._raw?.triggerPrice || '-' }}</td>
+              <td>{{ s.strategyType === 'condition' && s.side === 'BUY' ? s.deltaPercentage : '-' }}</td>
+              <td>{{ s.strategyType === 'condition' && s.side === 'SELL' ? s.deltaPercentage : '-' }}</td>
+              <td>{{ s.tradeVolume || '-' }}</td>
+              <td>{{ s.tradeVolume || '-' }}</td>
+              <td>{{ s._raw?.createDatetime ? s._raw.createDatetime.slice(0, 10) : '-' }}</td>
+              <td>{{ s._raw?.expiryDatetime ? s._raw.expiryDatetime.slice(0, 10) : '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="dialog-overlay" v-if="showColumnSelectDialog" @click="showColumnSelectDialog = false">
       <div class="dialog-content" @click.stop>
         <div class="dialog-header">
@@ -258,7 +402,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import StrategyRow from './StrategyRow.vue'
 import appConfigService from '../services/AppConfigService.js'
 
@@ -294,6 +438,10 @@ const props = defineProps({
   loadingHoldings: {
     type: Boolean,
     default: false
+  },
+  remoteStrategies: {
+    type: Object,
+    default: () => ({ founder: { default: null, credit: null }, pingan: null })
   }
 })
 
@@ -384,6 +532,7 @@ const allColumns = [
   { key: 'advancedOrderSettings', label: '高级设置' },
   { key: 'advancedOrder', label: '高级快捷' },
   { key: 'stockAnalysis', label: '买卖建议' },
+  { key: 'adx', label: 'ADX趋势强度' },
   { key: 'actions', label: '操作' }
 ]
 
@@ -435,6 +584,18 @@ const getInitialVisibleColumns = () => {
         // 保存更新后的配置
         localStorage.setItem(storageKey, JSON.stringify(parsed))
         console.log('[StrategyList] 自动添加 stockAnalysis 到可见列')
+      }
+      // 检查是否包含 adx，如果不包含则添加（新列自动显示）
+      if (!parsed.includes('adx')) {
+        // 在 'stockAnalysis' 后面插入 'adx'
+        const stockAnalysisIndex = parsed.indexOf('stockAnalysis')
+        if (stockAnalysisIndex !== -1) {
+          parsed.splice(stockAnalysisIndex + 1, 0, 'adx')
+        } else {
+          parsed.push('adx')
+        }
+        localStorage.setItem(storageKey, JSON.stringify(parsed))
+        console.log('[StrategyList] 自动添加 adx 到可见列')
       }
       return parsed
     }
@@ -495,6 +656,62 @@ const resetColumns = () => {
   visibleColumns.value = [...getDefaultVisibleColumns()]
   const storageKey = isMobileDevice() ? 'mobileVisibleColumns' : 'desktopVisibleColumns'
   localStorage.setItem(storageKey, JSON.stringify(visibleColumns.value))
+}
+
+// ========== 远程策略数据相关 ==========
+const showFounderAccounts = reactive({ default: false, credit: false });
+const showRemotePingan = ref(false);
+
+const toggleFounderAccount = (key) => {
+  showFounderAccounts[key] = !showFounderAccounts[key];
+};
+
+// 账户类型配置
+const ACCOUNT_TYPES = [
+  { key: 'default', label: '普通账户' },
+  { key: 'credit', label: '信用账户' }
+];
+
+// 方正：按账户类型组织数据（grids + conditions）
+const founderAccounts = computed(() => {
+  return ACCOUNT_TYPES.map(acc => {
+    const data = props.remoteStrategies?.founder?.[acc.key];
+    if (!data || !data.strategies) {
+      return { ...acc, data: null, grids: [], conditions: [] };
+    }
+    const grids = data.strategies.filter(s => s.strategyType === 'grid');
+    const conditions = data.strategies.filter(s => s.strategyType === 'condition');
+    return { ...acc, data, grids, conditions };
+  });
+});
+
+const hasAnyRemoteData = computed(() => {
+  const founder = props.remoteStrategies?.founder;
+  const hasFounderData = founder && (
+    (founder.default && founder.default.strategies?.length > 0)
+    || (founder.credit && founder.credit.strategies?.length > 0)
+  );
+  const hasPinganData = props.remoteStrategies?.pingan?.strategies?.length > 0;
+  return hasFounderData || hasPinganData;
+});
+
+// ========== 统一 status 显示 ==========
+// 标准化后的 status: 'running' | 'paused' | 'expired' | 其他原值
+const statusLabel = (status) => {
+  const map = { running: '运行中', paused: '已暂停', expired: '已过期' }
+  return map[status] || status || '-'
+}
+const getStatusClass = (status) => {
+  if (status === 'running') return 'status-running'
+  if (status === 'paused') return 'status-paused'
+  if (status === 'expired') return 'status-expired'
+  return 'status-idle'
+}
+
+const formatUpdateTime = (ts) => {
+  if (!ts) return ''
+  const d = new Date(ts)
+  return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 </script>
 
@@ -985,5 +1202,185 @@ const resetColumns = () => {
   .strategy-table {
     width: 100%;
   }
+}
+
+/* ========== 远程策略数据样式 ========== */
+.remote-strategies-section {
+  margin-top: 16px;
+  padding: 8px 0;
+}
+
+.section-divider {
+  display: flex;
+  align-items: center;
+  padding: 6px 15px;
+  background: rgba(78, 205, 196, 0.1);
+  border-bottom: 1px solid rgba(78, 205, 196, 0.3);
+}
+
+.section-divider-text {
+  font-size: 13px;
+  font-weight: bold;
+  color: #4ecdc4;
+}
+
+.remote-provider-section {
+  margin: 8px 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.remote-provider-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 15px;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+}
+
+.remote-provider-header:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.remote-provider-header svg {
+  transition: transform 0.2s ease;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.remote-provider-header.pingan-header {
+  background: rgba(78, 205, 196, 0.08);
+}
+
+.provider-badge {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.provider-badge.founder {
+  background: rgba(253, 126, 20, 0.2);
+  color: #fd7e14;
+}
+
+.provider-badge.pingan {
+  background: rgba(78, 205, 196, 0.2);
+  color: #4ecdc4;
+}
+
+.account-type-badge {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: normal;
+}
+
+.account-type-badge.account-default {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.account-type-badge.account-credit {
+  background: rgba(0, 123, 255, 0.15);
+  color: #4da6ff;
+}
+
+.provider-count {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.update-time {
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 11px;
+}
+
+.remote-subsection {
+  padding: 0 8px 8px;
+}
+
+.remote-subsection-header {
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 4px;
+}
+
+.remote-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.remote-table th,
+.remote-table td {
+  padding: 4px 8px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  white-space: nowrap;
+}
+
+.remote-table th {
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: normal;
+  font-size: 10px;
+}
+
+.remote-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.remote-code {
+  color: rgba(255, 255, 255, 0.5);
+  font-family: monospace;
+}
+
+.remote-name {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.remote-status {
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.remote-status.status-running {
+  background: rgba(40, 167, 69, 0.2);
+  color: #28a745;
+}
+
+.remote-status.status-paused {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}
+
+.remote-status.status-expired {
+  background: rgba(220, 53, 69, 0.2);
+  color: #dc3545;
+}
+
+.remote-status.status-idle {
+  background: rgba(108, 117, 125, 0.2);
+  color: #6c757d;
+}
+
+.profit-positive {
+  color: #e74c3c;
+}
+
+.profit-negative {
+  color: #28a745;
+}
+
+.expiring {
+  color: #fd7e14;
 }
 </style>
