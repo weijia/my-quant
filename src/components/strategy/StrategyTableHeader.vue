@@ -16,6 +16,7 @@
         :loading-holdings="loadingHoldings"
         :trend-filter="trendFilter"
         @sort="emit('sort', $event)"
+        @hide="emit('hide', $event)"
         @refresh-holdings="emit('refresh-holdings')"
         @update:hide-zero-quantity="emit('update:hideZeroQuantity', $event)"
         @update:use-margin-trade="emit('update:useMarginTrade', $event)"
@@ -41,6 +42,7 @@ defineProps({
 
 const emit = defineEmits([
   'sort',
+  'hide',
   'refresh-holdings',
   'update:hideZeroQuantity',
   'update:useMarginTrade',

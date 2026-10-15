@@ -45,6 +45,8 @@ class MQTTPriceService {
     this.quotes = reactive(new Map())
     this._codes = []
     this._connecting = null
+    /** 上一次实际发出的订阅 codes（用于去重，避免重复 subscribe） */
+    this._lastSentKey = ''
   }
 
   loadConfig() {
@@ -111,6 +113,8 @@ class MQTTPriceService {
 
       this.client.on('close', () => {
         this.connected.value = false
+        // 连接断开后服务端可能已重启/丢失订阅状态，下次恢复时强制重发 subscribe
+        this._lastSentKey = ''
       })
     })
   }
@@ -153,11 +157,18 @@ class MQTTPriceService {
     const list = [...new Set((codes || []).map(normalizeCode).filter(Boolean))]
     this._codes = list
     if (!list.length) return Promise.resolve()
-    return this.ensureConnected()
+    return this.ensureConnected().then(() => {
+      // 已连接时 ensureConnected 不会触发 onConnect，这里补发一次，
+      // 保证 codes 变化能同步到服务端（publishSubscribe 内部按 codes 去重）
+      this.publishSubscribe()
+    })
   }
 
   publishSubscribe() {
     if (!this.client || !this._codes.length) return
+    const key = this._codes.join(',')
+    if (key === this._lastSentKey) return
+    this._lastSentKey = key
     const config = this.loadConfig()
     this.publish({ action: 'subscribe', data: { codes: this._codes, interval: config.pushInterval } }, config)
   }

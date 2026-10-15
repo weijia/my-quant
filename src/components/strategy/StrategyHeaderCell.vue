@@ -65,6 +65,15 @@
 
     <!-- 普通列 -->
     <span v-else>{{ column.label }}</span>
+
+    <!-- 直接隐藏本列：hover 才显示，避免误点（参考 price monitor 的 col-hide-btn） -->
+    <button
+      class="col-hide-btn"
+      title="隐藏此列"
+      @click.stop="emit('hide', column.key)"
+    >
+      ✕
+    </button>
   </th>
 </template>
 
@@ -84,6 +93,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   'sort',
+  'hide',
   'refresh-holdings',
   'update:hideZeroQuantity',
   'update:useMarginTrade',
@@ -231,6 +241,38 @@ th {
 
 .holdings-refresh-btn .spin {
   animation: spin-refresh 1s linear infinite;
+}
+
+/* 表头「隐藏此列」按钮。
+   绝对定位于右上角（th 是 sticky，本身就是定位祖先，不影响粘性）；
+   默认 visibility:hidden —— 不可见即不可点，避免与「点击表头排序」冲突。 */
+.col-hide-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  visibility: hidden;
+}
+
+th:hover .col-hide-btn {
+  visibility: visible;
+}
+
+.col-hide-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ff6b6b;
 }
 
 @keyframes spin-refresh {

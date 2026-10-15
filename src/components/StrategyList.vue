@@ -32,6 +32,7 @@
           :loading-holdings="loadingHoldings"
           :trend-filter="trendFilter"
           @sort="handleSort"
+          @hide="handleHideColumn"
           @refresh-holdings="emit('refresh-holdings')"
           @update:hide-zero-quantity="handleHideZeroQuantityChange"
           @update:use-margin-trade="handleUseMarginTradeChange"
@@ -147,20 +148,21 @@
             <div v-if="account.grids.length > 0" class="remote-subsection">
               <div class="remote-subsection-header">网格策略 ({{ account.grids.length }})</div>
               <table class="remote-table">
-        <StrategyTableHeader
-          :columns="visibleColumnObjects"
-          :sort-by="sortBy"
-          :sort-order="sortOrder"
-          :hide-zero-quantity="hideZeroQuantity"
-          :use-margin-trade="useMarginTrade"
-          :loading-holdings="loadingHoldings"
-          :trend-filter="trendFilter"
-          @sort="handleSort"
-          @refresh-holdings="emit('refresh-holdings')"
-          @update:hide-zero-quantity="handleHideZeroQuantityChange"
-          @update:use-margin-trade="handleUseMarginTradeChange"
-          @update:trend-filter="handleTrendFilterChange"
-        />
+                <thead>
+                  <tr>
+                    <th>股票代码</th>
+                    <th>股票名称</th>
+                    <th>状态</th>
+                    <th>基准价</th>
+                    <th>现价</th>
+                    <th>间距</th>
+                    <th>区间</th>
+                    <th>盈亏</th>
+                    <th>净持仓</th>
+                    <th>占用资金</th>
+                    <th>到期</th>
+                  </tr>
+                </thead>
                 <tbody>
                   <tr v-for="s in account.grids" :key="'fg-' + account.key + '-' + s.strategyId">
                     <td class="remote-code">{{ s.stockCode }}</td>
@@ -182,20 +184,20 @@
             <div v-if="account.conditions.length > 0" class="remote-subsection">
               <div class="remote-subsection-header">条件单 ({{ account.conditions.length }})</div>
               <table class="remote-table">
-        <StrategyTableHeader
-          :columns="visibleColumnObjects"
-          :sort-by="sortBy"
-          :sort-order="sortOrder"
-          :hide-zero-quantity="hideZeroQuantity"
-          :use-margin-trade="useMarginTrade"
-          :loading-holdings="loadingHoldings"
-          :trend-filter="trendFilter"
-          @sort="handleSort"
-          @refresh-holdings="emit('refresh-holdings')"
-          @update:hide-zero-quantity="handleHideZeroQuantityChange"
-          @update:use-margin-trade="handleUseMarginTradeChange"
-          @update:trend-filter="handleTrendFilterChange"
-        />
+                <thead>
+                  <tr>
+                    <th>股票代码</th>
+                    <th>股票名称</th>
+                    <th>类型</th>
+                    <th>状态</th>
+                    <th>触发%</th>
+                    <th>成交量</th>
+                    <th>方向</th>
+                    <th>账户</th>
+                    <th>创建</th>
+                    <th>结束</th>
+                  </tr>
+                </thead>
                 <tbody>
                   <tr v-for="s in account.conditions" :key="'fc-' + account.key + '-' + s.strategyId">
                     <td class="remote-code">{{ s.stockCode }}</td>
@@ -227,20 +229,22 @@
           <span class="update-time">{{ formatUpdateTime(remoteStrategies.pingan.updatedAt) }}</span>
         </div>
         <table v-if="showRemotePingan" class="remote-table">
-        <StrategyTableHeader
-          :columns="visibleColumnObjects"
-          :sort-by="sortBy"
-          :sort-order="sortOrder"
-          :hide-zero-quantity="hideZeroQuantity"
-          :use-margin-trade="useMarginTrade"
-          :loading-holdings="loadingHoldings"
-          :trend-filter="trendFilter"
-          @sort="handleSort"
-          @refresh-holdings="emit('refresh-holdings')"
-          @update:hide-zero-quantity="handleHideZeroQuantityChange"
-          @update:use-margin-trade="handleUseMarginTradeChange"
-          @update:trend-filter="handleTrendFilterChange"
-        />
+          <thead>
+            <tr>
+              <th>股票代码</th>
+              <th>股票名称</th>
+              <th>类型</th>
+              <th>状态</th>
+              <th>基准价</th>
+              <th>触发价</th>
+              <th>买触发%</th>
+              <th>卖触发%</th>
+              <th>成交量</th>
+              <th>成交量</th>
+              <th>创建</th>
+              <th>到期</th>
+            </tr>
+          </thead>
           <tbody>
             <tr v-for="s in remoteStrategies.pingan.strategies" :key="'pa-' + (s._raw?.ymdId || s.strategyId)">
               <td class="remote-code">{{ s.stockCode }}</td>
@@ -448,6 +452,12 @@ function handleVisibleKeysChange(keys) {
 
 function resetColumns() {
   visibleColumns.value = getDefaultVisibleKeys()
+}
+
+/** 表头 ✕ 直接隐藏该列；至少保留一列，避免整表被清空 */
+function handleHideColumn(key) {
+  if (visibleColumns.value.length <= 1) return
+  visibleColumns.value = visibleColumns.value.filter((item) => item !== key)
 }
 
 function handleTrendFilterChange(trend) {
