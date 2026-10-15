@@ -244,7 +244,7 @@
             v-model.number="conditionPct" 
             type="number" 
             class="setting-input"
-            placeholder="0.1"
+            placeholder="0.01"
             min="0.01"
             step="0.1"
             @change="saveConditionPct"
@@ -460,7 +460,7 @@
           class="advanced-order-btn amount-buy-btn"
           @click="handleAdvancedUpTrendBuy"
           :disabled="!strategy.stockCode || sendingAdvancedUpTrendBuy || !effectivePrice"
-          :title="effectivePrice ? `上涨${upTrendBuyPct || 0.1}%买入 + 下跌${upTrendSellPct || 0.5}%卖出\n数量: ${getAdvancedOrderVolume()}股\n金额: ${defaultTradeAmount || 26000}元` : '请先输入价格'"
+          :title="effectivePrice ? `上涨${upTrendBuyPct || 0.01}%买入 + 下跌${upTrendSellPct || 0.5}%卖出\n数量: ${getAdvancedOrderVolume()}股\n金额: ${defaultTradeAmount || 26000}元` : '请先输入价格'"
         >
           {{ sendingAdvancedUpTrendBuy ? '...' : `↑买${getAdvancedOrderVolume()}` }}
         </button>
@@ -468,7 +468,7 @@
           class="advanced-order-btn amount-sell-btn"
           @click="handleAdvancedDownTrendSell"
           :disabled="!strategy.stockCode || sendingAdvancedDownTrendSell || !effectivePrice"
-          :title="effectivePrice ? `下跌${downTrendSellPct || 0.1}%卖出 + 上涨${downTrendBuyPct || 0.5}%买入\n数量: ${getAdvancedOrderVolume()}股\n金额: ${defaultTradeAmount || 26000}元` : '请先输入价格'"
+          :title="effectivePrice ? `下跌${downTrendSellPct || 0.01}%卖出 + 上涨${downTrendBuyPct || 0.5}%买入\n数量: ${getAdvancedOrderVolume()}股\n金额: ${defaultTradeAmount || 26000}元` : '请先输入价格'"
         >
           {{ sendingAdvancedDownTrendSell ? '...' : `↓卖${getAdvancedOrderVolume()}` }}
         </button>
@@ -589,9 +589,9 @@ const manualPrice = ref(null)
 const localStrategyName = ref(props.strategy.selectedStrategyName || 'auto')
 
 // 条件配置（上涨趋势/下跌趋势的买卖百分比）
-const upTrendBuyPct = ref(props.strategy.upTrendBuyPct ?? 0.1)
+const upTrendBuyPct = ref(props.strategy.upTrendBuyPct ?? 0.01)
 const upTrendSellPct = ref(props.strategy.upTrendSellPct ?? 0.5)
-const downTrendSellPct = ref(props.strategy.downTrendSellPct ?? 0.1)
+const downTrendSellPct = ref(props.strategy.downTrendSellPct ?? 0.01)
 const downTrendBuyPct = ref(props.strategy.downTrendBuyPct ?? 0.5)
 
 // 条件单按钮发送状态（6个按钮）
@@ -730,7 +730,7 @@ const loadConditionPct = () => {
     const key = `conditionPct_${props.strategy.id}`
     const saved = localStorage.getItem(key)
     if (saved) {
-      conditionPct.value = parseFloat(saved) || 0.1
+      conditionPct.value = parseFloat(saved) || 0.01
     }
   }
 }
@@ -1001,7 +1001,7 @@ const saveConditionConfig = () => {
 const DEFAULT_TRADE_AMOUNT = 26000
 const DEFAULT_TRADE_VOLUME = null
 const DEFAULT_MANUAL_PRICE = null
-const DEFAULT_CONDITION_PCT = 0.1
+const DEFAULT_CONDITION_PCT = 0.01
 
 // 检查是否有自定义配置
 const hasCustomConfig = ref(false)
@@ -1104,7 +1104,7 @@ const handleUpTrendBuy = async () => {
   }
   sendingUpTrendBuy.value = true
   const tradeVolume = getEffectiveTradeVolume()
-  const buyPct = upTrendBuyPct.value || 0.1
+  const buyPct = upTrendBuyPct.value || 0.01
   const sellPct = upTrendSellPct.value || 0.5
 
   try {
@@ -1145,7 +1145,7 @@ const handleDownTrendSell = async () => {
   }
   sendingDownTrendSell.value = true
   const tradeVolume = getEffectiveTradeVolume()
-  const sellPct = downTrendSellPct.value || 0.1
+  const sellPct = downTrendSellPct.value || 0.01
   const buyPct = downTrendBuyPct.value || 0.5
 
   try {
@@ -1190,7 +1190,7 @@ const handleConditionAmountBuy = async () => {
   sendingConditionAmountBuy.value = true
   const tradeAmount = defaultTradeAmount.value || 26000
   const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
-  const pct = conditionPct.value || 0.1
+  const pct = conditionPct.value || 0.01
 
   try {
     await mqttConditionService.sendBuyOrder({
@@ -1221,7 +1221,7 @@ const handleConditionAmountSell = async () => {
   sendingConditionAmountSell.value = true
   const tradeAmount = defaultTradeAmount.value || 26000
   const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
-  const pct = conditionPct.value || 0.1
+  const pct = conditionPct.value || 0.01
 
   try {
     await mqttConditionService.sendSellOrder({
@@ -1252,7 +1252,7 @@ const handleConditionAmountBoth = async () => {
   sendingConditionAmountBoth.value = true
   const tradeAmount = defaultTradeAmount.value || 26000
   const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
-  const pct = conditionPct.value || 0.1
+  const pct = conditionPct.value || 0.01
 
   try {
     await mqttConditionService.sendBuyOrder({
@@ -1291,7 +1291,7 @@ const handleConditionVolumeBuy = async () => {
   incrementCount('volumeBuy')
   sendingConditionVolumeBuy.value = true
   const tradeVolume = getEffectiveTradeVolume()
-  const pct = conditionPct.value || 0.1
+  const pct = conditionPct.value || 0.01
 
   try {
     await mqttConditionService.sendBuyOrder({
@@ -1321,7 +1321,7 @@ const handleConditionVolumeSell = async () => {
   incrementCount('volumeSell')
   sendingConditionVolumeSell.value = true
   const tradeVolume = getEffectiveTradeVolume()
-  const pct = conditionPct.value || 0.1
+  const pct = conditionPct.value || 0.01
 
   try {
     await mqttConditionService.sendSellOrder({
@@ -1351,7 +1351,7 @@ const handleConditionVolumeBoth = async () => {
   incrementCount('volumeBoth')
   sendingConditionVolumeBoth.value = true
   const tradeVolume = getEffectiveTradeVolume()
-  const pct = conditionPct.value || 0.1
+  const pct = conditionPct.value || 0.01
 
   try {
     await mqttConditionService.sendBuyOrder({
@@ -1951,7 +1951,7 @@ const handleAdvancedDownTrendSell = async () => {
 }
 
 // 【调试】监控 decreasePercentage 的值
-console.log(`[调试-StrategyRow] 渲染策略: ${props.strategy.name}(${props.strategy.stockCode}), decreasePercentage=${props.strategy.decreasePercentage}, 类型=${typeof props.strategy.decreasePercentage}`);
+console.log(`[调试-StrategyRow] 渲染策略: ${props.strategy.name}(${props.strategy.stockCode}), decreasePercentage=${props.strategy.decreasePercentage}, 类型=${typeof props.strategy.decreasePercentage}, accountType=${props.strategy.accountType}, isMarginAccount=${props.strategy.isMarginAccount}, provider=${props.strategy.provider}`);
 
 watch(() => props.strategy.trendJudgment, (newVal) => {
   localTrend.value = newVal || 'unset'
