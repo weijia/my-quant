@@ -190,6 +190,13 @@
         @update-sort="(sortInfo) => { filter.sortBy = sortInfo.sortBy; filter.sortOrder = sortInfo.sortOrder; loadStrategies() }"
         @refresh-holdings="refreshAllHoldings"
       />
+
+      <!-- 监控视图：price monitor 风格的分列组监控表（列可见性按客户端保存） -->
+      <MonitorPanel
+        :strategies="strategies"
+        :holdings-map="holdingsMap"
+        :remote-strategies="remoteStrategies"
+      />
     </main>
 
     <footer class="app-footer">
@@ -263,6 +270,7 @@ import { defaultStrategyService } from '../services/DefaultStrategyService'
 import { appConfigService } from '../services/AppConfigService'
 import { versionDisplay, buildTimeDisplay } from '../version'
 import StrategyList from '../components/StrategyList.vue'
+import MonitorPanel from '../components/monitor/MonitorPanel.vue'
 import StrategyDialog from '../components/StrategyDialog.vue'
 import BatchConditionDialog from '../components/BatchConditionDialog.vue'
 import { pinyin } from 'pinyin-pro'
