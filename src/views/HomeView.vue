@@ -190,6 +190,7 @@
         @update-sort="(sortInfo) => { filter.sortBy = sortInfo.sortBy; filter.sortOrder = sortInfo.sortOrder; loadStrategies() }"
         @refresh-holdings="refreshAllHoldings"
       />
+
     </main>
 
     <footer class="app-footer">
