@@ -224,6 +224,13 @@ export const COLUMNS = [
     header: { widthPx: 80, hasMarginToggle: true }
   },
   {
+    key: 'quickBuyFixed',
+    label: '0.5%买≤1.2万',
+    group: 'order',
+    defaultVisible: { mobile: false, desktop: true },
+    header: { widthPx: 110 }
+  },
+  {
     key: 'advancedOrderSettings',
     label: '高级设置',
     group: 'order',
