@@ -30,6 +30,16 @@ const DEFAULT_CONFIG = {
     sortBy: 'name',
     sortOrder: 'asc'
   },
+  // 行情 MQTT：对接 Price Server 的 quote_push 推送，供监控视图取实时价格
+  // 注意：topic / password 与下单用的 mqtt 不同（两者在 price server 侧独立配置）
+  priceMqtt: {
+    enabled: true,
+    serverUrl: 'wss://broker.emqx.io:8084/mqtt',
+    topic: 'secure/stock-price-mqtt',
+    password: 'stock_price_mqtt_S3cret',
+    clientId: 'myquant_price_' + Math.random().toString(16).slice(2, 8),
+    pushInterval: 5
+  },
   // 趋势与策略的匹配关系配置
   trendStrategyMapping: {
     // 趋势类型 -> 策略生成器名称
@@ -106,6 +116,8 @@ class AppConfigService {
     const localMarketCloseSell = this.config?.marketCloseSell ? JSON.parse(JSON.stringify(this.config.marketCloseSell)) : null
     // 保留本地 MQTT clientId（每个客户端必须唯一）
     const localMqttClientId = this.config?.mqtt?.clientId || null
+    // 行情连接同理，保留本地 clientId
+    const localPriceMqttClientId = this.config?.priceMqtt?.clientId || null
     this.config = this.mergeWithDefaults(remoteConfig)
     // 恢复本地 UI 配置（如果存在）
     if (localUI) {
@@ -121,6 +133,9 @@ class AppConfigService {
     // 恢复本地 MQTT clientId（每个客户端必须唯一，其余配置以远程为准）
     if (localMqttClientId) {
       this.config.mqtt.clientId = localMqttClientId
+    }
+    if (localPriceMqttClientId) {
+      this.config.priceMqtt.clientId = localPriceMqttClientId
     }
     this.saveToLocalStorage()
     console.log('[AppConfig] 已从远程合并配置:', JSON.stringify(this.config.trendStrategyMapping))
@@ -141,6 +156,7 @@ class AppConfigService {
     if (config.mqtt) Object.assign(result.mqtt, config.mqtt)
     if (config.window) Object.assign(result.window, config.window)
     if (config.ui) Object.assign(result.ui, config.ui)
+    if (config.priceMqtt) Object.assign(result.priceMqtt, config.priceMqtt)
     if (config.trendStrategyMapping) Object.assign(result.trendStrategyMapping, config.trendStrategyMapping)
     if (config.marketCloseBuy) result.marketCloseBuy = { ...config.marketCloseBuy }
     if (config.banner) result.banner = { ...config.banner }
@@ -156,6 +172,17 @@ class AppConfigService {
 
   updateMqttConfig(mqttConfig) {
     this.config.mqtt = { ...this.config.mqtt, ...mqttConfig }
+    this.saveToLocalStorage()
+  }
+
+  // ========== 行情 MQTT 配置 ==========
+
+  getPriceMqttConfig() {
+    return this.config.priceMqtt || {}
+  }
+
+  updatePriceMqttConfig(priceMqttConfig) {
+    this.config.priceMqtt = { ...this.config.priceMqtt, ...priceMqttConfig }
     this.saveToLocalStorage()
   }
 

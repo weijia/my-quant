@@ -12,141 +12,32 @@
       >
         列选择
       </button>
+      <span
+        class="quote-status"
+        :class="{ online: quoteConnected }"
+        :title="quoteConnected ? '已连接行情服务，当前价为实时值' : '未连接行情服务，当前价为非实时值'"
+      >
+        行情{{ quoteConnected ? '已连接' : '未连接' }}
+      </span>
     </div>
     
     <div class="table-wrapper">
       <table class="strategy-table">
-        <thead>
-          <tr>
-            <th v-if="visibleColumns.includes('name')" class="sortable-header" @click="handleSort('name')">
-              <div class="sort-header-content">
-                <span class="header-text">策略名称</span>
-                <span class="sort-icon">
-                  <span v-if="sortBy === 'name' && sortOrder === 'asc'">↑</span>
-                  <span v-else-if="sortBy === 'name' && sortOrder === 'desc'">↓</span>
-                  <span v-else>↕</span>
-                </span>
-              </div>
-            </th>
-            <th v-if="visibleColumns.includes('quantity')" class="quantity-header">
-              <div class="filter-header">
-                <span>股数</span>
-                <label class="toggle-filter">
-                  <input 
-                    type="checkbox" 
-                    v-model="hideZeroQuantity"
-                    @change="saveHideZeroQuantity"
-                  >
-                  <span class="toggle-label">隐藏0股</span>
-                </label>
-              </div>
-            </th>
-            <th v-if="visibleColumns.includes('dynamicHoldings')" class="dynamic-holdings-header" title="从 MQTT 获取的实时持仓">
-              <span>动态持仓</span>
-              <button
-                class="holdings-refresh-btn"
-                :class="{ 'is-loading': loadingHoldings }"
-                :disabled="loadingHoldings"
-                @click.stop="$emit('refresh-holdings')"
-                title="刷新持仓"
-              >
-                <svg v-if="!loadingHoldings" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                  <path d="M3 3v5h5"/>
-                </svg>
-                <svg v-else xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin">
-                  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                  <path d="M3 3v5h5"/>
-                </svg>
-              </button>
-              <span v-if="loadingHoldings" class="loading-dot">·</span>
-            </th>
-            <th v-if="visibleColumns.includes('marketValue')" class="sortable-header market-value-header" @click="handleSort('marketValue')">
-              <div class="sort-header-content">
-                <span class="header-text">市值</span>
-                <span class="sort-icon">
-                  <span v-if="sortBy === 'marketValue' && sortOrder === 'asc'">↑</span>
-                  <span v-else-if="sortBy === 'marketValue' && sortOrder === 'desc'">↓</span>
-                  <span v-else>↕</span>
-                </span>
-              </div>
-            </th>
-            <th v-if="visibleColumns.includes('profitLoss')">盈亏%</th>
-            <th v-if="visibleColumns.includes('dividendYield')">5年平均股息率</th>
-            <th v-if="visibleColumns.includes('changePercent')">涨跌%</th>
-            <th v-if="visibleColumns.includes('decreasePercentage')" class="sortable-header decrease-pct-header" @click="handleSort('decreasePercentage')">
-              <div class="sort-header-content">
-                <span class="header-text">下跌百分比</span>
-                <span class="sort-icon">
-                  <span v-if="sortBy === 'decreasePercentage' && sortOrder === 'asc'">↑</span>
-                  <span v-else-if="sortBy === 'decreasePercentage' && sortOrder === 'desc'">↓</span>
-                  <span v-else>↕</span>
-                </span>
-              </div>
-            </th>
-            <th v-if="visibleColumns.includes('trendIcon')" class="trend-icon-header" title="趋势">势</th>
-            <th v-if="visibleColumns.includes('autoTrend')">
-              <div class="filter-header">
-                <span>自动生成趋势</span>
-                <select 
-                  :value="trendFilter" 
-                  @change="handleTrendFilterChange"
-                  class="trend-filter-select"
-                  title="按自动生成趋势过滤"
-                >
-                  <option value="all">全部</option>
-                  <option value="unset">未设置</option>
-                  <option value="trend_unknown">未知趋势</option>
-                  <option value="trend_up">上涨趋势</option>
-                  <option value="trend_down">下跌趋势</option>
-                  <option value="trend_breakdown">下跌破位</option>
-                  <option value="trend_oscillation">震荡趋势</option>
-                  <option value="trend_pullback">回踩趋势</option>
-                  <option value="high_volatility">高波动率</option>
-                  <option value="medium_volatility">中等波动率</option>
-                  <option value="low_volatility">低波动率</option>
-                </select>
-              </div>
-            </th>
-            <th v-if="visibleColumns.includes('strategyType')">策略</th>
-            <th v-if="visibleColumns.includes('oscillationGrid')">震荡时网格</th>
-            <th v-if="visibleColumns.includes('decreaseStrategy')">下跌减仓</th>
-            <th v-if="visibleColumns.includes('increaseStrategy')">上涨加仓</th>
-            <th v-if="visibleColumns.includes('manualNotes')">手工备注</th>
-            <th v-if="visibleColumns.includes('conditionConfig')" style="width: 140px;">条件配置</th>
-            <th v-if="visibleColumns.includes('conditionOrder')" style="width: 100px;">条件单</th>
-            <th v-if="visibleColumns.includes('quickOrder')" style="width: 80px;">
-              <div class="filter-header">
-                <span>快捷</span>
-                <label class="toggle-filter">
-                  <input 
-                    type="checkbox" 
-                    v-model="useMarginTrade"
-                    @change="saveUseMarginTrade"
-                  >
-                  <span class="toggle-label">融资</span>
-                </label>
-              </div>
-            </th>
-            <th v-if="visibleColumns.includes('advancedOrderSettings')" style="width: 160px;">高级设置</th>
-            <th v-if="visibleColumns.includes('advancedOrder')" style="width: 120px;">
-              <div class="filter-header">
-                <span>高级快捷</span>
-                <label class="toggle-filter">
-                  <input 
-                    type="checkbox" 
-                    v-model="useMarginTrade"
-                    @change="saveUseMarginTrade"
-                  >
-                  <span class="toggle-label">融资</span>
-                </label>
-              </div>
-            </th>
-            <th v-if="visibleColumns.includes('stockAnalysis')" style="width: 120px;">买卖建议</th>
-            <th v-if="visibleColumns.includes('adx')" style="width: 100px;">ADX趋势强度</th>
-            <th v-if="visibleColumns.includes('actions')" style="width: 80px;">操作</th>
-          </tr>
-        </thead>
+        <StrategyTableHeader
+          :columns="visibleColumnObjects"
+          :sort-by="sortBy"
+          :sort-order="sortOrder"
+          :hide-zero-quantity="hideZeroQuantity"
+          :use-margin-trade="useMarginTrade"
+          :loading-holdings="loadingHoldings"
+          :trend-filter="trendFilter"
+          @sort="handleSort"
+          @hide="handleHideColumn"
+          @refresh-holdings="emit('refresh-holdings')"
+          @update:hide-zero-quantity="handleHideZeroQuantityChange"
+          @update:use-margin-trade="handleUseMarginTradeChange"
+          @update:trend-filter="handleTrendFilterChange"
+        />
         <tbody>
           <tr v-if="defaultStrategies.length > 0" class="account-section-header">
             <td :colspan="visibleColumns.length">普通账户策略 ({{ defaultStrategies.length }})</td>
@@ -259,8 +150,8 @@
               <table class="remote-table">
                 <thead>
                   <tr>
-                    <th>股票</th>
-                    <th>名称</th>
+                    <th>股票代码</th>
+                    <th>股票名称</th>
                     <th>状态</th>
                     <th>基准价</th>
                     <th>现价</th>
@@ -268,8 +159,8 @@
                     <th>区间</th>
                     <th>盈亏</th>
                     <th>净持仓</th>
-                    <th>已用资金</th>
-                    <th>过期</th>
+                    <th>占用资金</th>
+                    <th>到期</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -295,12 +186,12 @@
               <table class="remote-table">
                 <thead>
                   <tr>
-                    <th>股票</th>
-                    <th>名称</th>
+                    <th>股票代码</th>
+                    <th>股票名称</th>
                     <th>类型</th>
                     <th>状态</th>
-                    <th>涨跌%</th>
-                    <th>交易量</th>
+                    <th>触发%</th>
+                    <th>成交量</th>
                     <th>方向</th>
                     <th>账户</th>
                     <th>创建</th>
@@ -340,18 +231,18 @@
         <table v-if="showRemotePingan" class="remote-table">
           <thead>
             <tr>
-              <th>股票</th>
-              <th>名称</th>
+              <th>股票代码</th>
+              <th>股票名称</th>
               <th>类型</th>
               <th>状态</th>
               <th>基准价</th>
               <th>触发价</th>
-              <th>涨幅</th>
-              <th>跌幅</th>
-              <th>买入额</th>
-              <th>卖出额</th>
+              <th>买触发%</th>
+              <th>卖触发%</th>
+              <th>成交量</th>
+              <th>成交量</th>
               <th>创建</th>
-              <th>过期</th>
+              <th>到期</th>
             </tr>
           </thead>
           <tbody>
@@ -374,37 +265,33 @@
       </div>
     </div>
 
-    <div class="dialog-overlay" v-if="showColumnSelectDialog" @click="showColumnSelectDialog = false">
-      <div class="dialog-content" @click.stop>
-        <div class="dialog-header">
-          <h3>选择显示的列</h3>
-          <button class="close-button" @click="showColumnSelectDialog = false">×</button>
-        </div>
-        <div class="dialog-body">
-          <div class="column-select-list">
-            <label v-for="column in allColumns" :key="column.key" class="column-select-item">
-              <input 
-                type="checkbox" 
-                :checked="visibleColumns.includes(column.key)"
-                @change="toggleColumn(column.key)"
-              >
-              <span>{{ column.label }}</span>
-            </label>
-          </div>
-        </div>
-        <div class="dialog-footer">
-          <button @click="resetColumns" class="btn btn-secondary">重置默认</button>
-          <button @click="showColumnSelectDialog = false" class="btn btn-primary">确定</button>
-        </div>
-      </div>
-    </div>
+    <ColumnSelector
+      v-if="showColumnSelectDialog"
+      :columns="allColumns"
+      :group-order="groupOrder"
+      :visible-keys="visibleColumns"
+      collapse-scope="strategy"
+      @close="showColumnSelectDialog = false"
+      @reset="resetColumns"
+      @update:visible-keys="handleVisibleKeysChange"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import StrategyRow from './StrategyRow.vue'
+import StrategyTableHeader from './strategy/StrategyTableHeader.vue'
+import ColumnSelector from './ColumnSelector.vue'
 import appConfigService from '../services/AppConfigService.js'
+import { COLUMNS, GROUP_ORDER } from '../config/columnCatalog'
+import {
+  loadVisibleKeys,
+  saveVisibleKeys,
+  getDefaultVisibleKeys,
+  resolveVisibleColumns
+} from '../utils/columnVisibility'
+import { usePriceFeed } from '../composables/usePriceFeed'
 
 const props = defineProps({
   strategies: {
@@ -510,102 +397,25 @@ onUnmounted(() => {
   window.removeEventListener('appConfigUpdated', handleConfigUpdate)
 })
 
-const allColumns = [
-  { key: 'name', label: '策略名称' },
-  { key: 'quantity', label: '股数' },
-  { key: 'dynamicHoldings', label: '动态持仓' },
-  { key: 'marketValue', label: '市值' },
-  { key: 'profitLoss', label: '盈亏%' },
-  { key: 'dividendYield', label: '5年平均股息率' },
-  { key: 'changePercent', label: '涨跌%' },
-  { key: 'decreasePercentage', label: '下跌百分比' },
-  { key: 'trendIcon', label: '趋势' },
-  { key: 'autoTrend', label: '自动生成趋势' },
-  { key: 'strategyType', label: '策略' },
-  { key: 'oscillationGrid', label: '震荡时网格' },
-  { key: 'decreaseStrategy', label: '下跌减仓' },
-  { key: 'increaseStrategy', label: '上涨加仓' },
-  { key: 'manualNotes', label: '手工备注' },
-  { key: 'conditionConfig', label: '条件配置' },
-  { key: 'conditionOrder', label: '条件单' },
-  { key: 'quickOrder', label: '快捷' },
-  { key: 'advancedOrderSettings', label: '高级设置' },
-  { key: 'advancedOrder', label: '高级快捷' },
-  { key: 'stockAnalysis', label: '买卖建议' },
-  { key: 'adx', label: 'ADX趋势强度' },
-  { key: 'actions', label: '操作' }
-]
+/** 列定义与分组顺序统一取自列目录，本组件不再维护本地副本 */
+const allColumns = COLUMNS
+const groupOrder = GROUP_ORDER
 
-// 手机端默认可见列
-const mobileDefaultVisibleColumns = [
-  'name',
-  'quantity',
-  'trendIcon',
-  'stockAnalysis',
-  'advancedOrder'
-]
+/** 可见列：优先读取本客户端存档，无存档或目录版本升级时用默认值 */
+const visibleColumns = ref(loadVisibleKeys())
 
-// 电脑端默认可见列
-const desktopDefaultVisibleColumns = [
-  'name',
-  'quantity',
-  'trendIcon',
-  'stockAnalysis',
-  'conditionConfig',
-  'conditionOrder',
-  'quickOrder',
-  'advancedOrderSettings',
-  'advancedOrder'
-]
+watch(visibleColumns, (value) => saveVisibleKeys(value), { deep: true })
 
-// 判断是否为移动端
-const isMobileDevice = () => window.innerWidth <= 768
+/**
+ * 有序的可见列对象。
+ * 顺序严格跟随列目录，保证表头与 StrategyRow 的单元格一一对应；
+ * 因此用户反复开关某列后，该列仍回到目录中的固定位置。
+ */
+const visibleColumnObjects = computed(() => resolveVisibleColumns(visibleColumns.value))
 
-// 根据设备类型获取默认列
-const getDefaultVisibleColumns = () => {
-  return isMobileDevice() ? mobileDefaultVisibleColumns : desktopDefaultVisibleColumns
-}
-
-const getInitialVisibleColumns = () => {
-  try {
-    const storageKey = isMobileDevice() ? 'mobileVisibleColumns' : 'desktopVisibleColumns'
-    const saved = localStorage.getItem(storageKey)
-    const parsed = saved ? JSON.parse(saved) : null
-    if (Array.isArray(parsed)) {
-      // 检查是否包含 stockAnalysis，如果不包含则添加（新列自动显示）
-      if (!parsed.includes('stockAnalysis')) {
-        // 在 'trendIcon' 后面插入 'stockAnalysis'
-        const trendIconIndex = parsed.indexOf('trendIcon')
-        if (trendIconIndex !== -1) {
-          parsed.splice(trendIconIndex + 1, 0, 'stockAnalysis')
-        } else {
-          parsed.push('stockAnalysis')
-        }
-        // 保存更新后的配置
-        localStorage.setItem(storageKey, JSON.stringify(parsed))
-        console.log('[StrategyList] 自动添加 stockAnalysis 到可见列')
-      }
-      // 检查是否包含 adx，如果不包含则添加（新列自动显示）
-      if (!parsed.includes('adx')) {
-        // 在 'stockAnalysis' 后面插入 'adx'
-        const stockAnalysisIndex = parsed.indexOf('stockAnalysis')
-        if (stockAnalysisIndex !== -1) {
-          parsed.splice(stockAnalysisIndex + 1, 0, 'adx')
-        } else {
-          parsed.push('adx')
-        }
-        localStorage.setItem(storageKey, JSON.stringify(parsed))
-        console.log('[StrategyList] 自动添加 adx 到可见列')
-      }
-      return parsed
-    }
-    return getDefaultVisibleColumns()
-  } catch (error) {
-    return getDefaultVisibleColumns()
-  }
-}
-
-const visibleColumns = ref(getInitialVisibleColumns())
+// 订阅当前策略涉及股票的实时行情（策略变化会自动重新订阅）
+const strategyCodes = computed(() => props.strategies.map((item) => item.stockCode))
+const { connected: quoteConnected } = usePriceFeed(strategyCodes)
 
 const defaultStrategies = computed(() => {
   return props.strategies.filter(s => s.accountType !== 'credit' && s.provider !== 'pingan')
@@ -635,27 +445,33 @@ const handleSort = (column) => {
   emit('update-sort', { sortBy: newSortBy, sortOrder: newSortOrder })
 }
 
-const handleTrendFilterChange = () => {
-  emit('update-trend-filter', props.trendFilter)
+/** 列选择器的变更统一回写到 visibleColumns，由 watch 负责持久化 */
+function handleVisibleKeysChange(keys) {
+  visibleColumns.value = keys
 }
 
-const toggleColumn = (columnKey) => {
-  const index = visibleColumns.value.indexOf(columnKey)
-  if (index > -1) {
-    if (visibleColumns.value.length > 1) {
-      visibleColumns.value.splice(index, 1)
-    }
-  } else {
-    visibleColumns.value.push(columnKey)
-  }
-  const storageKey = isMobileDevice() ? 'mobileVisibleColumns' : 'desktopVisibleColumns'
-  localStorage.setItem(storageKey, JSON.stringify(visibleColumns.value))
+function resetColumns() {
+  visibleColumns.value = getDefaultVisibleKeys()
 }
 
-const resetColumns = () => {
-  visibleColumns.value = [...getDefaultVisibleColumns()]
-  const storageKey = isMobileDevice() ? 'mobileVisibleColumns' : 'desktopVisibleColumns'
-  localStorage.setItem(storageKey, JSON.stringify(visibleColumns.value))
+/** 表头 ✕ 直接隐藏该列；至少保留一列，避免整表被清空 */
+function handleHideColumn(key) {
+  if (visibleColumns.value.length <= 1) return
+  visibleColumns.value = visibleColumns.value.filter((item) => item !== key)
+}
+
+function handleTrendFilterChange(trend) {
+  emit('update-trend-filter', trend)
+}
+
+function handleHideZeroQuantityChange(value) {
+  hideZeroQuantity.value = value
+  saveHideZeroQuantity()
+}
+
+function handleUseMarginTradeChange(value) {
+  useMarginTrade.value = value
+  saveUseMarginTrade()
 }
 
 // ========== 远程策略数据相关 ==========
@@ -776,6 +592,20 @@ const formatUpdateTime = (ts) => {
   background-color: rgba(255,255,255,0.3);
 }
 
+.quote-status {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
+  padding: 3px 6px;
+  white-space: nowrap;
+}
+
+.quote-status.online {
+  color: #4ecdc4;
+  border-color: rgba(78, 205, 196, 0.5);
+}
+
 .table-wrapper {
   flex: 1;
   overflow: auto;
@@ -808,82 +638,6 @@ const formatUpdateTime = (ts) => {
   top: 0;
   z-index: 10;
   border-bottom: 2px solid rgba(255,255,255,0.3);
-}
-
-.market-value-header {
-  width: 88px;
-  min-width: 88px;
-}
-
-.quantity-header {
-  width: 88px;
-  min-width: 88px;
-}
-
-.dynamic-holdings-header {
-  width: 90px;
-  min-width: 90px;
-  text-align: center;
-  font-size: 11px;
-  cursor: default;
-}
-
-.holdings-refresh-btn {
-  margin-left: 4px;
-  padding: 2px;
-  width: 20px;
-  height: 20px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  vertical-align: middle;
-  transition: all 0.2s;
-}
-
-.holdings-refresh-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #4ecdc4;
-}
-
-.holdings-refresh-btn.is-loading {
-  color: #4ecdc4;
-  cursor: not-allowed;
-}
-
-.holdings-refresh-btn .spin {
-  animation: spin-refresh 1s linear infinite;
-}
-
-@keyframes spin-refresh {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.loading-dot {
-  animation: blink 1s infinite;
-  color: #4ecdc4;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-.decrease-pct-header {
-  width: 3ch;
-  min-width: 3ch;
-}
-
-.trend-icon-header {
-  width: 1.5ch;
-  min-width: 1.5ch;
-  text-align: center;
-  padding: 8px 4px;
 }
 
 .strategy-table th:first-child,
@@ -926,170 +680,6 @@ const formatUpdateTime = (ts) => {
   text-align: center;
   padding: 40px;
   color: rgba(255,255,255,0.5);
-}
-
-.filter-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.trend-filter-select {
-  font-size: 10px;
-  padding: 2px 4px;
-  border-radius: 3px;
-  border: 1px solid rgba(255,255,255,0.3);
-  background-color: rgba(0,0,0,0.8);
-  color: white;
-  cursor: pointer;
-  width: auto;
-  min-width: 80px;
-}
-
-.toggle-filter {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  font-size: 10px;
-}
-
-.toggle-filter input[type="checkbox"] {
-  accent-color: #4ecdc4;
-  cursor: pointer;
-}
-
-.toggle-label {
-  color: rgba(255,255,255,0.7);
-}
-
-.sortable-header {
-  cursor: pointer;
-}
-
-.sort-header-content {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.sort-icon {
-  font-size: 11px;
-  color: rgba(255,255,255,0.6);
-}
-
-.dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.dialog-content {
-  background-color: #2c3e50;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 400px;
-}
-
-.dialog-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.2);
-}
-
-.dialog-header h3 {
-  margin: 0;
-  color: white;
-  font-size: 16px;
-}
-
-.close-button {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 20px;
-  cursor: pointer;
-  padding: 0;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-}
-
-.close-button:hover {
-  background-color: rgba(255,255,255,0.1);
-}
-
-.dialog-body {
-  padding: 16px;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.column-select-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 10px;
-}
-
-.column-select-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: white;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.column-select-item input[type="checkbox"] {
-  accent-color: #4ecdc4;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 16px;
-  border-top: 1px solid rgba(255,255,255,0.2);
-}
-
-.btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.btn-secondary {
-  background-color: rgba(255,255,255,0.2);
-  color: white;
-}
-
-.btn-secondary:hover {
-  background-color: rgba(255,255,255,0.3);
-}
-
-.btn-primary {
-  background-color: #4ecdc4;
-  color: white;
-}
-
-.btn-primary:hover {
-  background-color: #45b7aa;
 }
 
 @media (max-width: 768px) {
