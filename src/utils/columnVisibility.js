@@ -20,7 +20,7 @@ const COLLAPSE_KEY = 'visibleColumnCollapsedGroups'
  * 避免新列对存量用户不可见（回填只发生一次）。
  */
 const SCHEMA_VERSION_KEY = 'visibleColumnsVersion'
-const SCHEMA_VERSION = 2
+const SCHEMA_VERSION = 3
 
 export function isMobileDevice() {
   return typeof window !== 'undefined' && window.innerWidth <= 768

@@ -60,6 +60,16 @@
       <span v-if="showTrendTip" class="trend-tip" @click.stop="showTrendTip = false">{{ getTrendTooltip(localTrend) }}</span>
     </td>
     
+    <td v-if="visibleColumns.includes('positionBias')" class="position-bias-cell">
+      <div class="bias-buttons">
+        <button class="bias-btn bias-increase" :class="{ active: bias === 'increase' }" @click="setBias('increase')" title="增持">增持</button>
+        <button class="bias-btn bias-decrease" :class="{ active: bias === 'decrease' }" @click="setBias('decrease')" title="减持">减持</button>
+        <button class="bias-btn bias-neutral" :class="{ active: bias === 'neutral' }" @click="setBias('neutral')" title="中性">中性</button>
+      </div>
+      <div v-if="updatedAt" class="bias-elapsed" :class="validityClass" :title="'设置时间: ' + updatedAtDisplay">{{ elapsedText }}</div>
+      <div v-else class="bias-elapsed bias-unset">未设置</div>
+    </td>
+
     <td v-if="visibleColumns.includes('autoTrend')">
       <select 
         v-model="localTrend" 
@@ -576,6 +586,8 @@ import StrategyMonitorCells from './strategy/StrategyMonitorCells.vue'
 import { normalizeCode } from '../utils/stockCode'
 import clickCounterService from '../services/ClickCounterService.js'
 import appConfigService from '../services/AppConfigService.js'
+import { webdavImportService } from '../services/WebDAVImportService.js'
+import { now } from '../composables/useNow.js'
 
 // 移动端检测
 const isMobile = ref(window.innerWidth <= 768)
@@ -755,9 +767,73 @@ const loadMarketCloseSellFlag = () => {
   }
 }
 
-// 监听配置更新事件，重新加载收市买状态
+// ========== 持仓倾向（增持/减持/中性，跨设备同步） ==========
+const bias = ref(null)
+const updatedAt = ref(null)
+const updatedAtDisplay = ref('')
+let uploadBiasTimer = null
+
+// 从 AppConfig 读取当前行的持仓倾向
+const loadPositionBias = () => {
+  const cfg = appConfigService.getPositionBiasForStock(props.strategy.stockCode)
+  bias.value = cfg?.bias || null
+  updatedAt.value = cfg?.updatedAt || null
+  updatedAtDisplay.value = cfg?.updatedAtDisplay || ''
+}
+
+// 改动后防抖上传到 WebDAV（跨设备同步）
+const scheduleUploadBias = () => {
+  if (uploadBiasTimer) clearTimeout(uploadBiasTimer)
+  uploadBiasTimer = setTimeout(() => {
+    webdavImportService.uploadAppConfig().then((ok) => {
+      if (ok) console.log('[positionBias] 已同步到 WebDAV')
+    })
+  }, 800)
+}
+
+// 设置/取消持仓倾向（再次点击当前已选项可清除）
+const setBias = (b) => {
+  const code = props.strategy.stockCode
+  if (!code) return
+  const next = bias.value === b ? null : b
+  if (next) {
+    appConfigService.setPositionBiasForStock(code, next)
+  } else {
+    appConfigService.clearPositionBiasForStock(code)
+  }
+  loadPositionBias()
+  scheduleUploadBias()
+}
+
+// 距今时长文案（依赖共享 ticker `now` 实时刷新）
+const elapsedText = computed(() => {
+  if (!updatedAt.value) return ''
+  const diff = now.value - new Date(updatedAt.value).getTime()
+  if (diff < 60000) return '刚刚'
+  const min = Math.floor(diff / 60000)
+  if (min < 60) return min + '分钟前'
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return hr + '小时前'
+  const day = Math.floor(hr / 24)
+  return day + '天前'
+})
+
+// 有效性分级：<3天 有效(绿) / 3–15天 需关注(橙) / >15天 已失效(灰)
+const validityClass = computed(() => {
+  if (!updatedAt.value) return 'bias-unset'
+  const day = (now.value - new Date(updatedAt.value).getTime()) / 86400000
+  if (day < 3) return 'bias-fresh'
+  if (day < 15) return 'bias-aging'
+  return 'bias-stale'
+})
+
+// 初始化加载当前行持仓倾向
+loadPositionBias()
+
+// 监听配置更新事件，重新加载收市买状态 + 持仓倾向（跨设备同步后刷新）
 window.addEventListener('appConfigUpdated', () => {
   loadMarketCloseBuyFlag()
+  loadPositionBias()
 })
 
 // 条件单涨跌幅（缺省0.1%）
@@ -3430,5 +3506,73 @@ const getTrendClass = (trend) => {
 .condition-order-btn .btn-count {
   background-color: rgba(255, 165, 0, 0.3);
   color: #ffa500;
+}
+
+/* ========== 持仓倾向列 ========== */
+.position-bias-cell {
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+.bias-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.bias-btn {
+  padding: 2px 6px;
+  font-size: 11px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  line-height: 1.4;
+  transition: all 0.15s ease;
+}
+
+.bias-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.bias-btn.active.bias-increase {
+  background: #e74c3c;
+  border-color: #e74c3c;
+  color: #fff;
+}
+
+.bias-btn.active.bias-decrease {
+  background: #28a745;
+  border-color: #28a745;
+  color: #fff;
+}
+
+.bias-btn.active.bias-neutral {
+  background: #7f8c8d;
+  border-color: #7f8c8d;
+  color: #fff;
+}
+
+.bias-elapsed {
+  margin-top: 3px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.bias-elapsed.bias-fresh {
+  color: #2ecc71;
+}
+
+.bias-elapsed.bias-aging {
+  color: #f39c12;
+}
+
+.bias-elapsed.bias-stale {
+  color: #95a5a6;
+}
+
+.bias-elapsed.bias-unset {
+  color: rgba(255, 255, 255, 0.35);
 }
 </style>

@@ -161,6 +161,13 @@ export const COLUMNS = [
     header: { cssClass: 'trend-icon-header', hint: '趋势' }
   },
   {
+    key: 'positionBias',
+    label: '持仓倾向',
+    group: 'trend',
+    defaultVisible: { mobile: true, desktop: true },
+    header: {}
+  },
+  {
     key: 'autoTrend',
     label: '自动生成趋势',
     group: 'trend',

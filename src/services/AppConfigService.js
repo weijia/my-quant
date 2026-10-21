@@ -70,7 +70,9 @@ const DEFAULT_CONFIG = {
     height: 200,
     // 本地内容最后修改时间，用于 WebDAV 同步冲突检测
     updatedAt: ''
-  }
+  },
+  // 持仓倾向配置（增持/减持/中性，按股票代码索引，跨设备同步）
+  positionBias: {}
 }
 
 class AppConfigService {
@@ -118,6 +120,7 @@ class AppConfigService {
     const localMqttClientId = this.config?.mqtt?.clientId || null
     // 行情连接同理，保留本地 clientId
     const localPriceMqttClientId = this.config?.priceMqtt?.clientId || null
+    const localPositionBias = this.config?.positionBias ? JSON.parse(JSON.stringify(this.config.positionBias)) : null
     this.config = this.mergeWithDefaults(remoteConfig)
     // 恢复本地 UI 配置（如果存在）
     if (localUI) {
@@ -136,6 +139,10 @@ class AppConfigService {
     }
     if (localPriceMqttClientId) {
       this.config.priceMqtt.clientId = localPriceMqttClientId
+    }
+    // 持仓倾向：合并远端与本地（本地逐 key 优先），保证跨设备同步且不丢失本地离线编辑
+    if (localPositionBias) {
+      this.config.positionBias = { ...(this.config.positionBias || {}), ...localPositionBias }
     }
     this.saveToLocalStorage()
     console.log('[AppConfig] 已从远程合并配置:', JSON.stringify(this.config.trendStrategyMapping))
@@ -161,6 +168,7 @@ class AppConfigService {
     if (config.marketCloseBuy) result.marketCloseBuy = { ...config.marketCloseBuy }
     if (config.banner) result.banner = { ...config.banner }
     if (config.note) result.note = { ...result.note, ...config.note }
+    if (config.positionBias) result.positionBias = { ...config.positionBias }
     return result
   }
 
@@ -432,6 +440,64 @@ class AppConfigService {
         }
       }
       keysToDelete.forEach(key => delete this.config.marketCloseSell[key])
+      this.saveToLocalStorage()
+    }
+  }
+
+  // ========== 持仓倾向配置（增持/减持/中性，跨设备同步） ==========
+
+  /**
+   * 获取全部持仓倾向配置
+   * @returns {Object} 形如 { "600519": { bias, updatedAt, updatedAtDisplay }, ... }
+   */
+  getPositionBiasConfig() {
+    return this.config.positionBias || {}
+  }
+
+  /**
+   * 获取某只股票的持仓倾向
+   * @param {string} stockCode 股票代码
+   * @returns {Object|null} { bias: 'increase'|'decrease'|'neutral', updatedAt, updatedAtDisplay } 或 null
+   */
+  getPositionBiasForStock(stockCode) {
+    if (!stockCode) return null
+    return this.config.positionBias?.[stockCode] || null
+  }
+
+  /**
+   * 设置某只股票的持仓倾向（自动记录东八区时间）
+   * @param {string} stockCode 股票代码
+   * @param {string|null} bias 'increase'|'decrease'|'neutral'（null 表示清除）
+   */
+  setPositionBiasForStock(stockCode, bias) {
+    if (!this.config.positionBias) this.config.positionBias = {}
+    if (bias) {
+      const nowTime = new Date()
+      this.config.positionBias[stockCode] = {
+        bias,
+        updatedAt: nowTime.toISOString(),
+        updatedAtDisplay: nowTime.toLocaleString('zh-CN', {
+          timeZone: 'Asia/Shanghai',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      }
+    } else {
+      delete this.config.positionBias[stockCode]
+    }
+    this.saveToLocalStorage()
+  }
+
+  /**
+   * 清除某只股票的持仓倾向
+   * @param {string} stockCode 股票代码
+   */
+  clearPositionBiasForStock(stockCode) {
+    if (this.config.positionBias) {
+      delete this.config.positionBias[stockCode]
       this.saveToLocalStorage()
     }
   }
