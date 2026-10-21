@@ -26,7 +26,7 @@ const DEFAULT_CONFIG = {
     hideZeroQuantity: false,
     useMarginTrade: true,
     mobileVisibleColumns: ['name', 'quantity', 'trendIcon', 'advancedOrder'],
-    desktopVisibleColumns: ['name', 'quantity', 'trendIcon', 'conditionConfig', 'conditionOrder', 'quickOrder', 'advancedOrderSettings', 'advancedOrder'],
+    desktopVisibleColumns: ['name', 'quantity', 'trendIcon', 'conditionConfig', 'conditionOrder', 'quickOrder', 'quickBuyFixed', 'advancedOrderSettings', 'advancedOrder'],
     sortBy: 'name',
     sortOrder: 'asc'
   },

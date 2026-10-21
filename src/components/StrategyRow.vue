@@ -427,6 +427,18 @@
       </div>
     </td>
     
+    <!-- 固定一键买入：上涨0.5%买入，金额上限1.2万元 -->
+    <td v-if="visibleColumns.includes('quickBuyFixed')" class="quick-buy-fixed-cell">
+      <button
+        class="condition-order-btn amount-buy-btn"
+        @click="handleQuickBuyFixed"
+        :disabled="!strategy.stockCode || !effectivePrice || sendingQuickBuyFixed"
+        :title="`上涨0.5%买入 上限1.2万元 数量:${calculateVolumeFromAmount(12000, effectivePrice || 0) || '-'}`"
+      >
+        {{ sendingQuickBuyFixed ? '...' : '0.5%↑买≤1.2万' }}<span v-if="getButtonCount('quickBuyFixed') > 0" class="btn-count">{{ getButtonCount('quickBuyFixed') }}</span>
+      </button>
+    </td>
+    
     <!-- 高级设置：上涨/下跌趋势的买卖百分比 -->
     <td v-if="visibleColumns.includes('advancedOrderSettings')" class="advanced-settings-cell">
       <div class="config-rows">
@@ -1476,6 +1488,37 @@ const handleConditionVolumeBoth = async () => {
     alert('发送失败，请检查MQTT连接')
   } finally {
     sendingConditionVolumeBoth.value = false
+  }
+}
+
+// 固定参数一键买入：上涨0.5%买入，金额上限1.2万元（仅买入，向下取整到100股且不超金额）
+const sendingQuickBuyFixed = ref(false)
+const handleQuickBuyFixed = async () => {
+  if (!props.strategy.stockCode || !effectivePrice.value) {
+    alert('股票代码或价格不存在')
+    return
+  }
+  incrementCount('quickBuyFixed')
+  sendingQuickBuyFixed.value = true
+  const tradeAmount = 12000
+  const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
+  const pct = 0.5
+  try {
+    await mqttConditionService.sendBuyOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume,
+      percentage: pct,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getBuySide()
+    })
+    console.log(`[固定条件单] 已发送: ${props.strategy.stockCode}, 上涨${pct}%买入, 上限${tradeAmount}元, 数量:${tradeVolume}`)
+  } catch (error) {
+    console.error('[固定条件单] 失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingQuickBuyFixed.value = false
   }
 }
 
