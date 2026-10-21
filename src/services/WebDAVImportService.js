@@ -569,6 +569,48 @@ class WebDAVImportService {
 
   async fetchTrendJudgments() {
     try {
+      // 优先从单文件 all_trends.json 读取（一次请求代替 N 次目录列举 + 逐文件下载）
+      try {
+        const allData = await this.fetchFromWebDAV('all_trends.json')
+        if (allData && typeof allData === 'object') {
+          const trendJudgmentsMap = {}
+          let validCount = 0
+          for (const [key, content] of Object.entries(allData)) {
+            if (!content || typeof content !== 'object') continue
+            const { stockCode, trendJudgment, autoTrendJudgment, trendJudgmentUpdatedAt, autoTrendJudgmentUpdatedAt, decreasePercentage, price_drop_ratio, volatilityMetrics, trendStrengthMetrics, stockAnalysis, stockAnalysisUpdatedAt, fiveYearAverageDividendYield, previousDayChangePercent } = content
+            // 根据最新文档格式，price_drop_ratio 位于 volatilityMetrics 对象内
+            const actualPriceDropRatio = volatilityMetrics?.price_drop_ratio != null
+              ? volatilityMetrics.price_drop_ratio
+              : (price_drop_ratio != null ? price_drop_ratio : null)
+            const k = stockCode || key
+            if (k && (trendJudgment || autoTrendJudgment || decreasePercentage != null || actualPriceDropRatio != null)) {
+              trendJudgmentsMap[k] = {
+                trendJudgment: trendJudgment || null,
+                trendJudgmentUpdatedAt: trendJudgmentUpdatedAt || null,
+                autoTrendJudgment: autoTrendJudgment || null,
+                autoTrendJudgmentUpdatedAt: autoTrendJudgmentUpdatedAt || null,
+                decreasePercentage: decreasePercentage != null ? decreasePercentage : null,
+                price_drop_ratio: actualPriceDropRatio,
+                currentPrice: volatilityMetrics?.current_price || null,
+                volatility15d: volatilityMetrics?.volatility_15d_ma || null,
+                adx: trendStrengthMetrics?.adx != null ? trendStrengthMetrics.adx : null,
+                plusDi: trendStrengthMetrics?.plus_di != null ? trendStrengthMetrics.plus_di : null,
+                minusDi: trendStrengthMetrics?.minus_di != null ? trendStrengthMetrics.minus_di : null,
+                stockAnalysis: stockAnalysis || null,
+                stockAnalysisUpdatedAt: stockAnalysisUpdatedAt || null,
+                fiveYearAverageDividendYield: content.fiveYearAverageDividendYield ?? null,
+                previousDayChangePercent: content.previousDayChangePercent ?? null
+              }
+              validCount++
+            }
+          }
+          console.log(`从 all_trends.json 成功获取 ${validCount} 条趋势判断数据`)
+          if (validCount > 0) return trendJudgmentsMap
+        }
+      } catch (e) {
+        console.warn('从 all_trends.json 读取失败，回退目录遍历:', e)
+      }
+
       console.log('正在获取趋势判断目录文件列表:', this.trendBaseUrl)
       const propfindResponse = await request(this.trendBaseUrl, {
         method: 'PROPFIND',
