@@ -448,6 +448,18 @@
         {{ sendingQuickBuyFixed ? '...' : '0.5%↑买≤1.2万' }}<span v-if="getButtonCount('quickBuyFixed') > 0" class="btn-count">{{ getButtonCount('quickBuyFixed') }}</span>
       </button>
     </td>
+
+    <!-- 固定一键买入：上涨0.01%买入，金额上限6000元 -->
+    <td v-if="visibleColumns.includes('quickBuyFixedSmall')" class="quick-buy-fixed-cell">
+      <button
+        class="condition-order-btn amount-buy-btn"
+        @click="handleQuickBuyFixedSmall"
+        :disabled="!strategy.stockCode || !effectivePrice || sendingQuickBuyFixedSmall"
+        :title="`上涨0.01%买入 上限6000元 数量:${calculateVolumeFromAmount(6000, effectivePrice || 0) || '-'}`"
+      >
+        {{ sendingQuickBuyFixedSmall ? '...' : '0.01%↑买≤6000' }}<span v-if="getButtonCount('quickBuyFixedSmall') > 0" class="btn-count">{{ getButtonCount('quickBuyFixedSmall') }}</span>
+      </button>
+    </td>
     
     <!-- 高级设置：上涨/下跌趋势的买卖百分比 -->
     <td v-if="visibleColumns.includes('advancedOrderSettings')" class="advanced-settings-cell">
@@ -623,7 +635,7 @@ const buttonCounts = ref({})
 
 const loadButtonCounts = () => {
   const counts = {}
-  const buttons = ['quickBuy', 'quickSell', 'quickBoth', 'amountBuy', 'amountSell', 'amountBoth', 'volumeBuy', 'volumeSell', 'volumeBoth', 'marketCloseBuy', 'marketCloseSell', 'strategyVolume', 'strategyAmount', 'strategyBuyOnlyVolume', 'strategyBuyOnlyAmount', 'strategySellOnlyVolume', 'strategySellOnlyAmount']
+  const buttons = ['quickBuy', 'quickSell', 'quickBoth', 'amountBuy', 'amountSell', 'amountBoth', 'volumeBuy', 'volumeSell', 'volumeBoth', 'marketCloseBuy', 'marketCloseSell', 'strategyVolume', 'strategyAmount', 'strategyBuyOnlyVolume', 'strategyBuyOnlyAmount', 'strategySellOnlyVolume', 'strategySellOnlyAmount', 'quickBuyFixedSmall']
   buttons.forEach(btn => {
     counts[btn] = clickCounterService.getCount(props.strategy.id, btn)
   })
@@ -1595,6 +1607,37 @@ const handleQuickBuyFixed = async () => {
     alert('发送失败，请检查MQTT连接')
   } finally {
     sendingQuickBuyFixed.value = false
+  }
+}
+
+// 固定参数一键买入：上涨0.01%买入，金额上限6000元（仅买入，向下取整到100股且不超金额）
+const sendingQuickBuyFixedSmall = ref(false)
+const handleQuickBuyFixedSmall = async () => {
+  if (!props.strategy.stockCode || !effectivePrice.value) {
+    alert('股票代码或价格不存在')
+    return
+  }
+  incrementCount('quickBuyFixedSmall')
+  sendingQuickBuyFixedSmall.value = true
+  const tradeAmount = 6000
+  const tradeVolume = calculateVolumeFromAmount(tradeAmount, effectivePrice.value)
+  const pct = 0.01
+  try {
+    await mqttConditionService.sendBuyOrder({
+      stockCode: props.strategy.stockCode,
+      stockName: props.strategy.name,
+      tradeVolume,
+      percentage: pct,
+      provider: props.strategy.provider === 'pingan' ? 'pingan' : '',
+      accountType: getAccountType(),
+      side: getBuySide()
+    })
+    console.log(`[固定条件单] 已发送: ${props.strategy.stockCode}, 上涨${pct}%买入, 上限${tradeAmount}元, 数量:${tradeVolume}`)
+  } catch (error) {
+    console.error('[固定条件单] 失败:', error)
+    alert('发送失败，请检查MQTT连接')
+  } finally {
+    sendingQuickBuyFixedSmall.value = false
   }
 }
 
