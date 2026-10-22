@@ -1,6 +1,7 @@
+import PouchDB from 'pouchdb'
+
 class Database {
   constructor() {
-    const PouchDB = window.PouchDB || require('pouchdb').default || require('pouchdb')
     this.db = new PouchDB('my_quant_strategies')
     this.strategyPrefix = 'strategy_'
     this.conditionPrefix = 'condition_'

@@ -14,6 +14,8 @@
 import { reactive, ref } from 'vue'
 import appConfigService from './AppConfigService.js'
 import { normalizeCode } from '../utils/stockCode'
+import mqtt from 'mqtt'
+import CryptoJS from 'crypto-js'
 
 const DEFAULT_PRICE_MQTT = {
   enabled: true,
@@ -79,9 +81,6 @@ class MQTTPriceService {
   createConnection() {
     const config = this.loadConfig()
     if (!config.enabled) return Promise.resolve()
-    if (typeof mqtt === 'undefined') {
-      return Promise.reject(new Error('mqtt 库未加载（检查 index.html CDN）'))
-    }
 
     return new Promise((resolve, reject) => {
       this.client = mqtt.connect(config.serverUrl, {

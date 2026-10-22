@@ -77,6 +77,9 @@ module.exports = require('vite').defineConfig({
     }
   },
   base: './',
+  optimizeDeps: {
+    include: ['pouchdb', 'mqtt', 'crypto-js']
+  },
   build: {
     outDir: './dist',
     emptyOutDir: true

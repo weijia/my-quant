@@ -23,6 +23,8 @@ export const PRESET_SERVERS = [
 ];
 
 import appConfigService from './AppConfigService.js'
+import mqtt from 'mqtt'
+import CryptoJS from 'crypto-js'
 
 // 默认配置
 const DEFAULT_MQTT_CONFIG = {
