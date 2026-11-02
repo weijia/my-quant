@@ -71,22 +71,30 @@
     </td>
 
     <td v-if="visibleColumns.includes('autoTrend')">
-      <select 
-        v-model="localTrend" 
-        @change="updateTrend"
-        :class="['trend-select', getTrendClass(localTrend)]"
-      >
-        <option value="unset">未设置</option>
-        <option value="trend_unknown">未知趋势</option>
-        <option value="trend_up">上涨趋势</option>
-        <option value="trend_down">下跌趋势</option>
-        <option value="trend_breakdown">下跌破位</option>
-        <option value="trend_oscillation">震荡趋势</option>
+      <div class="trend-container">
+        <select 
+          v-model="localTrend" 
+          @change="updateTrend"
+          :class="['trend-select', getTrendClass(localTrend)]"
+        >
+          <option value="unset">未设置</option>
+          <option value="trend_unknown">未知趋势</option>
+          <option value="trend_up">上涨趋势</option>
+          <option value="trend_down">下跌趋势</option>
+          <option value="trend_breakdown">下跌破位</option>
+          <option value="trend_oscillation">震荡趋势</option>
         <option value="trend_pullback">回踩趋势</option>
         <option value="high_volatility">高波动率</option>
         <option value="medium_volatility">中等波动率</option>
         <option value="low_volatility">低波动率</option>
       </select>
+      <span 
+        v-if="trendUpdatedAt" 
+        class="trend-timestamp"
+        :class="getTrendAgeClass(trendUpdatedAt)"
+        :title="'趋势更新时间: ' + new Date(trendUpdatedAt).toLocaleString('zh-CN')"
+      >{{ formatTrendTimestamp(trendUpdatedAt) }}</span>
+      </div>
     </td>
 
     <td v-if="visibleColumns.includes('strategyType')" class="strategy-type-cell">
@@ -1880,6 +1888,39 @@ const getTrendTooltip = (trend) => {
   return tooltips[trend] || '未设置'
 }
 
+// 格式化趋势更新时间戳为「今天/昨天/X天前/日期」（与 vue-dialog-userscript 保持一致）
+const formatTrendTimestamp = (updateTime) => {
+  if (!updateTime) return ''
+  const t = new Date(updateTime)
+  if (isNaN(t.getTime())) return ''
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const updateDate = new Date(t.getFullYear(), t.getMonth(), t.getDate())
+  const daysDiff = Math.floor((today - updateDate) / (1000 * 60 * 60 * 24))
+  if (daysDiff === 0) return '今天'
+  if (daysDiff === 1) return '昨天'
+  if (daysDiff <= 30) return `${daysDiff}天前`
+  return t.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+}
+
+// 趋势时间戳「陈旧程度」颜色类（仅作用于时间戳，不覆盖趋势方向颜色）
+const getTrendAgeClass = (updateTime) => {
+  if (!updateTime) return ''
+  const t = new Date(updateTime)
+  if (isNaN(t.getTime())) return ''
+  const now = new Date()
+  const daysDiff = Math.floor((now - t) / (1000 * 60 * 60 * 24))
+  if (daysDiff <= 1) return 'trend-fresh'
+  if (daysDiff <= 7) return 'trend-recent'
+  if (daysDiff <= 30) return 'trend-old'
+  return 'trend-stale'
+}
+
+// 自动生成趋势的有效更新时间（自动优先，回退手动）
+const trendUpdatedAt = computed(() =>
+  props.strategy.autoTrendJudgmentUpdatedAt || props.strategy.trendJudgmentUpdatedAt || null
+)
+
 // ADX 趋势强度分级（依据 my-data 文档 trendStrengthMetrics.adx）
 // <20 震荡, 20–25 趋势初现, 25–50 强趋势, >50 极强趋势
 const getAdxHint = (adx) => {
@@ -2308,6 +2349,46 @@ const getTrendClass = (trend) => {
 <style scoped>
 .strategy-row {
   transition: background-color 0.2s;
+}
+
+/* 趋势容器：竖向排布 select + 时间戳，与 vue-dialog-userscript 对齐 */
+.trend-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+}
+
+/* 趋势时间戳（趋势已更新/开始的相对天数） */
+.trend-timestamp {
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-weight: bold;
+  cursor: help;
+  line-height: 1.2;
+}
+
+/* 根据时间久远程度的颜色标注（仅作用于时间戳，不覆盖趋势方向颜色） */
+.trend-timestamp.trend-fresh {
+  color: #1a7f37;
+  background-color: rgba(26, 127, 55, 0.15);
+}
+
+.trend-timestamp.trend-recent {
+  color: #0d6efd;
+  background-color: rgba(13, 110, 253, 0.15);
+}
+
+.trend-timestamp.trend-old {
+  color: #fd7e14;
+  background-color: rgba(253, 126, 20, 0.15);
+}
+
+.trend-timestamp.trend-stale {
+  color: #dc3545;
+  background-color: rgba(220, 53, 69, 0.15);
 }
 
 .strategy-row:hover {

@@ -679,6 +679,10 @@ const loadStrategies = async () => {
               strategy.minusDi = trend.minusDi;
             }
 
+            // 注入趋势更新时间戳（自动优先，回退手动）：用于「自动生成趋势」列展示已持续天数
+            strategy.autoTrendJudgmentUpdatedAt = trend.autoTrendJudgmentUpdatedAt || null;
+            strategy.trendJudgmentUpdatedAt = trend.trendJudgmentUpdatedAt || null;
+
             matchedCount++;
           } else {
             // 【调试】trend 匹配失败
@@ -1338,7 +1342,10 @@ const getTrendByStockCode = (stockCode, trendData) => {
       plusDi: trendInfo.plusDi != null ? trendInfo.plusDi : null,
       minusDi: trendInfo.minusDi != null ? trendInfo.minusDi : null,
       // 买卖建议
-      stockAnalysis: trendInfo.stockAnalysis || null
+      stockAnalysis: trendInfo.stockAnalysis || null,
+      // 趋势更新时间戳：自动优先，回退到手动；用于展示「趋势已开始/更新多少天」
+      autoTrendJudgmentUpdatedAt: trendInfo.autoTrendJudgmentUpdatedAt || null,
+      trendJudgmentUpdatedAt: trendInfo.trendJudgmentUpdatedAt || null
     };
     console.debug(`[调试-getTrendByStockCode] 匹配成功: stockCode=${stockCode}, 方法=${matchMethod}, result=`, JSON.stringify(result));
     return result;
