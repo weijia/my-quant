@@ -1384,6 +1384,8 @@ onMounted(async () => {
     const payload = resp.data;
     const stockCode = resp.stockCode;
     const errorMessage = resp.message || (payload && typeof payload === 'object' && payload.message);
+    // 结构化诊断详情（Agent 端 _createConditionCore / 兜底逻辑返回的 details 字段）
+    const errorDetails = resp.details || (payload && typeof payload === 'object' && payload.details);
     console.log('[HomeView] 响应解析:', { isResponse, commandAction, status, stockCode, errorMessage, respKeys: Object.keys(resp||{}) });
 
     // ========== 处理策略列表响应（条件单 + 网格） ==========
@@ -1597,13 +1599,14 @@ onMounted(async () => {
       };
       const label = actionLabels[commandAction] || commandAction;
       const stockInfo = stockCode ? `【${stockCode}】` : '';
+      const detailSuffix = errorDetails ? ` | 详情: ${errorDetails}` : '';
 
       if (status === 'success') {
-        showToast(`${label} ${stockInfo}执行成功`, 'success', 3000);
+        showToast(`${label} ${stockInfo}执行成功${detailSuffix}`, 'success', 3000);
       } else if (status === 'error') {
         const errMsg = stockInfo + (errorMessage || '未知错误');
-        showToast(`${label} 失败: ${errMsg}`, 'error', 0);
-        bannerText.value = `⚠ ${label} 失败: ${errMsg}`;
+        showToast(`${label} 失败: ${errMsg}${detailSuffix}`, 'error', 0);
+        bannerText.value = `⚠ ${label} 失败: ${errMsg}${detailSuffix}`;
         // 登录态过期
         if (resp.loginExpired) {
           agentOnline.value = false;
@@ -1617,11 +1620,12 @@ onMounted(async () => {
     if (msgData && msgData.action && msgData.status === 'error') {
       const errStockCode = msgData.stockCode || msgData.orderId || '';
       const errDetail = errStockCode ? `【${errStockCode}】${msgData.message || '未知错误'}` : (msgData.message || '未知错误');
-      bannerText.value = `⚠ ${errDetail}`;
+      const errDetailsText = (errorDetails || msgData.details) ? ` | 详情: ${errorDetails || msgData.details}` : '';
+      bannerText.value = `⚠ ${errDetail}${errDetailsText}`;
       if (msgData.loginExpired) {
         agentOnline.value = false;
       }
-      showToast('MQTT 错误: ' + errDetail, 'error', 0);
+      showToast('MQTT 错误: ' + errDetail + errDetailsText, 'error', 0);
     }
   });
 
