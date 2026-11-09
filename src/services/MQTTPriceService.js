@@ -7,7 +7,8 @@
  *
  * 协议对齐 stock/instock/server/mqtt_protocol.py：
  *   发布 { action: 'subscribe', data: { codes, interval } } → 请求持续推送
- *   收到 { action: 'quote_push', data: { code, name, price, prev_close, change_pct ... } } → 一次报价
+ *   收到 { action: 'quote_push', data: [ {code,name,price,prev_close,change_pct...}, ... ] } → 一轮全部报价
+ *   （兼容旧格式：data 为单个报价对象）
  * 信封与加密规则沿用 mqtt-agent-protocol（CryptoJS.AES），与下单服务一致。
  */
 
@@ -130,7 +131,13 @@ class MQTTPriceService {
       const inner = typeof envelope.msg === 'string' ? JSON.parse(envelope.msg) : envelope.msg
       if (!inner || inner.action !== 'quote_push') return
 
-      this.updateQuote(inner.data)
+      // 服务端每轮合并成一条 batch（data 为数组）；兼容旧版逐只推送的单个对象
+      const data = inner.data
+      if (Array.isArray(data)) {
+        for (const quote of data) this.updateQuote(quote)
+      } else {
+        this.updateQuote(data)
+      }
     } catch (_e) {
       // 行情推送频率高，解析失败（密文/其它通道消息）静默忽略，避免刷日志
     }
