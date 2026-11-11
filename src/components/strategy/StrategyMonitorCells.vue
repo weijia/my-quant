@@ -106,7 +106,8 @@ const gridStatusTitle = computed(() => {
     )
   }
   const details = getGridCapacityDetails(grid.value, currentPrice.value)
-  if (details.length) lines.push('— 网格参数 —', ...details)
+  // 容量数据来自 all_strategies.json，只在「自动同步全部 / refresh_grid」时刷新，非实时
+  if (details.length) lines.push('— 网格参数（上次同步快照）—', ...details)
   if (gridIssues.value.length) {
     lines.push('— 容量提示 —')
     gridIssues.value.forEach((issue) => lines.push(`${issue.label}: ${issue.detail}`))

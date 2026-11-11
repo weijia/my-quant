@@ -236,8 +236,15 @@ export function getGridCapacityIssues(grid, price) {
 
   // —— 卖出侧：下一格是否还卖得动 / 可卖量是否超过设定上限 ——
   if (qtyCanSell !== null && qtySell !== null && qtySell > 0 && qtyCanSell < qtySell) {
-    pushIssue(issues, 'sell_exhausted', '卖空',
-      `可卖 ${qtyCanSell} 股 < 每格卖出 ${qtySell} 股，下一格无法成交`)
+    const netPos = toNumber(grid.netPosition)
+    // 油猴脚本用 `extra.qtyCanSell || 0` 赋值：详情接口未返回该字段时也会落成 0，
+    // 与「确实无券可卖」无法区分。有净持仓却报 0 时用存疑文案，避免武断结论。
+    const uncertain = qtyCanSell === 0 && netPos !== null && netPos > 0
+    pushIssue(issues, uncertain ? 'sell_unknown' : 'sell_exhausted',
+      uncertain ? '可卖待核' : '卖空',
+      uncertain
+        ? `可卖量为 0，但净持仓 ${netPos} 股：可能确实无券可卖，也可能是详情接口未返回该字段，请核对`
+        : `可卖 ${qtyCanSell} 股 < 每格卖出 ${qtySell} 股，下一格无法成交`)
   }
   if (qtyCanSell !== null && maxQtyCanSell !== null && maxQtyCanSell > 0
       && qtyCanSell > maxQtyCanSell) {
