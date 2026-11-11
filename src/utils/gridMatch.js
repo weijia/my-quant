@@ -96,6 +96,20 @@ export function toMonitorGrid(raw) {
     netPosition: raw.netPosition ?? null,
     profit: raw.profit ?? null,
     expiredTime: raw.expiredTime ?? null,
+    // ===== 容量参数（券商 taskInfo.params / extra 经 GridStrategyService 派生）=====
+    // 卖出侧：qtyCanSell 当前可卖股数，maxQtyCanSell 建网格时设定的最大可卖股数
+    qtyCanSell: raw.qtyCanSell ?? null,
+    maxQtyCanSell: raw.maxQtyCanSell ?? null,
+    quantityBuy: raw.quantityBuy ?? raw.quantity ?? null,
+    quantitySell: raw.quantitySell ?? raw.quantity ?? null,
+    // 资金侧：investedAmount = costFunds（可为负，表示卖出回笼已超过买入投入）
+    // remainingFund / availableToBuy 在油猴脚本里是同一个公式 max(0, maxFund - costFunds)
+    maxFund: raw.maxFund ?? raw.totalAmount ?? null,
+    investedAmount: raw.investedAmount ?? raw.costFunds ?? null,
+    remainingFund: raw.remainingFund ?? null,
+    availableToBuy: raw.availableToBuy ?? null,
+    gridCount: raw.gridCount ?? null,
+    nowPrice: raw.nowPrice ?? null,
     stockCode: raw.stockCode ?? '',
     stockName: raw.stockName ?? '',
     accountType: normalizeAccountType(raw.accountType),
@@ -178,4 +192,98 @@ export function getGridPriceState(grid, price) {
   if (current < bounds.low) return 'out_low'
   if (current > bounds.high) return 'out_high'
   return 'in'
+}
+
+// ===== 网格容量状态（可卖量 / 可用资金） =====
+// 价格破网之外，网格还会因为「券卖光」或「钱用光」而单边停摆；反过来，
+// 卖出回笼超过初始额度（costFunds 为负 → remainingFund > maxFund）、
+// 或可卖量超过建网格时设定的 maxQtyCanSell，也属于需要提示的越界状态。
+// 券商字段见 GridStrategyService.js:492-552 与 http-interface.md 的 params/extra 说明。
+
+/** 宽松数值解析：兼容 "1,200" / "1200 股" / 数字字符串 */
+function toNumber(value) {
+  if (value === null || value === undefined || value === '') return null
+  const num = Number(String(value).replace(/[,，\s]/g, ''))
+  return Number.isFinite(num) ? num : null
+}
+
+function pushIssue(issues, code, label, detail) {
+  issues.push({ code, label, detail })
+}
+
+/**
+ * 判定网格的容量类异常，返回按严重程度排序的提示数组。
+ * 数据缺失时对应项跳过，不误报。
+ * @param {object} grid 网格对象（all_strategies.json 或 MQTT 远程策略）
+ * @param {number} price 当前价，用于估算一格买入所需金额
+ * @returns {Array<{code:string,label:string,detail:string}>}
+ */
+export function getGridCapacityIssues(grid, price) {
+  if (!grid) return []
+  const issues = []
+
+  const qtyCanSell = toNumber(grid.qtyCanSell ?? grid.enableAmount)
+  // 注意：gridAmount 在部分数据是「每格金额（元）」而非股数，不能当数量用
+  const qtySell = toNumber(grid.quantitySell ?? grid.quantity)
+  const maxQtyCanSell = toNumber(grid.maxQtyCanSell)
+  const qtyBuy = toNumber(grid.quantityBuy ?? grid.quantity)
+  const maxFund = toNumber(grid.maxFund ?? grid.totalAmount)
+  const invested = toNumber(grid.investedAmount ?? grid.costFunds)
+  const current = toNumber(price ?? grid.nowPrice)
+  // 优先用现成的可用资金；缺失时按油猴脚本公式由 总额度 - 已投入 推导
+  const fund = toNumber(grid.availableToBuy ?? grid.remainingFund)
+    ?? (maxFund !== null && invested !== null ? Math.max(0, maxFund - invested) : null)
+
+  // —— 卖出侧：下一格是否还卖得动 / 可卖量是否超过设定上限 ——
+  if (qtyCanSell !== null && qtySell !== null && qtySell > 0 && qtyCanSell < qtySell) {
+    pushIssue(issues, 'sell_exhausted', '卖空',
+      `可卖 ${qtyCanSell} 股 < 每格卖出 ${qtySell} 股，下一格无法成交`)
+  }
+  if (qtyCanSell !== null && maxQtyCanSell !== null && maxQtyCanSell > 0
+      && qtyCanSell > maxQtyCanSell) {
+    pushIssue(issues, 'qty_overflow', '持仓超限',
+      `可卖 ${qtyCanSell} 股 > 设定最大可卖 ${maxQtyCanSell} 股`)
+  }
+
+  // —— 买入侧：下一格是否还买得动 / 可用资金是否超过设定额度 ——
+  const oneGridCost = qtyBuy !== null && qtyBuy > 0 && current !== null && current > 0
+    ? qtyBuy * current
+    : null
+  if (fund !== null && oneGridCost !== null && fund < oneGridCost) {
+    pushIssue(issues, 'buy_exhausted', '买满',
+      `可用资金 ${fund.toFixed(0)} 元 < 一格买入约 ${oneGridCost.toFixed(0)} 元`
+      + `（${qtyBuy} 股 × ${current}）`)
+  }
+  if (fund !== null && maxFund !== null && maxFund > 0 && fund > maxFund) {
+    pushIssue(issues, 'fund_overflow', '额度超额',
+      `可用资金 ${fund.toFixed(0)} 元 > 设定总额度 ${maxFund.toFixed(0)} 元`
+      + (invested !== null && invested < 0
+        ? `（已投入 ${invested.toFixed(0)} 元为负，说明卖出回笼已超过初始额度）`
+        : ''))
+  }
+
+  return issues
+}
+
+/** tooltip 用的容量参数明细（无有效参数时返回空数组） */
+export function getGridCapacityDetails(grid, price) {
+  if (!grid) return []
+  const lines = []
+  const show = (label, value, unit = '') => {
+    if (value !== null && value !== undefined && value !== '') lines.push(`${label}: ${value}${unit}`)
+  }
+  show('净持仓', grid.netPosition, ' 股')
+  show('可卖量', grid.qtyCanSell, ' 股')
+  show('最大可卖', grid.maxQtyCanSell, ' 股')
+  show('每格买/卖', grid.quantityBuy != null && grid.quantitySell != null
+    ? `${grid.quantityBuy} / ${grid.quantitySell}` : (grid.quantityBuy ?? grid.quantitySell), ' 股')
+  show('已投入', grid.investedAmount, ' 元')
+  show('可用资金', grid.availableToBuy ?? grid.remainingFund, ' 元')
+  show('总额度', grid.maxFund, ' 元')
+  const qtyBuy = toNumber(grid.quantityBuy ?? grid.quantity)
+  const current = toNumber(price ?? grid.nowPrice)
+  if (qtyBuy !== null && qtyBuy > 0 && current !== null && current > 0) {
+    lines.push(`一格买入约需: ${(qtyBuy * current).toFixed(0)} 元`)
+  }
+  return lines
 }

@@ -80,6 +80,21 @@ export function formatGridStatusWithPrice(status, priceState) {
   return formatGridStatus(status)
 }
 
+/**
+ * 网格状态列的完整文案：价格破网 + 容量异常（卖空/买满/持仓超限/额度超额）。
+ * 列宽有限，最多展示 2 个标签，其余用 +N 表示，完整明细放在单元格 tooltip 里。
+ * 无任何异常时展示券商网格单的原始状态。
+ */
+export function formatGridStatusFull(status, priceState, issues = []) {
+  const labels = []
+  if (priceState === 'out_low') labels.push('破网↓')
+  if (priceState === 'out_high') labels.push('破网↑')
+  issues.forEach((issue) => labels.push(issue.label))
+  if (!labels.length) return formatGridStatus(status)
+  const shown = labels.slice(0, 2).join('·')
+  return labels.length > 2 ? `${shown}+${labels.length - 2}` : shown
+}
+
 export function formatDateOnly(value) {
   if (!value) return PLACEHOLDER
   return String(value).slice(0, 10)

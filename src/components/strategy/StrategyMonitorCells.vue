@@ -30,14 +30,16 @@ import mqttPriceService from '../../services/MQTTPriceService'
 import {
   findGridForStock,
   getGridPriceBounds,
-  getGridPriceState
+  getGridPriceState,
+  getGridCapacityIssues,
+  getGridCapacityDetails
 } from '../../utils/gridMatch'
 import { normalizeCode } from '../../utils/stockCode'
 import {
   formatNumber,
   formatSignedNumber,
   formatGridStatus,
-  formatGridStatusWithPrice,
+  formatGridStatusFull,
   formatDateOnly
 } from '../../utils/monitorFormatters'
 
@@ -72,28 +74,44 @@ const priceText = computed(() => formatNumber(currentPrice.value, 2))
  * 当前价低于 priceLowLimit 或高于 priceHighLimit 即为破网，网格状态列给出警示。
  */
 const gridPriceState = computed(() => getGridPriceState(grid.value, currentPrice.value))
+
+/**
+ * 容量异常：可卖量 / 可用资金耗尽或超出设定上限。
+ * 与破网提示并列展示，明细放在 tooltip 里，避免把窄列塞满。
+ */
+const gridIssues = computed(() => getGridCapacityIssues(grid.value, currentPrice.value))
 const gridStatusText = computed(() =>
-  formatGridStatusWithPrice(grid.value?.status, gridPriceState.value)
+  formatGridStatusFull(grid.value?.status, gridPriceState.value, gridIssues.value)
 )
-const gridStatusClass = computed(() =>
-  gridPriceState.value === 'out_low' || gridPriceState.value === 'out_high'
+const gridStatusClass = computed(() => {
+  if (gridIssues.value.length) return 'grid-status-warn'
+  return gridPriceState.value === 'out_low' || gridPriceState.value === 'out_high'
     ? 'grid-status-out'
     : ''
-)
+})
 const gridStatusTitle = computed(() => {
-  const state = gridPriceState.value
-  if (state === 'unknown') return ''
+  if (!grid.value) return ''
+  const lines = [`网格状态: ${formatGridStatus(grid.value.status)}`]
   const bounds = getGridPriceBounds(grid.value)
   const price = Number(currentPrice.value)
-  const verdict = state === 'in'
-    ? '在网'
-    : (state === 'out_low' ? '跌破网格下限' : '突破网格上限')
-  return [
-    `网格状态: ${formatGridStatus(grid.value?.status)}`,
-    `当前价: ${Number.isFinite(price) ? price.toFixed(2) : '-'}`,
-    `区间: ${bounds.low} - ${bounds.high}`,
-    `判定: ${verdict}`
-  ].join('\n')
+  if (bounds) {
+    const state = gridPriceState.value
+    const verdict = state === 'in'
+      ? '在网'
+      : (state === 'out_low' ? '跌破网格下限' : state === 'out_high' ? '突破网格上限' : '无法判定')
+    lines.push(
+      `当前价: ${Number.isFinite(price) ? price.toFixed(2) : '-'}`,
+      `区间: ${bounds.low} - ${bounds.high}`,
+      `判定: ${verdict}`
+    )
+  }
+  const details = getGridCapacityDetails(grid.value, currentPrice.value)
+  if (details.length) lines.push('— 网格参数 —', ...details)
+  if (gridIssues.value.length) {
+    lines.push('— 容量提示 —')
+    gridIssues.value.forEach((issue) => lines.push(`${issue.label}: ${issue.detail}`))
+  }
+  return lines.join('\n')
 })
 const gridMidText = computed(() => formatNumber(grid.value?.basicPrice, 2))
 const gridRangeText = computed(() => grid.value?.priceRange || '-')
@@ -125,6 +143,12 @@ const gridProfitClass = computed(() => {
 /* 当前价超出网格区间（破网）：警示色，与油猴脚本的越界标红对应 */
 .grid-status-out {
   color: #ffa940;
+  font-weight: 600;
+}
+
+/* 可卖量 / 可用资金耗尽或超限额：网格已单边停摆，比破网更需关注 */
+.grid-status-warn {
+  color: #ff7875;
   font-weight: 600;
 }
 
