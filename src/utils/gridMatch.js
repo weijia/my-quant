@@ -89,6 +89,9 @@ export function toMonitorGrid(raw) {
     statusText: String(raw.status ?? '').trim(),
     basicPrice: raw.basicPrice ?? null,
     priceRange: range || '',
+    // 保留原始上下限，供「当前价是否越界（破网）」判断使用
+    priceLowLimit: raw.priceLowLimit ?? null,
+    priceHighLimit: raw.priceHighLimit ?? null,
     gridSpacing: spacing,
     netPosition: raw.netPosition ?? null,
     profit: raw.profit ?? null,
@@ -133,4 +136,46 @@ export function attachGridsFromAllStrategies(strategies, gridStrategies) {
     strategy.grid = exact.get(key) || byCode.get(code) || null
   })
   return strategies
+}
+
+// ===== 当前价是否超出网格区间（破网） =====
+// 规则与 vue-dialog-userscript 的 isOscillationGridOutOfRange 一致：
+// 取网格单的价格上下限，currentPrice < low || currentPrice > high 即越界；
+// 上下限缺失/非法、或当前价无效时不做判断。
+
+/** 解析 "9.5-11.58" / "30.000-43.000" 这类区间文本 */
+export function parseGridRange(priceRange) {
+  const text = String(priceRange ?? '').trim()
+  if (!text) return null
+  const matched = text.match(/^(\d+(?:\.\d+)?)\s*[-~～至]\s*(\d+(?:\.\d+)?)$/)
+  if (!matched) return null
+  const low = Number(matched[1])
+  const high = Number(matched[2])
+  return Number.isFinite(low) && Number.isFinite(high) && low > 0 && high > low
+    ? { low, high }
+    : null
+}
+
+/** 取网格价格边界：优先显式上下限字段，其次解析 priceRange（MQTT 远程策略常用） */
+export function getGridPriceBounds(grid) {
+  if (!grid) return null
+  const low = Number(grid.priceLowLimit ?? grid.priceLow ?? grid.low)
+  const high = Number(grid.priceHighLimit ?? grid.priceHigh ?? grid.high)
+  if (Number.isFinite(low) && Number.isFinite(high) && low > 0 && high > low) {
+    return { low, high }
+  }
+  return parseGridRange(grid.priceRange)
+}
+
+/**
+ * 判定当前价相对网格区间的位置。
+ * @returns {'in'|'out_low'|'out_high'|'unknown'} out_low=跌破下限，out_high=突破上限
+ */
+export function getGridPriceState(grid, price) {
+  const bounds = getGridPriceBounds(grid)
+  const current = Number(price)
+  if (!bounds || !Number.isFinite(current) || current <= 0) return 'unknown'
+  if (current < bounds.low) return 'out_low'
+  if (current > bounds.high) return 'out_high'
+  return 'in'
 }

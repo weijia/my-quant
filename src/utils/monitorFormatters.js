@@ -70,6 +70,16 @@ export function formatGridStatus(value) {
   return GRID_STATUS_LABELS[text] || GRID_STATUS_LABELS[text.toLowerCase()] || text
 }
 
+/**
+ * 网格状态列：当前价超出网格区间时优先展示破网警示（↑ 高于上限 / ↓ 低于下限），
+ * 在网或无法判断时仍展示券商网格单的原始状态。
+ */
+export function formatGridStatusWithPrice(status, priceState) {
+  if (priceState === 'out_low') return '破网↓'
+  if (priceState === 'out_high') return '破网↑'
+  return formatGridStatus(status)
+}
+
 export function formatDateOnly(value) {
   if (!value) return PLACEHOLDER
   return String(value).slice(0, 10)

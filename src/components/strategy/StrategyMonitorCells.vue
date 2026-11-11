@@ -8,7 +8,12 @@
 <template>
   <td v-if="isVisible('price')" class="monitor-cell align-right">{{ priceText }}</td>
 
-  <td v-if="isVisible('grid_status')" class="monitor-cell">{{ gridStatusText }}</td>
+  <td
+    v-if="isVisible('grid_status')"
+    class="monitor-cell"
+    :class="gridStatusClass"
+    :title="gridStatusTitle"
+  >{{ gridStatusText }}</td>
   <td v-if="isVisible('grid_mid')" class="monitor-cell align-right">{{ gridMidText }}</td>
   <td v-if="isVisible('grid_range')" class="monitor-cell">{{ gridRangeText }}</td>
   <td v-if="isVisible('grid_step')" class="monitor-cell align-right">{{ gridStepText }}</td>
@@ -22,12 +27,17 @@
 <script setup>
 import { computed } from 'vue'
 import mqttPriceService from '../../services/MQTTPriceService'
-import { findGridForStock } from '../../utils/gridMatch'
+import {
+  findGridForStock,
+  getGridPriceBounds,
+  getGridPriceState
+} from '../../utils/gridMatch'
 import { normalizeCode } from '../../utils/stockCode'
 import {
   formatNumber,
   formatSignedNumber,
   formatGridStatus,
+  formatGridStatusWithPrice,
   formatDateOnly
 } from '../../utils/monitorFormatters'
 
@@ -51,9 +61,40 @@ const grid = computed(() =>
   props.strategy.grid || findGridForStock(props.remoteStrategies, props.strategy.stockCode)
 )
 
-const priceText = computed(() => formatNumber(liveQuote.value?.price ?? props.strategy.currentPrice, 2))
+/** 破网判断与「当前价」列共用同一个价格：实时行情 > 策略携带价 > 网格现价 */
+const currentPrice = computed(() =>
+  liveQuote.value?.price ?? props.strategy.currentPrice ?? grid.value?.nowPrice
+)
+const priceText = computed(() => formatNumber(currentPrice.value, 2))
 
-const gridStatusText = computed(() => formatGridStatus(grid.value?.status))
+/**
+ * 参照 vue-dialog-userscript 的 isOscillationGridOutOfRange：
+ * 当前价低于 priceLowLimit 或高于 priceHighLimit 即为破网，网格状态列给出警示。
+ */
+const gridPriceState = computed(() => getGridPriceState(grid.value, currentPrice.value))
+const gridStatusText = computed(() =>
+  formatGridStatusWithPrice(grid.value?.status, gridPriceState.value)
+)
+const gridStatusClass = computed(() =>
+  gridPriceState.value === 'out_low' || gridPriceState.value === 'out_high'
+    ? 'grid-status-out'
+    : ''
+)
+const gridStatusTitle = computed(() => {
+  const state = gridPriceState.value
+  if (state === 'unknown') return ''
+  const bounds = getGridPriceBounds(grid.value)
+  const price = Number(currentPrice.value)
+  const verdict = state === 'in'
+    ? '在网'
+    : (state === 'out_low' ? '跌破网格下限' : '突破网格上限')
+  return [
+    `网格状态: ${formatGridStatus(grid.value?.status)}`,
+    `当前价: ${Number.isFinite(price) ? price.toFixed(2) : '-'}`,
+    `区间: ${bounds.low} - ${bounds.high}`,
+    `判定: ${verdict}`
+  ].join('\n')
+})
 const gridMidText = computed(() => formatNumber(grid.value?.basicPrice, 2))
 const gridRangeText = computed(() => grid.value?.priceRange || '-')
 const gridStepText = computed(() => formatNumber(grid.value?.gridSpacing, 2))
@@ -79,6 +120,12 @@ const gridProfitClass = computed(() => {
 
 .align-right {
   text-align: right;
+}
+
+/* 当前价超出网格区间（破网）：警示色，与油猴脚本的越界标红对应 */
+.grid-status-out {
+  color: #ffa940;
+  font-weight: 600;
 }
 
 /* 红涨绿跌 */
