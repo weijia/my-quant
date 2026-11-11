@@ -22,7 +22,12 @@ const TREND_LABELS = {
 const GRID_STATUS_LABELS = {
   running: '运行中',
   paused: '已暂停',
-  expired: '已过期'
+  expired: '已过期',
+  // all_strategies.json 的 gridStrategies.status 是页面解析出的中文文本，
+  // 兼容未经归一化直接传入的情形
+  '运行中': '运行中',
+  '已暂停': '已暂停',
+  '已过期': '已过期'
 }
 
 const PLACEHOLDER = '-'
@@ -61,7 +66,8 @@ export function formatTrend(value) {
 
 export function formatGridStatus(value) {
   if (!value) return PLACEHOLDER
-  return GRID_STATUS_LABELS[value] || value
+  const text = String(value).trim()
+  return GRID_STATUS_LABELS[text] || GRID_STATUS_LABELS[text.toLowerCase()] || text
 }
 
 export function formatDateOnly(value) {

@@ -42,7 +42,14 @@ const isVisible = (key) => props.visibleColumns.includes(key)
 /** 实时行情优先，缺失时回退策略自身携带的价格 */
 const liveQuote = computed(() => mqttPriceService.quotes.get(normalizeCode(props.strategy.stockCode)))
 
-const grid = computed(() => findGridForStock(props.remoteStrategies, props.strategy.stockCode))
+/**
+ * 网格数据源以 all_strategies.json 为准：WebDAV 导入时已把该股票的 gridStrategies
+ * 挂到 strategy.grid（随策略落库，页面刷新后依然在）。
+ * MQTT list_strategies 的远程策略只作补充，避免未点「获取策略」时整列为空。
+ */
+const grid = computed(() =>
+  props.strategy.grid || findGridForStock(props.remoteStrategies, props.strategy.stockCode)
+)
 
 const priceText = computed(() => formatNumber(liveQuote.value?.price ?? props.strategy.currentPrice, 2))
 

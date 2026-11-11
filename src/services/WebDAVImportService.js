@@ -1,6 +1,7 @@
 import { database } from '../utils/Database'
 import { request } from '../utils/http.js'
 import WEBDAV_PATHS from '../config/WebDAVPaths'
+import { attachGridsFromAllStrategies } from '../utils/gridMatch'
 import appConfigService from './AppConfigService.js'
 
 class DataConverter {
@@ -195,7 +196,14 @@ class DataConverter {
       }
     }
 
-    console.log('转换完成，共获得策略数量:', convertedStrategies.length)
+    // all_strategies.json 的 gridStrategies 是网格列（状态/中枢价/区间/间距/盈亏/过期等）
+    // 的数据源。此前只抽取了 oscillationGridSize / tradeAmount 两个数值，其余字段全被丢弃。
+    // 这里把该股票对应的完整网格对象挂到 strategy.grid，随策略一起落库，刷新页面后仍可用。
+    attachGridsFromAllStrategies(convertedStrategies, webdavData.gridStrategies)
+    const matchedGrids = convertedStrategies.filter(s => s.grid).length
+
+    console.log('转换完成，共获得策略数量:', convertedStrategies.length,
+      `网格策略 ${(webdavData.gridStrategies || []).length} 条，匹配到 ${matchedGrids} 条策略`)
     return convertedStrategies
   }
   
