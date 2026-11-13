@@ -13,6 +13,9 @@ const WEBDAV_PATHS = {
   // 趋势判断数据目录
   TREND_JUDGMENTS: '/app_data/stocks/trend_judgments/',
 
+  // 策略单创建/成交归档目录（按月 {YYYY-MM}.json）
+  ORDERS: '/app_data/stocks/orders/',
+
   // MQTT 配置文件
   MQTT_CONFIG: '/app_data/my-quant/mqtt-config.json',
 

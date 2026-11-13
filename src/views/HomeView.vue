@@ -259,6 +259,7 @@ import { strategyService } from '../services/StrategyService'
 import { trendService } from '../services/TrendService'
 import { database } from '../utils/Database'
 import { webdavImportService } from '../services/WebDAVImportService'
+import { refreshLastConditionSellPrice } from '../services/LastConditionSellService.js'
 import mqttConditionService from '../services/MQTTConditionService'
 import { defaultStrategyService } from '../services/DefaultStrategyService'
 import { appConfigService } from '../services/AppConfigService'
@@ -1610,6 +1611,9 @@ onMounted(async () => {
 
       if (status === 'success') {
         showToast(`${label} ${stockInfo}执行成功${detailSuffix}`, 'success', 3000);
+      } else if (status === 'warning') {
+        // 例如 refresh_grid 未解析到网格单：Agent 会带回具体原因，不能再静默跳过
+        showToast(`${label} ${stockInfo}${errorMessage || '未获取到数据'}${detailSuffix}`, 'info', 8000);
       } else if (status === 'error') {
         const errMsg = stockInfo + (errorMessage || '未知错误');
         showToast(`${label} 失败: ${errMsg}${detailSuffix}`, 'error', 0);
@@ -1654,6 +1658,10 @@ onMounted(async () => {
     const result = await webdavImportService.importFromWebDAV(true);
     if (result.success) {
       console.log('HomeView: WebDAV 同步成功:', result.message);
+      // 同步完 WebDAV 后刷新「上次条件单卖出价」（内部有短时节流，不会重复读盘）
+      refreshLastConditionSellPrice().catch((error) => {
+        console.warn('[HomeView] 加载上次条件单卖出成交价失败:', error)
+      });
       // 如果 WebDAV 上有 MQTT 配置，加载并应用
       if (result.mqttConfig) {
         // WebDAV 配置可能不包含 encryptMessages 等新字段，保留本地已有的值

@@ -224,6 +224,13 @@ export const COLUMNS = [
     header: { widthPx: 100 }
   },
   {
+    key: 'lastConditionSellPrice',
+    label: '上次条件单卖出价',
+    group: 'order',
+    defaultVisible: { mobile: false, desktop: true },
+    header: { widthPx: 130 }
+  },
+  {
     key: 'quickOrder',
     label: '快捷',
     group: 'order',

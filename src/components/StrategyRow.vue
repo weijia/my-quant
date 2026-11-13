@@ -403,6 +403,13 @@
       </div>
     </td>
     
+    <!-- 上一次条件单卖出成交价：WebDAV orders 归档聚合，按 股票代码 + 账户类型 取最近一笔 -->
+    <td v-if="visibleColumns.includes('lastConditionSellPrice')" class="last-sell-price-cell" :title="lastConditionSell.title">
+      <span :class="{ 'last-sell-price': lastConditionSell.hasData, 'last-sell-empty': !lastConditionSell.hasData }">
+        {{ lastConditionSell.text }}
+      </span>
+    </td>
+
     <!-- 快捷：金额显示 + 百分比输入 + 3个按钮 -->
     <td v-if="visibleColumns.includes('quickOrder')" class="quick-order-cell">
       <div class="quick-info">
@@ -608,6 +615,12 @@ import clickCounterService from '../services/ClickCounterService.js'
 import appConfigService from '../services/AppConfigService.js'
 import { webdavImportService } from '../services/WebDAVImportService.js'
 import { now } from '../composables/useNow.js'
+import {
+  lastConditionSellMap,
+  lastConditionSellStatus,
+  lookupLastConditionSell,
+  describeLastConditionSell
+} from '../utils/LastConditionSell.js'
 
 // 移动端检测
 const isMobile = ref(window.innerWidth <= 768)
@@ -637,6 +650,17 @@ const props = defineProps({
     default: () => ({ founder: { default: null, credit: null }, pingan: null })
   }
 })
+
+// 「上一次条件单卖出成交价」：共享 Map 由 StrategyList / HomeView 在载入或 WebDAV 同步后刷新
+const lastConditionSell = computed(() => describeLastConditionSell(
+  lookupLastConditionSell(
+    lastConditionSellMap.value,
+    props.strategy.stockCode,
+    props.strategy.accountType,
+    props.strategy.provider
+  ),
+  lastConditionSellStatus.value
+))
 
 // 点击计数器
 const buttonCounts = ref({})
@@ -2349,6 +2373,20 @@ const getTrendClass = (trend) => {
 <style scoped>
 .strategy-row {
   transition: background-color 0.2s;
+}
+
+/* 上一次条件单卖出成交价 */
+.last-sell-price-cell {
+  text-align: right;
+  cursor: help;
+}
+.last-sell-price {
+  color: #ffd166;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+}
+.last-sell-empty {
+  color: rgba(255, 255, 255, 0.45);
 }
 
 /* 趋势容器：竖向排布 select + 时间戳，与 vue-dialog-userscript 对齐 */
