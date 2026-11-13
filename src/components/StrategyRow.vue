@@ -405,9 +405,17 @@
     
     <!-- 上一次条件单卖出成交价：WebDAV orders 归档聚合，按 股票代码 + 账户类型 取最近一笔 -->
     <td v-if="visibleColumns.includes('lastConditionSellPrice')" class="last-sell-price-cell" :title="lastConditionSell.title">
-      <span :class="{ 'last-sell-price': lastConditionSell.hasData, 'last-sell-empty': !lastConditionSell.hasData }">
-        {{ lastConditionSell.text }}
-      </span>
+      <div class="last-sell-container">
+        <span :class="{ 'last-sell-price': lastConditionSell.hasData, 'last-sell-empty': !lastConditionSell.hasData }">
+          {{ lastConditionSell.text }}
+        </span>
+        <span
+          v-if="lastConditionSellTime"
+          class="trend-timestamp"
+          :class="getTrendAgeClass(lastConditionSellTime)"
+          :title="'上次卖出成交时间: ' + new Date(lastConditionSellTime).toLocaleString('zh-CN')"
+        >{{ formatTrendTimestamp(lastConditionSellTime) }}</span>
+      </div>
     </td>
 
     <!-- 快捷：金额显示 + 百分比输入 + 3个按钮 -->
@@ -652,15 +660,24 @@ const props = defineProps({
 })
 
 // 「上一次条件单卖出成交价」：共享 Map 由 StrategyList / HomeView 在载入或 WebDAV 同步后刷新
+const lastConditionSellInfo = computed(() => lookupLastConditionSell(
+  lastConditionSellMap.value,
+  props.strategy.stockCode,
+  props.strategy.accountType,
+  props.strategy.provider
+))
 const lastConditionSell = computed(() => describeLastConditionSell(
-  lookupLastConditionSell(
-    lastConditionSellMap.value,
-    props.strategy.stockCode,
-    props.strategy.accountType,
-    props.strategy.provider
-  ),
+  lastConditionSellInfo.value,
   lastConditionSellStatus.value
 ))
+// 成交时间即该价格的变化时间；优先用聚合时算好的 epoch 时间戳，避免原始字符串解析失败
+const lastConditionSellTime = computed(() => {
+  const info = lastConditionSellInfo.value
+  if (!info) return null
+  const value = info.timestamp || info.time || null
+  if (!value) return null
+  return Number.isNaN(new Date(value).getTime()) ? null : value
+})
 
 // 点击计数器
 const buttonCounts = ref({})
@@ -2387,6 +2404,13 @@ const getTrendClass = (trend) => {
 }
 .last-sell-empty {
   color: rgba(255, 255, 255, 0.45);
+}
+/* 卖出价 + 成交时间竖向排布，与「自动生成趋势」列的时间戳一致 */
+.last-sell-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
 }
 
 /* 趋势容器：竖向排布 select + 时间戳，与 vue-dialog-userscript 对齐 */
