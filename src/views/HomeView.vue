@@ -650,9 +650,12 @@ const loadStrategies = async () => {
               console.debug(`[调试-decreasePercentage] 策略: ${strategy.name}(${strategy.stockCode}), trend 匹配成功但 price_drop_ratio 和 decreasePercentage 均为空! trend 对象:`, JSON.stringify(trend));
             }
 
-            // 注入15日平均波动率
+            // 注入15日 / 5日平均波动率（小数格式）
             if (trend.volatility15d != null) {
               strategy.volatility15d = trend.volatility15d;
+            }
+            if (trend.volatility5d != null) {
+              strategy.volatility5d = trend.volatility5d;
             }
 
             // 注入当前价格
@@ -848,6 +851,18 @@ const executeStrategyInternal = async (strategy, useAmount = false, filter = nul
   const currentPrice = strategy.currentPrice || 0
   const defaultAmount = strategy.defaultTradeAmount || 20000
 
+  // 5日平均波动率（小数，如 0.0205 表示 2.05%），按优先级取第一个有效值
+  const volatility5dCandidates = [
+    strategy.volatility5d,
+    strategy.volatility_5d_ma,
+    strategy.volatilityMetrics?.volatility_5d_ma
+  ]
+  const volatility5d = volatility5dCandidates
+    .map(Number)
+    .find(v => Number.isFinite(v) && v > 0) ?? null
+  // 持仓倾向来自 my-quant 本地配置（按 stockCode 索引）
+  const biasConfig = appConfigService.getPositionBiasForStock(strategy.stockCode)
+
   const ctx = {
     stockCode: strategy.stockCode,
     stockName: strategy.name,
@@ -856,6 +871,9 @@ const executeStrategyInternal = async (strategy, useAmount = false, filter = nul
     marketValue: parseFloat(String(strategy.marketValue).replace(/,/g, '')) || 0,
     trendJudgment: trend,
     volatility15d: strategy.volatility15d || 0,
+    volatility5d: volatility5d,
+    positionBias: biasConfig?.bias || null,
+    positionBiasUpdatedAt: biasConfig?.updatedAt || null,
     priceDropRatio: strategy.price_drop_ratio || 0,
     isMarginAccount: strategy.isMarginAccount || false,
     defaultBuyVolume: defaultBuyVolume,
@@ -1335,9 +1353,10 @@ const getTrendByStockCode = (stockCode, trendData) => {
       // 修复：使用 != null 判断，避免 0 被当作 falsy 值处理
       decreasePercentage: trendInfo.decreasePercentage != null ? trendInfo.decreasePercentage : null,
       price_drop_ratio: trendInfo.price_drop_ratio != null ? trendInfo.price_drop_ratio : null,
-      // 添加当前价格和15日波动率
+      // 添加当前价格和15日 / 5日波动率
       currentPrice: trendInfo.currentPrice != null ? trendInfo.currentPrice : null,
       volatility15d: trendInfo.volatility15d != null ? trendInfo.volatility15d : null,
+      volatility5d: trendInfo.volatility5d != null ? trendInfo.volatility5d : null,
       // ADX 趋势强度指标
       adx: trendInfo.adx != null ? trendInfo.adx : null,
       plusDi: trendInfo.plusDi != null ? trendInfo.plusDi : null,

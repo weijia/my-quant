@@ -315,6 +315,9 @@
               <tr><td>ctx.marketValue</td><td>number</td><td>持仓市值 = 持仓 × 价格</td><td>168000</td></tr>
               <tr><td>ctx.trendJudgment</td><td>string</td><td>趋势判断类型</td><td>"trend_up"</td></tr>
               <tr><td>ctx.volatility15d</td><td>number</td><td>15日平均波动率（小数，如1.65%存为0.0165）</td><td>0.0165</td></tr>
+              <tr><td>ctx.volatility5d</td><td>number / null</td><td>5日平均波动率（小数，如2.05%存为0.0205）；无数据为 null</td><td>0.0205</td></tr>
+              <tr><td>ctx.positionBias</td><td>string / null</td><td>持仓倾向："increase" 增持 / "decrease" 减持 / "neutral" 中性；未设置为 null</td><td>"increase"</td></tr>
+              <tr><td>ctx.positionBiasUpdatedAt</td><td>string / null</td><td>持仓倾向的设置时间（ISO 字符串）；未设置为 null</td><td>"2026-11-13T06:30:00.000Z"</td></tr>
               <tr><td>ctx.priceDropRatio</td><td>number</td><td>最高价到当前价的下跌比率</td><td>0.05（表示5%）</td></tr>
               <tr><td>ctx.isMarginAccount</td><td>boolean</td><td>是否为融资融券账户</td><td>false</td></tr>
               <tr><td>ctx.defaultBuyVolume</td><td>number</td><td>缺省买入数量，优先使用策略的加仓数量（increaseAmount），否则为持仓的1/4</td><td>1/4持仓</td></tr>
@@ -988,6 +991,9 @@ const sampleCtx = {
   marketValue: 168000,
   trendJudgment: 'trend_up',
   volatility15d: 0.0165,
+  volatility5d: 0.0205,
+  positionBias: 'increase',
+  positionBiasUpdatedAt: '2026-11-13T06:30:00.000Z',
   priceDropRatio: 0.05,
   isMarginAccount: false,
   defaultBuyVolume: 100,
@@ -1015,6 +1021,15 @@ const defaultStrategyScripts = [
 // 下跌15日波动率卖出1/4持仓，上涨0.5%买入设定数量
 const vol = ctx.volatility15d * 100  // 转为百分比
 
+// 卖出触发跌幅：持仓倾向为「增持」且 5 日波动率有效时改用 5 日平均波动率
+// ctx.volatility5d 为小数（如 0.0205 = 2.05%）；其余情况沿用 15 日口径
+const vol5d = Number(ctx.volatility5d)
+const use5d = ctx.positionBias === 'increase'
+  && Number.isFinite(vol5d) && vol5d > 0 && vol5d <= 1
+const sellPct = use5d
+  ? parseFloat((vol5d * 100).toFixed(2))
+  : parseFloat(vol.toFixed(2))
+
 // 持仓已经是100股，不生成卖出条件单
 if (ctx.netPosition === 100) {
   return [
@@ -1039,7 +1054,7 @@ return [
     stockCode: ctx.stockCode,
     stockName: ctx.stockName,
     tradeVolume: sellVol,
-    percentage: parseFloat(vol.toFixed(2)),
+    percentage: sellPct,
     provider: ctx.provider,
     accountType: ctx.accountType
   }),
@@ -1062,6 +1077,15 @@ return [
 // 下跌15日波动率1/2卖出1/4持仓，上涨15日波动率买入设定数量
 const vol = ctx.volatility15d * 100  // 转为百分比
 
+// 卖出触发跌幅：增持且 5 日波动率有效时用 5 日整值（与生成链路覆盖一致，不减半）
+// 非增持时仍按 15 日波动率的 1/2
+const vol5d = Number(ctx.volatility5d)
+const use5d = ctx.positionBias === 'increase'
+  && Number.isFinite(vol5d) && vol5d > 0 && vol5d <= 1
+const sellPct = use5d
+  ? parseFloat((vol5d * 100).toFixed(2))
+  : parseFloat((vol / 2).toFixed(2))
+
 // 持仓已经是100股，不生成卖出条件单
 if (ctx.netPosition === 100) {
   return [
@@ -1086,7 +1110,7 @@ return [
     stockCode: ctx.stockCode,
     stockName: ctx.stockName,
     tradeVolume: sellVol,
-    percentage: parseFloat((vol / 2).toFixed(2)),
+    percentage: sellPct,
     provider: ctx.provider,
     accountType: ctx.accountType
   }),
@@ -1109,6 +1133,15 @@ return [
 // 上涨或下跌达15日波动率时，买入设定数量或卖出1/4持仓
 const vol = ctx.volatility15d * 100  // 转为百分比
 
+// 卖出触发跌幅：持仓倾向为「增持」且 5 日波动率有效时改用 5 日平均波动率
+// ctx.volatility5d 为小数（如 0.0205 = 2.05%）；其余情况沿用 15 日口径
+const vol5d = Number(ctx.volatility5d)
+const use5d = ctx.positionBias === 'increase'
+  && Number.isFinite(vol5d) && vol5d > 0 && vol5d <= 1
+const sellPct = use5d
+  ? parseFloat((vol5d * 100).toFixed(2))
+  : parseFloat(vol.toFixed(2))
+
 // 持仓已经是100股，不生成卖出条件单
 if (ctx.netPosition === 100) {
   return [
@@ -1133,7 +1166,7 @@ return [
     stockCode: ctx.stockCode,
     stockName: ctx.stockName,
     tradeVolume: sellVol,
-    percentage: parseFloat(vol.toFixed(2)),
+    percentage: sellPct,
     provider: ctx.provider,
     accountType: ctx.accountType
   }),
@@ -1320,6 +1353,9 @@ const generateAIPrompt = async (index) => {
   - ctx.marketValue: 持仓市值 = 持仓 × 价格（如 168000）
   - ctx.trendJudgment: 趋势判断类型（如 "trend_up", "trend_down" 等）
   - ctx.volatility15d: 15日平均波动率（小数，如 1.65% 存为 0.0165）
+  - ctx.volatility5d: 5日平均波动率（小数，如 2.05% 存为 0.0205），无数据为 null
+  - ctx.positionBias: 持仓倾向，"increase" 增持 / "decrease" 减持 / "neutral" 中性，未设置为 null
+  - ctx.positionBiasUpdatedAt: 持仓倾向设置时间（ISO 字符串），未设置为 null
   - ctx.priceDropRatio: 最高价到当前价的下跌比率（如 0.05 表示 5%）
   - ctx.isMarginAccount: 是否为融资融券账户（true/false）
   - ctx.defaultBuyVolume: 缺省买入数量，优先使用策略的加仓数量，否则为持仓的 1/4

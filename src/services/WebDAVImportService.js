@@ -302,6 +302,8 @@ class DataConverter {
     const currentPrice = trendData.currentPrice || advanced.currentPrice || advanced.price || null
     // 获取15日平均波动率（从趋势数据）
     const volatility15d = trendData.volatility15d || advanced.volatility15d || null
+    // 获取5日平均波动率（从趋势数据的波动率指标；小数格式）
+    const volatility5d = trendData.volatility5d ?? advanced.volatility5d ?? null
 
     const decreaseStrategies = (advanced.decreaseStrategies || [])
       .map(c => ({
@@ -344,7 +346,8 @@ class DataConverter {
       notes: advanced.notes || '',
       manualNotes: advanced.manualNotes || advanced.notes || '',
       currentPrice: currentPrice,
-      volatility15d: volatility15d
+      volatility15d: volatility15d,
+      volatility5d: volatility5d
     }
   }
 
@@ -601,6 +604,7 @@ class WebDAVImportService {
                 price_drop_ratio: actualPriceDropRatio,
                 currentPrice: volatilityMetrics?.current_price || null,
                 volatility15d: volatilityMetrics?.volatility_15d_ma || null,
+                volatility5d: volatilityMetrics?.volatility_5d_ma ?? null,
                 adx: trendStrengthMetrics?.adx != null ? trendStrengthMetrics.adx : null,
                 plusDi: trendStrengthMetrics?.plus_di != null ? trendStrengthMetrics.plus_di : null,
                 minusDi: trendStrengthMetrics?.minus_di != null ? trendStrengthMetrics.minus_di : null,
@@ -722,6 +726,8 @@ class WebDAVImportService {
                 currentPrice: volatilityMetrics?.current_price || null,
                 // 从波动率指标中获取15日平均波动率
                 volatility15d: volatilityMetrics?.volatility_15d_ma || null,
+                // 从波动率指标中获取5日平均波动率
+                volatility5d: volatilityMetrics?.volatility_5d_ma ?? null,
                 // ADX 趋势强度指标
                 adx: trendStrengthMetrics?.adx != null ? trendStrengthMetrics.adx : null,
                 plusDi: trendStrengthMetrics?.plus_di != null ? trendStrengthMetrics.plus_di : null,
