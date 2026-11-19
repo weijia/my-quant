@@ -392,9 +392,9 @@ const handleConfigUpdate = () => {
 
 onMounted(() => {
   window.addEventListener('appConfigUpdated', handleConfigUpdate)
-  // 读取 WebDAV orders 归档，供「上次条件单卖出价」列展示；失败只写状态，不阻塞渲染
+  // 读取 WebDAV orders 归档，供「上次卖出价」列展示；失败只写状态，不阻塞渲染
   refreshLastConditionSellPrice().catch((error) => {
-    console.warn('[StrategyList] 加载上次条件单卖出成交价失败:', error)
+    console.warn('[StrategyList] 加载上次卖出成交价失败:', error)
   })
 })
 

@@ -1,5 +1,5 @@
 /**
- * 「上一次条件单卖出成交价」加载服务（my-quant 侧）。
+ * 「上一次卖出成交价」加载服务（my-quant 侧，含条件单与网格单）。
  *
  * 与用户脚本读同一批 WebDAV orders 月文件，但用本项目自己的 WebDAV 配置
  * （localStorage.webDAVConfig）与 request 封装，不依赖 price monitor 服务在线。
@@ -112,10 +112,10 @@ export function refreshLastConditionSellPrice(options = {}) {
         ...(files.length === 0 ? { reason: 'NO_ORDER_FILES', message: '未找到 orders 月文件' } : {})
       })
       lastRefreshAt = Date.now()
-      console.log(`[LastConditionSellService] 已加载 ${files.length} 个 orders 月文件，${map.size} 只股票有上次条件单卖出成交价`)
+      console.log(`[LastConditionSellService] 已加载 ${files.length} 个 orders 月文件，${map.size} 只股票有上次卖出成交价`)
       return map
     } catch (error) {
-      console.warn('[LastConditionSellService] 加载条件单卖出成交价失败:', error)
+      console.warn('[LastConditionSellService] 加载卖出成交价失败:', error)
       setLastConditionSellError('LOAD_FAILED', error && error.message ? error.message : '读取成交归档失败')
       return new Map()
     }

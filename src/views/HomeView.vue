@@ -1677,9 +1677,9 @@ onMounted(async () => {
     const result = await webdavImportService.importFromWebDAV(true);
     if (result.success) {
       console.log('HomeView: WebDAV 同步成功:', result.message);
-      // 同步完 WebDAV 后刷新「上次条件单卖出价」（内部有短时节流，不会重复读盘）
+      // 同步完 WebDAV 后刷新「上次卖出价」（内部有短时节流，不会重复读盘）
       refreshLastConditionSellPrice().catch((error) => {
-        console.warn('[HomeView] 加载上次条件单卖出成交价失败:', error)
+        console.warn('[HomeView] 加载上次卖出成交价失败:', error)
       });
       // 如果 WebDAV 上有 MQTT 配置，加载并应用
       if (result.mqttConfig) {

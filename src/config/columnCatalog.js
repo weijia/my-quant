@@ -225,7 +225,7 @@ export const COLUMNS = [
   },
   {
     key: 'lastConditionSellPrice',
-    label: '上次条件单卖出价',
+    label: '上次卖出价',
     group: 'order',
     defaultVisible: { mobile: false, desktop: true },
     header: { widthPx: 130 }

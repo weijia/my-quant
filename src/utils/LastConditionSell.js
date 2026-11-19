@@ -1,14 +1,14 @@
 /**
- * 「上一次条件单卖出成交价」聚合（纯函数 + 共享响应式状态）。
+ * 「上一次卖出成交价」聚合（纯函数 + 共享响应式状态）。
  *
  * 数据源：WebDAV app_data/stocks/orders/{YYYY-MM}.json 中的 orders[].entrusts[]，
  * 由用户脚本 OrderCreateSaver 调方正 todayEntrust 归档而来。
  *
  * 口径（两端必须一致）：
- *   1. 只取 order.type === 'condition'（排除网格单成交）
+ *   1. 条件单与网格单都算（order.type ∈ {condition, grid}）
  *   2. 只取卖出：entrust.side === 'sell'，旧数据 side 为空时用方向码 2/102 兜底
  *   3. 只取成交状态：statusName ∈ {已成, 部成, 部分成交}（与 price monitor /api/trades 一致）
- *   4. 按 stockCode + accountType 分组，取 time 最新的一条
+ *   4. 按 stockCode + accountType 分组，取 time 最新的一条；时间相同取 entrust.id 数值更大的一条
  *   5. price 来自今日委托记录（price_type 多为「限价」），系统一直把它当成交价使用
  *
  * 限制：todayEntrust 只返回当日委托，跨天靠每天「自动同步全部」累积归档，
@@ -74,6 +74,16 @@ export function isSellEntrust(entrust) {
   return text.includes('卖')
 }
 
+/** 时间相同时按委托号判先后：数值更大者视为更晚；非数字 id 退回字符串比较 */
+function isNewerEntrustId(candidateId, currentId) {
+  if (candidateId === null || candidateId === undefined || candidateId === '') return false
+  if (currentId === null || currentId === undefined || currentId === '') return true
+  const a = Number(candidateId)
+  const b = Number(currentId)
+  if (Number.isFinite(a) && Number.isFinite(b)) return a > b
+  return String(candidateId) > String(currentId)
+}
+
 /** 取可用时间戳：ISO 字符串 / epoch 毫秒 / epoch 字符串 */
 function toTimestamp(...values) {
   for (const value of values) {
@@ -95,7 +105,7 @@ function formatTradeTime(value) {
 }
 
 /**
- * 聚合出每只股票（按账户隔离）最近一次条件单卖出成交价。
+ * 聚合出每只股票（按账户隔离）最近一次卖出成交价（条件单 + 网格单）。
  * @param {Array<{orders: Array}>} monthFiles orders 月文件内容数组
  * @returns {Map<string, object>} key = `${stockCode}|${accountType}`
  */
@@ -106,7 +116,7 @@ export function aggregateLastConditionSellPrice(monthFiles) {
   for (const file of files) {
     const orders = file && Array.isArray(file.orders) ? file.orders : []
     for (const order of orders) {
-      if (!order || order.type !== 'condition') continue
+      if (!order || (order.type !== 'condition' && order.type !== 'grid')) continue
       if (String(order.provider || 'founder').toLowerCase() !== 'founder') continue
       const accountType = normalizeAccountType(order.accountType)
       const entrusts = Array.isArray(order.entrusts) ? order.entrusts : []
@@ -120,8 +130,13 @@ export function aggregateLastConditionSellPrice(monthFiles) {
 
         const timestamp = toTimestamp(entrust.time, order.createTime)
         const key = `${stockCode}|${accountType}`
+        const entrustId = entrust.id != null ? String(entrust.id) : null
         const previous = result.get(key)
-        if (previous && previous.timestamp >= timestamp) continue
+        if (previous) {
+          const olderByTime = previous.timestamp > timestamp
+          const sameTimeNotNewer = previous.timestamp === timestamp && !isNewerEntrustId(entrustId, previous.entrustId)
+          if (olderByTime || sameTimeNotNewer) continue
+        }
 
         result.set(key, {
           stockCode,
@@ -130,7 +145,7 @@ export function aggregateLastConditionSellPrice(monthFiles) {
           time: entrust.time || order.createTime || null,
           timestamp,
           statusName: String(entrust.statusName || '').trim() || null,
-          entrustId: entrust.id != null ? String(entrust.id) : null,
+          entrustId,
           taskId: entrust.taskId != null ? String(entrust.taskId) : (order.id != null ? String(order.id) : null),
           month: file.month || null
         })
@@ -173,7 +188,7 @@ export function setLastConditionSellMap(map, meta = {}) {
   lastConditionSellStatus.value = {
     ok: true,
     reason: meta.reason || (next.size === 0 ? 'NO_DATA' : 'OK'),
-    message: meta.message || (next.size === 0 ? '归档中没有条件单卖出成交记录' : '已加载成交归档'),
+    message: meta.message || (next.size === 0 ? '归档中没有卖出成交记录' : '已加载成交归档'),
     files: Number(meta.files) || 0,
     records: next.size
   }
@@ -196,7 +211,7 @@ export function setLastConditionSellError(reason, message) {
  */
 export function describeLastConditionSell(info, status = lastConditionSellStatus.value) {
   const sourceLines = [
-    '来源: WebDAV app_data/stocks/orders/（方正今日委托归档）',
+    '来源: WebDAV app_data/stocks/orders/（方正今日委托归档，含条件单与网格单）',
     '仅覆盖已执行「自动同步全部」的日期；平安账户无成交数据',
     '限价单取委托记录价格，非逐笔成交均价'
   ]
@@ -204,13 +219,13 @@ export function describeLastConditionSell(info, status = lastConditionSellStatus
     const reasonText = {
       NOT_LOADED: '尚未读取成交归档',
       WEBDAV_NOT_CONFIGURED: 'WebDAV 未配置',
-      NO_DATA: '归档中没有条件单卖出成交记录',
+      NO_DATA: '归档中没有卖出成交记录',
       LOAD_FAILED: '读取成交归档失败',
       NO_ORDER_FILES: '未找到 orders 月文件'
     }[status && status.reason] || (status && status.message) || ''
     return {
       text: '-',
-      title: `未同步到条件单卖出成交数据${reasonText ? `（${reasonText}）` : ''}\n${sourceLines.join('\n')}`,
+      title: `未同步到卖出成交数据${reasonText ? `（${reasonText}）` : ''}\n${sourceLines.join('\n')}`,
       hasData: false
     }
   }
@@ -219,7 +234,7 @@ export function describeLastConditionSell(info, status = lastConditionSellStatus
   return {
     text,
     title: [
-      `上次条件单卖出成交价: ${text}`,
+      `上次卖出成交价: ${text}`,
       `成交时间: ${formatTradeTime(info.time) || '-'}`,
       `状态: ${info.statusName || '-'}`,
       `账户: ${info.accountType === 'credit' ? '信用' : '普通'}`,

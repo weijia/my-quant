@@ -403,7 +403,7 @@
       </div>
     </td>
     
-    <!-- 上一次条件单卖出成交价：WebDAV orders 归档聚合，按 股票代码 + 账户类型 取最近一笔 -->
+    <!-- 上一次卖出成交价：WebDAV orders 归档聚合（含条件单与网格单），按 股票代码 + 账户类型 取最近一笔 -->
     <td v-if="visibleColumns.includes('lastConditionSellPrice')" class="last-sell-price-cell" :title="lastConditionSell.title">
       <div class="last-sell-container">
         <span :class="{ 'last-sell-price': lastConditionSell.hasData, 'last-sell-empty': !lastConditionSell.hasData }">
@@ -659,7 +659,7 @@ const props = defineProps({
   }
 })
 
-// 「上一次条件单卖出成交价」：共享 Map 由 StrategyList / HomeView 在载入或 WebDAV 同步后刷新
+// 「上一次卖出成交价」：共享 Map 由 StrategyList / HomeView 在载入或 WebDAV 同步后刷新
 const lastConditionSellInfo = computed(() => lookupLastConditionSell(
   lastConditionSellMap.value,
   props.strategy.stockCode,
@@ -2392,7 +2392,7 @@ const getTrendClass = (trend) => {
   transition: background-color 0.2s;
 }
 
-/* 上一次条件单卖出成交价 */
+/* 上一次卖出成交价（含条件单与网格单） */
 .last-sell-price-cell {
   text-align: right;
   cursor: help;
